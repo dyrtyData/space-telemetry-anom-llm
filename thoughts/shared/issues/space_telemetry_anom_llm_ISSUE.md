@@ -57,3 +57,6 @@ Note: these are proposed...Validate this approach against your research and prop
 
 
 Reference Doc - original Gemini thread: /Users/laptop/Developer/fdl_technicalInterview/space-telemetry-anom-llm/thoughts/issues/space-anomaly-detection-ai-advice_exploratoryThread.md
+
+
+Note: always track all changes to git.
