@@ -4,6 +4,9 @@
 > 
 > **For validated decisions and final architecture, see:**
 > `thoughts/shared/research/2026-06-12-star-pipeline-codebase-research.md`
+>
+> **For implementation plan, see:**
+> `thoughts/shared/plans/2026-06-12-star-pipeline-implementation.md`
 > 
 > Key validated changes from original proposals:
 > - **Model**: Qwen3-8B (not Qwen2.5 or Llama-3)
