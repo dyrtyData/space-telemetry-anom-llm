@@ -590,11 +590,11 @@ data/
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Environment setup succeeds: `make setup`
+- [x] Environment setup succeeds: `make setup`
 - [ ] Download completes: `make download` (check `data/raw/esa-ad/` has files)
 - [ ] ETL runs without errors: `make etl`
 - [ ] JSONL files created: `ls data/splits/*.jsonl`
-- [ ] Linting passes: `make lint`
+- [x] Linting passes: `make lint`
 - [ ] Sample JSONL validation: `make validate-etl` (schema check, field presence)
 - [ ] Anomaly count in expected range: assert 100 < anomalies < 200
 - [ ] PNG plots generated: `test -d data/processed/plots/train`
