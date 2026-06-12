@@ -1,0 +1,5 @@
+# Local inference dependencies for M3 Max
+# See: thoughts/shared/plans/2026-06-12-star-pipeline-implementation.md
+llama-cpp-python>=0.2.50
+numpy>=1.26.0
+pandas>=2.1.0

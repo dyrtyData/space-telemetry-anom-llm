@@ -75,6 +75,42 @@ Advice labels will be generated **in-session** (Claude Code Max) rather than via
 
 ---
 
+## Phase 0: Project Scaffolding (Completed Concurrently)
+
+### Overview
+Create the full directory structure and placeholder files for all phases. Executed concurrently with Phase 1 start in separate thread.
+
+### Changes Completed:
+
+#### 0.1 Directory Structure
+Created all directories from recommended structure:
+- `config/` - Unsloth training config
+- `data/processed/jsonl/`, `data/processed/plots/{train,val,test}/`
+- `data/splits/`, `data/labels/`
+- `src/baselines/`
+- `models/{lora,merged,gguf}/`
+- `scripts/cloud/`
+- `results/{lstm,isolation_forest}/`
+
+#### 0.2 Placeholder Files
+Created placeholder files with TODO markers for later phases:
+- `config/unsloth-train.yaml` (Phase 3)
+- `src/etl/generate_plots.py` (Phase 1.4)
+- `src/baselines/train_lstm.py`, `isolation_forest.py` (Phase 2)
+- `src/training/format_for_unsloth.py`, `train_advice.py`, `train_detection.py`, `export_gguf.py` (Phase 3-4)
+- `src/inference/evaluate.py` (Phase 5)
+- `scripts/cloud/launch_vast.sh`, `upload_data.sh`, `download_models.sh` (Phase 3-4)
+- `requirements-local.txt` (Phase 4)
+
+### Success Criteria:
+
+#### Automated Verification:
+- [ ] All directories exist: `find . -type d | wc -l` shows expected count
+- [ ] All placeholder files exist: `find . -name "*.py" -o -name "*.sh" | wc -l`
+- [ ] .gitkeep files in empty directories
+
+---
+
 ## Phase 1: Project Setup & ETL
 
 ### Overview
