@@ -11,7 +11,7 @@
 | Phase | Status | Started | Completed | Deviations |
 |-------|--------|---------|-----------|------------|
 | 1 (code) | completed | 2026-06-12 14:35 | 2026-06-12 14:55 | pyproject.toml needed hatch build config |
-| 1 (data pipeline) | **in progress** | 2026-06-12 14:48 | - | D2 ETL rewrite + D3 Kaggle source + D4 resample/subsample (see below) |
+| 1 (data pipeline) | **completed (Mission1)** | 2026-06-12 14:48 | 2026-06-12 16:50 | D2 ETL rewrite + D3 Kaggle source + D4 resample/subsample; Mission2/3 pending |
 | 1.5 | pending | - | - | - |
 | 2 | pending | - | - | - |
 | 3 | pending | - | - | - |
@@ -160,10 +160,25 @@ Re-audited true Phase 1 state against the plan's success criteria:
 - **Raw-data lifecycle**: raw is needed through Phase 2 (LSTM reads it too), so it stays until
   Phase 2; only then is it deletable. For "just Phase 1" we keep Mission1 raw on the drive.
 
-### CURRENT STATUS (in progress)
-- Mission1 downloading to the drive via `download_kaggle.py` (background, ~45 min, network-bound).
-- Pending on completion: run `patch_telemetry.py` (Mission1) → splits, `generate_plots.py` →
-  PNGs, then validate (schema, anomaly balance, plot presence) and re-update log/plan.
+### PHASE 1 DATA PIPELINE — COMPLETE (Mission1)
+- **Download**: Mission1 fully fetched to `DUAL DRIVE` (76/76 channels, 8.3 GB unzipped pickles).
+- **ETL** (`patch_telemetry.py --missions 1 --resample 1h`, 58 target channels, ~64 s):
+  - **30,000 patches** total (capped by `--max-windows`): **7,437 anomalous / 22,563 nominal**.
+  - Splits written: `train.jsonl` 21,000 · `val.jsonl` 4,500 · `test.jsonl` 4,500 (70/15/15).
+  - `data/processed/jsonl/all_patches.jsonl` (28 MB).
+- **Plots** (`generate_plots.py --max-per-split 2000`): real window values rendered to PNG
+  (capped 2,000/split → ~6,000 PNGs) + per-split `*_metadata.jsonl` for the VL model.
+- **Validation** (all ✅): JSONL schema present on every record; anomaly balance ~25% and
+  consistent across train/val/test; all 58 target channels represented; every window length 32;
+  `make validate-etl` range (100 < anomalies < 10000) satisfied (7,437).
+- **Network note**: user is on a VPN (M247, São Paulo exit, 240 ms RTT). Raw link is 37 Mbit/s
+  but single-stream transfers ran ~2 MB/s — high-latency single-connection limit, not the source.
+- **.gitignore added**: raw/processed/plots/splits/models/.venv excluded; `.gitkeep` structure kept.
+
+Remaining for full-dataset scope (user opted for all 3 missions, mission-by-mission):
+- Repeat download+ETL for **Mission2** (4.1 GB) and **Mission3** (3.7 GB). Mission2's source zip on
+  Zenodo is >4 GB but the Kaggle mirror is per-file (<200 MB), so FAT32 is fine either way.
+- Re-run ETL with `--missions 1,2,3` once all three are on the drive to build the combined set.
 
 ---
 

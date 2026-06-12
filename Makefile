@@ -1,21 +1,30 @@
-.PHONY: setup download etl baseline train-cloud export eval-all clean lint format validate-etl
+.PHONY: setup download download-zenodo etl baseline train-cloud export eval-all clean lint format validate-etl
 
 PYTHON := python3
 VENV := .venv
 PIP := $(VENV)/bin/pip
 PY := $(VENV)/bin/python
 
+# Where raw ESA-AD lives. Override to use an external drive, e.g.:
+#   make download ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad"
+ESA_DATA_DIR ?= data/raw/esa-ad
+MISSION ?= 1
+
 # Setup
 setup:
 	$(PYTHON) -m venv $(VENV)
 	$(PIP) install -e ".[dev,lstm]"
 
-# ETL Pipeline
+# ETL Pipeline -- primary download is the Kaggle mirror (fast CDN, byte-identical
+# to the official Zenodo manifest). Zenodo kept as a fallback (download-zenodo).
 download:
-	$(PY) src/etl/download_esa.py
+	$(PY) src/etl/download_kaggle.py --data-dir "$(ESA_DATA_DIR)" --mission $(MISSION)
 
-etl: download
-	$(PY) src/etl/patch_telemetry.py
+download-zenodo:
+	$(PY) src/etl/download_esa.py --data-dir "$(ESA_DATA_DIR)" --missions $(MISSION)
+
+etl:
+	ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/etl/patch_telemetry.py --missions $(MISSION)
 	$(PY) src/etl/generate_plots.py
 
 # Baselines
