@@ -1,5 +1,19 @@
 # Space Telemetry Anomaly Detection & Resolution Pipeline (STAR-Pipeline)
 
+> **IMPORTANT**: This document contains the original project requirements and proposals.
+> 
+> **For validated decisions and final architecture, see:**
+> `thoughts/shared/research/2026-06-12-star-pipeline-codebase-research.md`
+> 
+> Key validated changes from original proposals:
+> - **Model**: Qwen3-8B (not Qwen2.5 or Llama-3)
+> - **Dataset**: ESA-AD only (NASA MSL/SMAP has quality issues)
+> - **Architecture**: Three-way comparison (LSTM baseline, LLM detection, Hybrid)
+> - **Cloud**: Vast.ai preferred (official Unsloth image)
+> - **GGUF**: Unsloth Dynamic 2.0 quantization
+
+---
+
 ## 1. Project Context & Business Objective
 
 The primary objective of this project is to build an end-to-end, production-ready AI pipeline that detects anomalies in multivariate time-series data and automatically generates human-readable diagnostic advice.
