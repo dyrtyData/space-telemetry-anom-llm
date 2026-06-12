@@ -11,7 +11,7 @@
 | Phase | Status | Started | Completed | Deviations |
 |-------|--------|---------|-----------|------------|
 | 1 (code) | completed | 2026-06-12 14:35 | 2026-06-12 14:55 | pyproject.toml needed hatch build config |
-| 1 (data pipeline) | **blocked** | 2026-06-12 14:48 | - | Download interrupted (corrupt zip); ETL loader assumption wrong |
+| 1 (data pipeline) | **in progress** | 2026-06-12 14:48 | - | D2 ETL rewrite + D3 Kaggle source + D4 resample/subsample (see below) |
 | 1.5 | pending | - | - | - |
 | 2 | pending | - | - | - |
 | 3 | pending | - | - | - |
@@ -111,23 +111,59 @@ Re-audited true Phase 1 state against the plan's success criteria:
 - ESA-AD on Zenodo (record 12528696) = **3 zips, 11.6 GB total**:
   ESA-Mission1.zip (3.7 GB), ESA-Mission2.zip (4.1 GB), ESA-Mission3.zip (3.7 GB).
 
-### Deviation D2 — ETL loader assumption is wrong (BLOCKER, plan change needed)
-- `src/etl/patch_telemetry.py::load_mission_data` assumes each mission is a **directory**
-  containing `telemetry.pkl` and `labels.pkl` (plan lines 322–334).
-- The real ESA-AD ships **zip archives of CSV-based channel data** (per-channel telemetry +
-  `labels.csv` / `anomaly_types.csv` / `channels.csv`), not pickles.
-- **Consequence**: even with a complete download, `make etl` would fail. The ETL needs:
-  (a) an unzip step, and (b) a loader rewritten for the real CSV structure.
-- This must be fixed before Phase 1's data pipeline can pass, and the plan's 1.3 code block
-  should be updated to match the real format.
+### Deviation D2 — ETL loader assumption is wrong (RESOLVED — ETL rewritten)
+- `patch_telemetry.py::load_mission_data` assumed each mission is a directory with
+  `telemetry.pkl` + `labels.pkl` (plan lines 322–334). **Entirely wrong.**
+- **Real ESA-AD structure** (confirmed by inspecting the data):
+  - `ESA-MissionN/channels.csv` — `Channel, Subsystem, Physical Unit, Group, Target(YES/NO)`
+  - `ESA-MissionN/labels.csv` — `ID, Channel, StartTime, EndTime` (ISO-8601 UTC intervals)
+  - `ESA-MissionN/anomaly_types.csv` — `ID, Class, Subclass, Category, Dimensionality, ...`
+  - `ESA-MissionN/channels/channel_N/channel_N` — a **pickled pandas DataFrame**: a
+    `datetime` DatetimeIndex + one float32 column. Channels are LONG (channel_1 =
+    10.5 M rows, ~90 s cadence, spanning 2000-01-01 → 2013-12-31).
+  - Mission1: 76 channels (58 Target=YES), 200 anomaly events, 3,589 label rows. The 58
+    target channels are exactly the 58 with anomalies → `--target-only` is the right default.
+- **Fix (commit 7695a47)**: `patch_telemetry.py` rewritten — loads per-channel pickles,
+  maps `labels.csv` intervals onto the (resampled) time grid, windows + labels, preserves
+  the instruction/response/metadata JSONL schema (downstream-compatible). Unit-tested on a
+  real channel_1 sample (loader/resample/mask/window all correct).
 
-### OPEN DECISION (awaiting user)
-Download scope for completing the data pipeline:
-- **Mission1 only (3.7 GB)** — recommended; enough to validate ETL + produce splits/plots.
-- **All 3 missions (11.6 GB)** — full dataset per plan.
-- **Synthetic fixture** — validate/fix ETL code now, defer the real multi-GB download.
+### Deviation D3 — Data source switched Zenodo → Kaggle mirror (speed)
+- Zenodo (record 12528696) throttles single-connection downloads to ~0.3–0.4 MB/s and does
+  **not** support HTTP range requests (returns 200 + full length for a Range request), so it
+  cannot be parallelised → ~3 h/mission. The original thread died mid-Zenodo-download.
+- Switched to the Kaggle mirror `sammahoney/esa-anomaly-dataset`, whose total size
+  (11,664,533,376 B) is **byte-identical to the official Zenodo manifest** → same data,
+  verified provenance. Mirror ships the **unzipped** form (per-file).
+- New `src/etl/download_kaggle.py` (commit 7695a47): per-mission, per-file via kaggle CLI,
+  unzips wrappers, skips telecommands, flattens the doubled `ESA-MissionN/ESA-MissionN/`.
+- **Network finding**: Kaggle bulk endpoint also measured ~0.28 MB/s to /dev/null; per-file
+  Kaggle channel transfer ~2 MB/s. The real bottleneck is the **local network (~1–2 MB/s)**,
+  not the source. Per-file Mission1 (3.7 GB) is still optimal vs any bulk (11.6 GB) download.
+- Kaggle auth: user supplied a `KGAT_`-prefixed token at `~/.kaggle/access_token` (accepted
+  by kaggle CLI 2.2.1). **Token was pasted in plaintext in-session → user should rotate it.**
 
-User previously declined the full download; not re-triggering it without explicit go-ahead.
+### Deviation D4 — Resampling + balanced subsampling (scale; plan-relevant)
+- Naive windowing of all channels → tens of millions of windows; the plan's "100 < anomalies
+  < 200" check (plan line 599) reflected *annotated events*, not *windows*, and is invalid as
+  written. Mission1 alone has 200 anomaly events.
+- ETL now: resample each channel to a uniform cadence (`--resample`, default `1h`), keep ALL
+  anomalous windows, subsample nominal to `--normal-ratio`×anomalous, cap at `--max-windows`
+  (default 30k). Produces a tractable, balanced set. `generate_plots.py` rewritten to plot the
+  real stored window values (removed a synthetic sine-wave fabrication) with a per-split cap.
+
+### RESOLVED DECISIONS (user)
+- **Scope**: full dataset, processed **mission-by-mission** (Mission1 first).
+- **Storage**: external thumb drive `DUAL DRIVE` (FAT32, 765 GB free) — raw data lives off the
+  near-full internal disk. FAT32 4 GB-file limit is a non-issue for the Kaggle mirror (largest
+  per-file < 200 MB). `ESA_DATA_DIR` / `--data-dir` point the pipeline at the drive.
+- **Raw-data lifecycle**: raw is needed through Phase 2 (LSTM reads it too), so it stays until
+  Phase 2; only then is it deletable. For "just Phase 1" we keep Mission1 raw on the drive.
+
+### CURRENT STATUS (in progress)
+- Mission1 downloading to the drive via `download_kaggle.py` (background, ~45 min, network-bound).
+- Pending on completion: run `patch_telemetry.py` (Mission1) → splits, `generate_plots.py` →
+  PNGs, then validate (schema, anomaly balance, plot presence) and re-update log/plan.
 
 ---
 
