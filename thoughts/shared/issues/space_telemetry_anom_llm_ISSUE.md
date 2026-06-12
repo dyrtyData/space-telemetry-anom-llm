@@ -12,6 +12,7 @@ The pipeline must be cost-effective and intelligently split between local and cl
 
 * Local Hardware (Inference, ETL & EDA): MacBook Pro (M3 Max, 14-core CPU, 30-core GPU, 36GB unified memory, 1TB SSD, macOS Tahoe 26.2). To be used for all exploratory data analysis, data transformation pipelines, and final local GGUF model inference/testing.
 * Cloud Hardware (Model Training): Do not attempt full LoRA fine-tuning on the local machine to save time and optimize GPU usage. Utilize decentralized cloud GPU rentals (e.g., Vast.ai or RunPod) to spin up an Ubuntu/PyTorch container with a single NVIDIA RTX 4090 (24GB VRAM) or A6000 (48GB VRAM) for a few hours.
+  * note: Vast.ai or RunPod are suggestions... Validate this approach against your research and propose adjustments in your generated plan. Explain all of your reasoning for whatever you choose.
 * Note: if anything can be set up with CLI, API, or MCP so that Claude Code can automate any process, please do so or instruct the user on how to do so. We also have access to chrome-devtools, so if anything can't be done through cli, api, mcp etc. and needs manual maneuvering, please write detailed instructions for Cursor Browser Use or chrome-devtools, or for the user to manually be able to follow step by step as if they have never done any of this before...please explain the concepts and the why behind things as well for the user to be able to understand and learn the process.
 
 ## 3. Reference Architectures & Research Directives
@@ -46,7 +47,7 @@ Note to Agent: This is a suggested path. Validate this approach against your res
 3. Phase 3: LLM Fine-Tuning (Cloud): Set up the Unsloth environment on a Vast.ai/RunPod instance. Load the selected base model in 4-bit precision, apply the LoRA adapters, and execute the training loop using the processed JSONL data.
 4. Phase 4: Inference & Integration (Local): Export the fine-tuned model to GGUF format, pull it down to the M3 Max, and run an inference script that feeds it unseen telemetry data to evaluate its diagnostic accuracy against the traditional ML baseline.
 
-## 6. Definition of Done 
+## 6. Definition of Done
 
 Note: these are proposed...Validate this approach against your research and propose adjustments in your generated plan. Explain all of your reasoning for whatever you choose.
 
@@ -55,8 +56,6 @@ Note: these are proposed...Validate this approach against your research and prop
 * An open-source LLM is fine-tuned via Unsloth and successfully infers both the presence of an anomaly and the correct diagnostic advice from a raw telemetry patch.
 * Evaluation metrics (False Positives, Precision, Recall) are documented comparing the LLM approach vs. the traditional baseline.
 
-
 Reference Doc - original Gemini thread: /Users/laptop/Developer/fdl_technicalInterview/space-telemetry-anom-llm/thoughts/issues/space-anomaly-detection-ai-advice_exploratoryThread.md
-
 
 Note: always track all changes to git.

@@ -228,10 +228,243 @@ or
 - Unsloth Docs: `unsloth.ai/docs`
 - NASA MSL/SMAP Dataset: `kaggle.com/datasets/patrickfleith/nasa-anomaly-detection-dataset-smap-msl`
 
-## Open Questions
+## Validated Recommendations (Post-Research)
 
-1. **Dataset Selection**: ESA-AD (~12GB) vs NASA MSL/SMAP - which better fits FDL's "space-based observing" focus?
-2. **Model Selection**: Qwen2.5-7B vs Llama-3-8B - which has better time-series reasoning?
-3. **Patching Strategy**: What window size and stride for telemetry patches?
-4. **Advice Generation**: How to synthesize "diagnostic advice" labels for the training data?
-5. **ML Baseline**: Which traditional model (LSTM, Autoencoder, Isolation Forest) to implement first?
+### 1. Dataset Selection: ESA-AD (ESA-ADB)
+
+**Recommendation**: Use ESA Anomaly Dataset as primary dataset.
+
+**Reasoning**:
+- **Benchmark credibility**: Only actively competed-on public benchmark (Kaggle competition May–Aug 2025)
+- **Label quality**: Expert-annotated by ESA spacecraft operations engineers over 18 months
+- **Scale**: 11.6 GB compressed, 224 real telemetry channels, 844 annotated events across 17.5 years
+- **FDL alignment**: ESA partnership with FDL Europe signals domain awareness
+- **Honest difficulty**: Paper concludes "no existing algorithm meets operational requirements" — compelling problem statement
+
+**Do NOT use NASA MSL/SMAP as primary**:
+- Documented quality issues: mislabeled ground truth, trivial anomalies
+- "Multivariate" claim misleading: all channels except first are binary one-hot flags
+- OPS-SAT paper (Nature 2025): "should not be used for time series anomaly detection benchmarking"
+
+**Caveat on FDL alignment**: FDL's actual focus is heliophysics/solar observation (SDO, Parker Solar Probe) and Earth observation — not spacecraft health telemetry. Consider augmenting with SDO data if the role is heliophysics-focused.
+
+**Sources**: [ESA-ADB Zenodo](https://zenodo.org/records/12528696), [arXiv 2406.17826](https://arxiv.org/abs/2406.17826), [Kaggle ESA-ADB Challenge](https://www.kaggle.com/competitions/esa-adb-challenge)
+
+---
+
+### 2. Model Selection: Qwen2.5-7B-Instruct
+
+**Recommendation**: Use `unsloth/Qwen2.5-7B-Instruct-bnb-4bit`
+
+**Reasoning**:
+- **Numerical reasoning**: MATH benchmark 75.5% vs Llama-3.1-8B's 51.9% — 23.6-point gap
+- **Structured output**: Explicitly trained on JSON extraction, more reliable formatting
+- **GSM8K**: 91.6% vs Llama's 84.5%
+- **Fine-tuning**: Unsloth provides pre-patched 4-bit variants with correct chat templates
+
+**Alternative**: Qwen3-8B (April 2025) outperforms Qwen2.5 if starting fresh.
+
+**Avoid Mistral-7B**: Community consensus it "is not as good as Qwen2.5 7B" on benchmarks.
+
+**Sources**: [Qwen2.5-LLM Blog](https://qwenlm.github.io/blog/qwen2.5-llm/), [rankllms.com comparison](https://rankllms.com/compare/llama-3-1-8b-vs-qwen-2-5-7b/)
+
+---
+
+### 3. LLM vs Traditional Approach: Hybrid Architecture
+
+**Critical Finding**: LLMs perform poorly on multivariate telemetry anomaly detection.
+
+**Research evidence**:
+- DeepSeek-V3 on aerospace telemetry: F1=0.47 (10% below TFMAE baseline)
+- On multivariate out-of-loop data: "almost indistinguishable from random guessing"
+- AnomLLM benchmark: Only tested on synthetic data, "no evidence they can understand more subtle real-world anomalies"
+
+**Recommended Architecture** (adjusted from issue proposal):
+```
+Phase 1: ETL → Telemanom LSTM detects anomalies (proven F1~0.71)
+Phase 2: Fine-tuned LLM generates diagnostic advice from LSTM output
+```
+
+This hybrid approach:
+- Uses traditional ML where it excels (detection)
+- Uses LLM where it excels (natural language explanation)
+- Matches what the issue's friend actually asked for: "anomaly detection AND end user advice"
+
+**If you must show LLM detection**: Fine-tune multimodal LLM (AnomSeer-style) on visual plots, not raw numbers. AnomSeer-7B achieves 84.4% F1 on AnomLLM benchmark — but only on synthetic data.
+
+**Sources**: [arXiv 2601.12448](https://arxiv.org/html/2601.12448), [AnomSeer arXiv 2602.08868](https://arxiv.org/abs/2602.08868)
+
+---
+
+### 4. ML Baseline: Telemanom (LSTM + Dynamic Thresholding)
+
+**Recommendation**: Implement Telemanom first.
+
+**Reasoning**:
+- Domain-specific, battle-tested on NASA datasets
+- Apache 2.0, ready-to-run with SMAP/MSL data included
+- Interpretable per-channel predictions (operators know which sensor triggered)
+- No GPU required for basic version
+- ESA used "Telemanom-ESA" as their baseline in ESA-ADB
+
+**Honest benchmark numbers** (post-PA-correction):
+- Telemanom: F1=0.713 on SMAP
+- OmniAnomaly: F1=0.576 on SMD (PA-inflated numbers ~0.87)
+- Published 90%+ F1 scores use "Point Adjustment" which inflates scores artificially
+
+**Secondary baseline**: Isolation Forest (windowed) — 10 minutes to implement, gives non-temporal comparison.
+
+**For root cause**: M2AD (2025) provides 81% top-1 sensor attribution accuracy.
+
+**Implementation**: [github.com/khundman/telemanom](https://github.com/khundman/telemanom)
+
+**Sources**: [Telemanom KDD 2018](https://ar5iv.labs.arxiv.org/html/1802.04431), [M2AD arXiv 2504.15225](https://arxiv.org/abs/2504.15225)
+
+---
+
+### 5. Patching Strategy for Time-Series Tokenization
+
+**Recommendation**: Patch size 16-64 timesteps with stride = patch_size/2
+
+**Best practices from research**:
+1. **Apply RevIN** (Reversible Instance Normalization) before tokenization
+2. **Patch, don't serialize**: Direct float serialization fragments into multi-tokens
+3. **For frozen LLM**: Use cross-attention over text prototypes (Time-LLM approach)
+4. **For fine-tuning**: Quantize to 512-4096 bins (Chronos approach) or AXIS-style integer serialization
+
+**AXIS workaround** (if serializing numbers):
+- Scale values, round to integers
+- Use delimiter separation: "123, 124, 127"
+- Minimizes token count while preserving ordering
+
+**Sources**: [Time-LLM arXiv 2310.01728](https://arxiv.org/abs/2310.01728), [AXIS arXiv 2509.24378](https://arxiv.org/html/2509.24378v1)
+
+---
+
+### 6. Diagnostic Advice Labels
+
+**Challenge**: ESA-AD and NASA datasets have anomaly labels but NO diagnostic advice text.
+
+**Recommended approach**:
+1. Use Telemanom to detect anomalies and identify which sensor/channel triggered
+2. Create synthetic advice labels by:
+   - Mapping channel IDs to subsystem names (thermal, power, attitude, etc.)
+   - Generating templated advice: "Anomaly detected in {subsystem}. Effect: {effect}. Action: {action}"
+   - Using LLM (Claude/GPT-4) to expand templates into natural language
+
+**Alternative**: Use LLMAD's AnoCoT (Anomaly Detection Chain-of-Thought) prompting to generate explanations from a frozen LLM, then use those as training labels for the fine-tuned model.
+
+**Sources**: [LLMAD KDD 2025 arXiv 2405.15370](https://arxiv.org/abs/2405.15370)
+
+---
+
+### 7. Unsloth Hyperparameters (Validated)
+
+**Recommended configuration**:
+```python
+# LoRA config
+r = 16                    # Bump to 32 if loss plateaus
+lora_alpha = 16           # Equal to rank (Unsloth default)
+target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                  "gate_proj", "up_proj", "down_proj"]
+lora_dropout = 0          # Optimized for Unsloth kernels
+
+# Training
+learning_rate = 2e-4
+num_train_epochs = 3
+per_device_train_batch_size = 2
+gradient_accumulation_steps = 8  # Effective batch = 16
+warmup_ratio = 0.05
+optim = "adamw_8bit"
+use_gradient_checkpointing = "unsloth"  # Saves 30% VRAM
+```
+
+**GGUF export for M3 Max**: Use `q4_k_m` (4.1 GB) or Unsloth Dynamic 2.0 Q4 for best quality-to-speed tradeoff.
+
+**Cloud GPU**: RTX 4090 (24GB) is sufficient and cost-effective for 7B QLoRA.
+
+**Critical gotcha**: Qwen2.5 base model's chat tokens are untrained — always use instruct variant.
+
+**Sources**: [Unsloth LoRA Guide](https://unsloth.ai/docs/get-started/fine-tuning-llms-guide/lora-hyperparameters-guide), [Unsloth GGUF Docs](https://unsloth.ai/docs/basics/inference-and-deployment/saving-to-gguf)
+
+---
+
+### 8. Evaluation Metrics
+
+**Critical warning**: ESA-ADB uses F0.5, not F1.
+
+**Reasoning**: In operations, false alarms are very expensive (operator fatigue). F0.5 weights precision twice as heavily as recall.
+
+**Do NOT use Point Adjustment (PA)**: A 2022 AAAI paper proved even random scorers achieve "SOTA" under PA. Use:
+- **Affinity-F1** (temporally-aware) for LLM comparison
+- **CEF0.5** (corrected event-wise F0.5) for ESA benchmark alignment
+- **VUS-PR** (volume under surface, precision-recall) from TSB-AD
+
+**Sources**: [AAAI 2022 PA critique arXiv 2109.05257](https://arxiv.org/abs/2109.05257), [ESA-ADB arXiv 2406.17826](https://arxiv.org/abs/2406.17826)
+
+---
+
+## Adjusted Architecture (Post-Research)
+
+```
+Raw Telemetry (ESA-AD HDF5/CSV)
+        │
+        ▼
+┌───────────────────────┐
+│ patch_telemetry.py    │  Phase 1: ETL
+│ - RevIN normalize     │
+│ - 16-64 step patches  │
+│ - JSONL format        │
+└───────────────────────┘
+        │
+        ▼
+   Processed Dataset
+        │
+   ┌────┴────────────────┐
+   │                     │
+   ▼                     ▼
+┌──────────────┐   ┌──────────────────┐
+│ Telemanom    │   │ Qwen2.5-7B       │  Phase 2 & 3
+│ LSTM-DT      │   │ QLoRA Fine-tune  │
+│ (detection)  │   │ (advice gen)     │
+└──────────────┘   └──────────────────┘
+   │                     │
+   ▼                     ▼
+Channel-level        Diagnostic
+Anomaly Flags        Advice Model
+   │                     │
+   └────────┬────────────┘
+            │
+            ▼
+┌───────────────────────────┐
+│ Integrated Pipeline       │  Phase 4: Inference
+│ - LSTM detects anomaly    │
+│ - LLM explains + advises  │
+│ - CEF0.5 / Affinity-F1    │
+└───────────────────────────┘
+```
+
+---
+
+## Key Research Sources
+
+### LLM Time-Series Anomaly Detection
+- [AnomLLM (ICLR 2025)](https://arxiv.org/abs/2410.05440) - Benchmarking study showing LLM limitations
+- [AnomSeer (ICLR 2026)](https://arxiv.org/abs/2602.08868) - Fine-tuned multimodal LLM achieving 84.4% on synthetic
+- [LLM-TSAD (NeurIPS 2025)](https://openreview.net/forum?id=6rpy7X1Of8) - 66.6% F1 improvement via prompting
+- [Time-LLM (ICLR 2024)](https://arxiv.org/abs/2310.01728) - Patching/reprogramming approach (forecasting, not detection)
+
+### Datasets
+- [ESA-ADB (2024)](https://arxiv.org/abs/2406.17826) - Primary recommendation
+- [OPS-SAT (Nature 2025)](https://www.nature.com/articles/s41597-025-05035-3) - Small alternative
+- [TSB-AD (NeurIPS 2024)](https://thedatumorg.github.io/TSB-AD/) - 1070 datasets, 40 algorithms
+
+### Traditional ML
+- [Telemanom (KDD 2018)](https://ar5iv.labs.arxiv.org/html/1802.04431) - LSTM baseline
+- [M2AD (2025)](https://arxiv.org/abs/2504.15225) - Best root-cause attribution
+- [STGLR (Sensors 2025)](https://pmc.ncbi.nlm.nih.gov/articles/PMC11769452/) - SOTA F1 with graph learning
+
+### Unsloth
+- [Fine-tuning Guide](https://unsloth.ai/docs/get-started/fine-tuning-llms-guide)
+- [GGUF Export](https://unsloth.ai/docs/basics/inference-and-deployment/saving-to-gguf)
+- [Dynamic 2.0 Quantization](https://unsloth.ai/docs/basics/unsloth-dynamic-2.0-ggufs)
