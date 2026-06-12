@@ -1,7 +1,8 @@
 """Download ESA-AD dataset from Zenodo."""
-import os
-import requests
+
 from pathlib import Path
+
+import requests
 from tqdm import tqdm
 
 ZENODO_RECORD = "12528696"
@@ -25,12 +26,15 @@ def download_file(url: str, dest: Path, size: int) -> None:
     response = requests.get(url, stream=True)
     response.raise_for_status()
 
-    with open(dest, "wb") as f, tqdm(
-        total=size,
-        unit="B",
-        unit_scale=True,
-        desc=dest.name,
-    ) as pbar:
+    with (
+        open(dest, "wb") as f,
+        tqdm(
+            total=size,
+            unit="B",
+            unit_scale=True,
+            desc=dest.name,
+        ) as pbar,
+    ):
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
             pbar.update(len(chunk))

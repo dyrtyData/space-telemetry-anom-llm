@@ -1,7 +1,9 @@
 """Transform raw ESA-AD telemetry into training patches."""
+
 import json
 import pickle
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -142,12 +144,10 @@ def main():
             print(f"  Skipping {mission_name} - missing files")
             continue
 
-        for channel in tqdm(telemetry.columns, desc=f"  Channels"):
+        for channel in tqdm(telemetry.columns, desc="  Channels"):
             channel_data = telemetry[channel].values.reshape(-1, 1)
             channel_labels = (
-                labels[channel].values
-                if channel in labels.columns
-                else np.zeros(len(channel_data))
+                labels[channel].values if channel in labels.columns else np.zeros(len(channel_data))
             )
 
             normalized = normalizer.fit_transform(channel_data)
