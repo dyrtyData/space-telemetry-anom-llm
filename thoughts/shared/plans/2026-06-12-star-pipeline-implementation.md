@@ -44,6 +44,35 @@ Five sequential phases, each with clear success criteria. Phases 1-2 run locally
 
 Advice labels will be generated **in-session** (Claude Code Max) rather than via API calls to save costs.
 
+### Implementation Tracking Requirements
+
+**Implementation Log**: Maintain `thoughts/shared/implement/2026-06-12-star-pipeline-log.md` throughout implementation:
+- Log each step completed with timestamp
+- Document any deviations from plan with rationale
+- Record blockers, workarounds, and decisions made
+- Note actual vs. expected outcomes for each phase
+- Track cloud costs and resource usage
+
+**Git Commit Cadence**:
+- Commit after each numbered step (e.g., 1.1, 1.2, 1.3)
+- Commit message format: `[Phase X.Y] Brief description`
+- Never batch multiple steps into one commit
+- If a step requires deviation, commit the deviation separately with `[DEVIATION]` prefix
+- Tag phase completions: `git tag phase-1-complete`
+
+**Log Template**:
+```markdown
+## Phase X: [Name]
+
+### Step X.Y: [Description]
+- **Started**: YYYY-MM-DD HH:MM
+- **Completed**: YYYY-MM-DD HH:MM
+- **Status**: completed | deviated | blocked
+- **Deviation**: (if any) What changed and why
+- **Commit**: [short SHA]
+- **Notes**: Any observations or learnings
+```
+
 ---
 
 ## Phase 1: Project Setup & ETL
@@ -1766,10 +1795,48 @@ eval-all:
 
 Not applicable - greenfield implementation.
 
+## Pre-Implementation Setup
+
+Before starting Phase 1, create the implementation log:
+
+```bash
+mkdir -p thoughts/shared/implement
+cat > thoughts/shared/implement/2026-06-12-star-pipeline-log.md << 'EOF'
+# STAR-Pipeline Implementation Log
+
+**Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-implementation.md`
+**Started**: 2026-06-12
+**Status**: In Progress
+
+---
+
+## Summary
+
+| Phase | Status | Started | Completed | Deviations |
+|-------|--------|---------|-----------|------------|
+| 1 | pending | - | - | - |
+| 1.5 | pending | - | - | - |
+| 2 | pending | - | - | - |
+| 3 | pending | - | - | - |
+| 4 | pending | - | - | - |
+| 5 | pending | - | - | - |
+
+---
+
+## Detailed Log
+
+(Entries added during implementation)
+
+EOF
+git add thoughts/shared/implement/2026-06-12-star-pipeline-log.md
+git commit -m "[Setup] Initialize implementation log"
+```
+
 ## References
 
 - Original issue: `thoughts/shared/issues/space_telemetry_anom_llm_ISSUE.md`
 - Research document: `thoughts/shared/research/2026-06-12-star-pipeline-codebase-research.md`
+- Implementation log: `thoughts/shared/implement/2026-06-12-star-pipeline-log.md`
 - ESA-AD dataset: https://zenodo.org/records/12528696
 - Unsloth documentation: https://unsloth.ai/docs
 - Telemanom paper: https://arxiv.org/abs/1802.04431
