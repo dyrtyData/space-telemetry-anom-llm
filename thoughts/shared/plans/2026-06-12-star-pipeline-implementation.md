@@ -601,6 +601,17 @@ data/
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause for in-session advice label generation (Step 1.6) before proceeding to Phase 2.
 
+> **⚠️ Implementation status (updated 2026-06-12):** Phase 1 **code** is complete and committed
+> (`make setup`/`make lint` pass). The Phase 1 **data pipeline is NOT complete** — download,
+> ETL, splits, and plots have never run. Two deviations were found during the resumed session;
+> see `thoughts/shared/implement/2026-06-12-star-pipeline-log.md` (CORRECTION section):
+> - **D1**: a corrupt partial `ESA-Mission1.zip` was deleted. ESA-AD = 3 zips, 11.6 GB total.
+> - **D2 (blocker)**: `load_mission_data` (below, §1.3) assumes per-mission `telemetry.pkl`/
+>   `labels.pkl` directories, but ESA-AD actually ships **zipped CSV channel data**. The ETL
+>   loader must be rewritten (unzip + CSV) before `make etl` can pass. **The same fix applies
+>   to Phase 2's `train_lstm.py` and `isolation_forest.py`**, which share the assumption —
+>   extract a shared loader into `src/etl/io.py` once the real structure is confirmed.
+
 ---
 
 ## Phase 1.5: In-Session Advice Label Generation
