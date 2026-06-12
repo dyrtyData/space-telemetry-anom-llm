@@ -530,11 +530,9 @@ data/
 - [ ] ETL runs without errors: `make etl`
 - [ ] JSONL files created: `ls data/splits/*.jsonl`
 - [ ] Linting passes: `make lint`
-
-#### Manual Verification:
-- [ ] Inspect sample JSONL records for correctness
-- [ ] Verify anomaly ratio matches ESA-AD documentation (~148 anomalies)
-- [ ] Sample PNG plots look reasonable (clear telemetry visualization)
+- [ ] Sample JSONL validation: `make validate-etl` (schema check, field presence)
+- [ ] Anomaly count in expected range: assert 100 < anomalies < 200
+- [ ] PNG plots generated: `test -d data/processed/plots/train`
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause for in-session advice label generation (Step 1.6) before proceeding to Phase 2.
 
@@ -572,11 +570,9 @@ grep '"is_anomaly": true' data/splits/*.jsonl | wc -l
 
 #### Automated Verification:
 - [ ] Advice file exists: `test -f data/labels/anomaly_advice.json`
-- [ ] All anomalies have advice: `python -c "import json; d=json.load(open('data/labels/anomaly_advice.json')); print(len(d))"`
-
-#### Manual Verification:
-- [ ] Advice content is sensible and domain-appropriate
-- [ ] No duplicate or missing entries
+- [ ] All anomalies have advice: `make validate-advice` (count matches anomaly count)
+- [ ] No duplicates: assert unique anomaly_ids
+- [ ] Required fields present: assert all have `advice`, `severity`, `recommended_action`
 
 ---
 
@@ -873,13 +869,9 @@ if __name__ == "__main__":
 - [ ] LSTM training completes: `make baseline`
 - [ ] Results file created: `test -f results/lstm/baseline_results.json`
 - [ ] Models saved: `ls models/lstm/`
-
-#### Manual Verification:
-- [ ] F1 score is reasonable (~0.5-0.8 range expected)
-- [ ] No NaN values in metrics
-- [ ] Training logs show convergence
-
-**Implementation Note**: After completing this phase, pause for manual confirmation before proceeding to Phase 3 (cloud setup).
+- [ ] F1 in valid range: `make validate-baseline` (assert 0.3 < avg_f1 < 0.95)
+- [ ] No NaN/Inf in metrics: assert all values are finite
+- [ ] Loss decreased: assert final_loss < initial_loss
 
 ---
 
@@ -1323,15 +1315,12 @@ if __name__ == "__main__":
 #### Automated Verification:
 - [ ] Vast.ai CLI works: `vastai show user`
 - [ ] Instance created: `vastai show instances`
-- [ ] Data uploaded successfully (SSH works)
-- [ ] Training completes without OOM errors
-- [ ] LoRA adapters saved: check `/workspace/star-pipeline/models/lora/`
-
-#### Manual Verification:
-- [ ] Training loss decreases over epochs
-- [ ] Validation loss doesn't diverge (no overfitting)
-- [ ] Cloud costs reasonable (~$5-15 total)
-- [ ] Instance terminated after training
+- [ ] Data uploaded successfully: SSH test command succeeds
+- [ ] Training completes without OOM errors (exit code 0)
+- [ ] LoRA adapters saved: `ssh $INSTANCE ls /workspace/star-pipeline/models/lora/`
+- [ ] Training loss decreased: parse logs, assert final < initial
+- [ ] Validation loss stable: assert val_loss[-1] < val_loss[0] * 1.5
+- [ ] Instance terminated: `vastai show instances` returns empty or destroyed
 
 **Implementation Note**: After training completes, export GGUF before terminating instance. Then proceed to Phase 4.
 
@@ -1521,13 +1510,11 @@ pandas>=2.1.0
 
 #### Automated Verification:
 - [ ] GGUF file downloaded: `test -f models/gguf/star-pipeline-advice.gguf`
-- [ ] Model loads without errors: `python src/inference/test_local_gguf.py`
-- [ ] Inference produces coherent output (not garbage)
-
-#### Manual Verification:
-- [ ] Inference speed is reasonable (<5 sec per response)
-- [ ] Metal GPU acceleration is active (check Activity Monitor)
-- [ ] Responses are contextually appropriate
+- [ ] Model loads without errors: `python src/inference/test_local_gguf.py` (exit code 0)
+- [ ] Inference produces output: assert len(response) > 10 characters
+- [ ] Response contains expected keywords: assert "ANOMALY" or "NOMINAL" in response
+- [ ] Inference speed acceptable: assert avg_time < 10 seconds per sample
+- [ ] Metal GPU active: parse llama.cpp logs for "Metal" or check `n_gpu_layers > 0`
 
 **Implementation Note**: After verifying local inference works, proceed to Phase 5 for full evaluation.
 
@@ -1743,32 +1730,30 @@ eval-all:
 #### Automated Verification:
 - [ ] Evaluation completes: `make eval-all`
 - [ ] Report generated: `test -f results/comparison_report.md`
-- [ ] All approaches have metrics (no errors)
-
-#### Manual Verification:
-- [ ] Metrics are reasonable and interpretable
-- [ ] Report clearly shows three-way comparison
-- [ ] LLM advice quality is coherent (spot check 5-10 samples)
+- [ ] All approaches have metrics: assert no "error" in results JSON
+- [ ] Metrics in valid range: assert 0 <= precision, recall, f1 <= 1
+- [ ] Report has required sections: grep for "Approach Comparison", "Key Findings"
+- [ ] Advice coherence check: assert avg response length > 50 chars for anomalies
 
 ---
 
 ## Testing Strategy
 
 ### Unit Tests:
-- Test RevIN normalization (invertibility)
-- Test windowing function (correct sizes, no gaps)
-- Test ChatML formatting
+- Test RevIN normalization (invertibility): `make test-revin`
+- Test windowing function (correct sizes, no gaps): `make test-windowing`
+- Test ChatML formatting: `make test-chatml`
 
 ### Integration Tests:
-- End-to-end ETL pipeline on sample data
-- LSTM training on small subset
-- Local GGUF inference
+- End-to-end ETL pipeline on sample data: `make test-etl-integration`
+- LSTM training on small subset (5 channels, 10 epochs): `make test-lstm-smoke`
+- Local GGUF inference sanity check: `make test-inference-smoke`
 
-### Manual Testing Steps:
-1. Inspect 10 random JSONL patches for correctness
-2. Run LSTM on single channel, verify convergence
-3. Test GGUF inference with sample prompts
-4. Compare advice quality across approaches
+### Validation Scripts (run via Makefile):
+- `make validate-etl` - Schema validation, anomaly count check
+- `make validate-advice` - Advice label completeness
+- `make validate-baseline` - LSTM metrics sanity
+- `make validate-inference` - Response format and timing
 
 ## Performance Considerations
 
