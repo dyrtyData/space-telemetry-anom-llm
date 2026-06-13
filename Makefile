@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all clean lint format validate-etl validate-format
+.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm install-local validate-inference clean lint format validate-etl validate-format validate-advice advice
 
 PYTHON := python3
 VENV := .venv
@@ -74,15 +74,47 @@ print('validate-format OK') \
 launch-vast:
 	./scripts/cloud/launch_vast.sh
 
+# Phase 4 -- Local GGUF inference on M3 Max.
+# STAR_MODEL_DIR must point to where the GGUF was downloaded (default: DUAL DRIVE).
+STAR_MODEL_DIR ?= /Volumes/DUAL DRIVE/star-pipeline/models
+
+# Install llama-cpp-python with Metal GPU support (M3 Max). Run once after Phase 4 download.
+install-local:
+	CMAKE_ARGS="-DLLAMA_METAL=on" $(PIP) install llama-cpp-python --upgrade --force-reinstall --no-cache-dir
+
+# Run inference smoke test (default 100 samples). Use LIMIT=0 for full 4,500 (Phase 5).
+LIMIT ?= 100
+eval-llm:
+	STAR_MODEL_DIR="$(STAR_MODEL_DIR)" $(PY) src/inference/test_local_gguf.py --limit $(LIMIT)
+
+validate-inference:
+	$(PY) -c "\
+import json, math, os; \
+p = 'results/inference_test.json'; \
+assert os.path.exists(p), f'Missing {p} -- run make eval-llm first'; \
+d = json.load(open(p)); \
+s = d['summary']; \
+rs = d['results']; \
+print('Summary:', s); \
+assert s['n_samples'] > 0, 'No samples'; \
+assert all(math.isfinite(s[k]) for k in ('precision','recall','f1','accuracy')), 'Non-finite metric'; \
+assert 0 <= s['f1'] <= 1, 'F1 out of range'; \
+assert s['avg_time_s'] < 30, f'Avg time {s[\"avg_time_s\"]:.1f}s too slow (expect <30s on M3 Max)'; \
+assert s['unknown_responses'] < s['n_samples'] * 0.2, 'Too many unparseable responses'; \
+long_enough = sum(1 for r in rs if len(r['actual_response']) > 10); \
+assert long_enough == s['n_samples'], f'Short responses found ({s[\"n_samples\"] - long_enough})'; \
+kw_ok = sum(1 for r in rs if 'ANOMALY' in r['actual_response'].upper() or 'NOMINAL' in r['actual_response'].upper()); \
+print(f'Responses with ANOMALY/NOMINAL keyword: {kw_ok}/{s[\"n_samples\"]}'); \
+assert kw_ok > s['n_samples'] * 0.8, 'Model not producing expected keywords'; \
+print('validate-inference OK') \
+"
+
 # Evaluation
 eval-all:
 	$(PY) src/inference/evaluate.py --all
 
 eval-lstm:
 	$(PY) src/baselines/train_lstm.py
-
-eval-llm:
-	$(PY) src/inference/test_local_gguf.py
 
 # Utilities
 lint:
