@@ -1697,17 +1697,20 @@ pandas>=2.1.0
 - [x] §4.1 GGUF export ran on instance: `qwen3-8b.Q4_K_M.gguf` (4.7GB q4_k_m) produced by Unsloth
 - [x] §4.4 llama-cpp-python 0.3.29 installed with Metal: `llama_supports_gpu_offload()=True` on M3 Max
 - [x] §4.3 `test_local_gguf.py` written: loads from STAR_MODEL_DIR, uses test_with_advice.jsonl
-- [ ] GGUF downloaded to local SSD: `ls /Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf` — **IN PROGRESS** (D17: FAT32 limit; D18: slow Hungary SSH; testing native scp)
-- [ ] Instance terminated: `vastai destroy instance 40838191` — pending GGUF download
-- [ ] Model loads without errors: `make eval-llm` (exit code 0) — pending download
-- [ ] Inference produces output: assert len(response) > 10 characters — pending
-- [ ] Response contains expected keywords: `make validate-inference` — pending
-- [ ] Inference speed acceptable: assert avg_time_s < 30s per sample (M3 Max Metal) — pending
-- [ ] Metal GPU active: `llama_supports_gpu_offload()=True` ✅ (already confirmed)
+- [x] GGUF downloaded to local SSD: 5,027,784,160 bytes at `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
+  (D19: US relay spun up but obsoleted by D20; D20: uploaded to HF Hub `dyrtyData/star-pipeline-qwen3-8b-advice-gguf` at 102 MB/s from Hungary, downloaded via CDN in <60s)
+- [x] Instance terminated: Hungary 40838191 + relay 40866462 both destroyed (GGUF on local + HF)
+- [x] Model loads without errors: `make eval-llm` ✅ exit code 0; n_gpu_layers=2147483647 (all layers Metal)
+- [x] Inference produces output: all 100 responses > 10 chars ✅
+- [x] Response contains expected keywords: 100/100 contain ANOMALY or NOMINAL ✅
+- [x] Inference speed acceptable: avg 1.962s/sample (well under 30s) ✅
+- [x] Metal GPU active: `llama_supports_gpu_offload()=True` ✅
 
-> **⏳ STATUS (2026-06-13/14):** Phase 4 code + Metal install COMPLETE. GGUF download in progress
-> to local SSD (D17: FAT32 too small; D18: Hungary→US SSH slow ~300KB/s; testing native scp).
-> Inference + validate pending download completion + instance teardown.
+> **✅ STATUS (2026-06-13 ~19:55 local): Phase 4 COMPLETE.**
+> GGUF verified (5,027,784,160 bytes). Both instances destroyed. `make eval-llm` and
+> `make validate-inference` pass. Results: Accuracy=0.69, Precision=0.432, Recall=0.615,
+> F1=0.508 (100-sample smoke test). Avg 1.962s/sample on M3 Max Metal GPU.
+> → Proceed to Phase 5: `make eval-all` for full 4,500-sample comparison report.
 
 **Implementation Note**: After verifying local inference works, proceed to Phase 5 for full evaluation.
 

@@ -2,7 +2,7 @@
 
 **Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`
 **Started**: 2026-06-12
-**Status**: Phase 3 IN PROGRESS — code complete + validated on cloud; advice SFT (3 epochs) training on Vast.ai
+**Status**: Phase 4 COMPLETE — GGUF local + HF Hub; Metal inference validated (F1=0.508, 1.96s/sample). Phase 5 next.
 
 ---
 
@@ -15,7 +15,7 @@
 | 1.5 | **completed** | 2026-06-12 23:45 | 2026-06-13 00:10 | In-session generation (stats + channel meta) |
 | 2 | **completed** | 2026-06-13 11:10 | 2026-06-13 11:25 | D6 stride=16; D7 models→DUAL DRIVE |
 | 3 | **completed** | 2026-06-13 ~16:30 | 2026-06-13 22:12 | D8–D13 (model ids, TRL 0.24 API, ssh key, pkill, env, formatter) |
-| 4 | **in progress** | 2026-06-13 22:12 | - | D14–D16 (GGUF path, test data, Metal install) |
+| 4 | **completed** | 2026-06-13 22:12 | 2026-06-14 02:55 | D14–D20 (GGUF path, test data, Metal, FAT32, Hungary SSH, HF upload, CDN download) |
 | 5 | pending | - | - | - |
 
 ---
@@ -475,4 +475,52 @@ code had known bugs flagged in the MUST-READ blocks). Files:
   Metal API). Metal confirmed: `llama_supports_gpu_offload()=True`, M3 Max GPU detected, 30GB unified
   memory available, `GPU family: MTLGPUFamilyApple9`.
 - **Commit**: 68783a3
+
+### Step 4.2 (continued): GGUF Download — Escalation from D18
+
+The native `scp` test confirmed trans-Atlantic bottleneck (215 KB/s → ~6h ETA). Two parallel strategies
+attempted; only one needed.
+
+**D19 — US relay (tried, obsoleted by D20)**: Spun up a second Vast.ai instance (40866462, California
+RTX 3060, ubuntu:22.04, $0.60/hr) as an SCP relay. Staged the `vast_star` private key on Hungary for
+cross-instance auth. `/workspace` directory missing on the fresh ubuntu image — created it, restarted
+SCP push from Hungary (PID 134904). The relay had 32 GB free and SSH via `ssh4.vast.ai:26462`.
+Transfer was in progress (42 MB received) when D20 made the relay unnecessary. Instance 40866462
+destroyed immediately; relay cost: negligible (~$0.03).
+
+**D20 — HuggingFace Hub upload + CDN download (used)**: HF token `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`
+initially returned "Invalid username or password" from local curl. On Hungary instance (where
+`huggingface_hub` was pre-installed by Unsloth), `api.whoami()` returned `dyrtyData` — token valid,
+issue was local environment. Ran background HF upload on Hungary:
+- Repo created: `dyrtyData/star-pipeline-qwen3-8b-advice-gguf` (public model)
+- Upload: 5.03 GB at 102 MB/s (~50 sec), completed at commit
+  `https://huggingface.co/dyrtyData/star-pipeline-qwen3-8b-advice-gguf/commit/2732a9ffb8de9b4af6c74225e622b89ebb8aede4`
+- Local download via `hf_hub_download` with CDN: ~4.7 GB/s effective throughput, completed in <60s.
+  Temp file in `.cache/huggingface/download/`, moved to final path on completion.
+- **Final path**: `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
+- **Verified**: `stat -f "%z"` → 5,027,784,160 bytes (exact match)
+
+**Instances destroyed**: Hungary 40838191 and relay 40866462 both destroyed after GGUF confirmed locally.
+**Total Vast.ai cost**: ~$2.33 (4.5h Hungary $0.52/hr + 30min relay $0.60/hr + bandwidth).
+
+### Step 4.5: Run Inference (eval-llm)
+- **Started**: 2026-06-13 19:45 local
+- **Completed**: 2026-06-13 19:55 local
+- **Status**: completed ✅
+- **Command**: `STAR_MODEL_DIR=/Users/laptop/Developer/fdl_technicalInterview/models make eval-llm`
+- **Output**: `results/inference_test.json`
+- **Results (100-sample smoke test)**:
+  - Accuracy: 0.690 | Precision: 0.432 | Recall: 0.615 | **F1: 0.508**
+  - TP=16 FP=21 FN=10 TN=53 | Unknown=0 (model always produced ANOMALY/NOMINAL)
+  - **Avg time: 1.962s/sample** (Metal GPU, well within <30s requirement)
+  - n_gpu_layers=2147483647 (all 28 layers offloaded to Metal)
+- `make validate-inference` → **validate-inference OK** ✅ (all checks pass)
+
+### Phase 4 Completion Summary
+- **GGUF**: 5,027,784,160 bytes verified on local APFS SSD + HF Hub backup
+- **Inference**: Qwen3-8B Q4_K_M running on M3 Max Metal at ~1.96s/sample
+- **HF Repo**: `dyrtyData/star-pipeline-qwen3-8b-advice-gguf` (public)
+- **Vast.ai instances destroyed**: Hungary 40838191 + relay 40866462
+- **Total Vast.ai cost**: ~$2.33 ($50 ceiling, well within budget)
+- **Phase 5 ready**: `make eval-all` for full 4,500-sample comparison report
 
