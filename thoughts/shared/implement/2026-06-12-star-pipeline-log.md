@@ -12,7 +12,7 @@
 |-------|--------|---------|-----------|------------|
 | 1 (code) | completed | 2026-06-12 14:35 | 2026-06-12 14:55 | pyproject.toml needed hatch build config |
 | 1 (data pipeline) | **completed (all 3 missions)** | 2026-06-12 14:48 | 2026-06-12 23:45 | D2–D5; full dataset on DUAL DRIVE |
-| 1.5 | pending | - | - | - |
+| 1.5 | **completed** | 2026-06-12 23:45 | 2026-06-13 00:10 | In-session generation (stats + channel meta) |
 | 2 | pending | - | - | - |
 | 3 | pending | - | - | - |
 | 4 | pending | - | - | - |
@@ -202,10 +202,19 @@ Re-audited true Phase 1 state against the plan's success criteria:
 
 ## Notes for Future Phases
 
-### Phase 1.5 (Advice Label Generation)
-- ETL complete with real full-dataset data — ready to generate advice labels in-session
-- Will generate advice in-session to avoid API costs
-- Input: `data/splits/train.jsonl` (anomalous windows with channel/mission/time metadata)
+### Phase 1.5 (Advice Label Generation) — COMPLETE
+- **Script**: `src/etl/generate_advice_labels.py`
+- **Output**: `data/labels/anomaly_advice.json` (7,457 records, no API cost)
+- **Methodology**: window statistics (pattern type: spike/drift/oscillation/sustained_offset/
+  subtle_deviation) + channel metadata (subsystem → human name, physical unit → measurement type)
+  → structured advice + severity (low/medium/high) + recommended_action
+- **Enriched splits**: `data/splits/*_with_advice.jsonl` (advice merged into `response` field)
+- **Severity distribution**: low 3,138 · medium 972 · high 3,347
+- **Pattern distribution**: subtle_deviation 4,132 · persistent_anomaly 2,250 ·
+  sustained_offset 576 · spike 257 · drift 224 · sustained_oscillation 15 · oscillation 3
+- **Validation** (`make validate-advice` ✅): 7,457 unique IDs · all required fields present ·
+  severities ⊆ {low, medium, high}
+- **Commit**: 0868cc2 · pushed to remote
 
 ### Phase 2 (LSTM Baseline)
 - `train_lstm.py` / `isolation_forest.py` make the **same `telemetry.pkl`/`labels.pkl`
