@@ -14,8 +14,8 @@
 | 1 (data pipeline) | **completed (all 3 missions)** | 2026-06-12 14:48 | 2026-06-12 23:45 | D2–D5; full dataset on DUAL DRIVE |
 | 1.5 | **completed** | 2026-06-12 23:45 | 2026-06-13 00:10 | In-session generation (stats + channel meta) |
 | 2 | **completed** | 2026-06-13 11:10 | 2026-06-13 11:25 | D6 stride=16; D7 models→DUAL DRIVE |
-| 3 | **in progress** | 2026-06-13 ~16:30 | - | D8–D13 (model ids, TRL 0.24 API, ssh key, pkill, env, formatter) |
-| 4 | pending | - | - | - |
+| 3 | **completed** | 2026-06-13 ~16:30 | 2026-06-13 22:12 | D8–D13 (model ids, TRL 0.24 API, ssh key, pkill, env, formatter) |
+| 4 | **in progress** | 2026-06-13 22:12 | - | D14–D16 (GGUF path, test data, Metal install) |
 | 5 | pending | - | - | - |
 
 ---
@@ -396,11 +396,68 @@ code had known bugs flagged in the MUST-READ blocks). Files:
 - **Scope**: this run is **advice (text) model only**. The VL `train_detection.py` is written but not
   run; plots were not uploaded. VL can be a follow-up if desired for the 3-way comparison.
 
+### Phase 3 completion summary (2026-06-13 22:12 UTC)
+- **Training**: 3 epochs / 3,939 steps, ~4.5h total, loss 2.85→0.24, eval_loss 0.256 (stable)
+- **Export**: `export_gguf.py` ran on instance → `models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf` (4.7GB)
+  + Modelfile. Note: Unsloth added a `_gguf` suffix to the dir name and named the GGUF after the base model
+  (`qwen3-8b.Q4_K_M.gguf`), not the project name. This deviates from `export_gguf.py`'s output_name parameter.
+- **LoRA downloaded**: all final adapter files on DUAL DRIVE at `/Volumes/DUAL DRIVE/star-pipeline/models/lora/qwen3-8b-advice/`
+  (adapter_model.safetensors 167MB, tokenizer.json 11MB, adapter_config.json, tokenizer_config.json, chat_template.jinja, README.md).
+- **Cost**: ~$2.30 (4.5h × $0.49/hr + bandwidth) — well within $50 ceiling.
+- **Commits**: 3e758a8 (Phase 3 code), 68783a3 (Phase 4 code)
+
 ### Plan sections that may need updating based on this phase
-- Phase 4 §4.1 `export_gguf.py` `quantization_method="dynamic"` → use a real llama.cpp quant
-  (`q4_k_m`); already done in the rewritten file.
-- Phase 4 §4.3 / Phase 5: the trained model produces the structured `ANOMALY DETECTED … DIAGNOSIS/
-  ADVICE/ACTION` response from the enriched data — eval should parse that, and the test/eval should
-  use `test_with_advice.jsonl`.
-- Phase 5 LLM eval should run over the full test split (4,500), not 10 samples (already flagged).
+- Phase 4 §4.1 `export_gguf.py` `quantization_method="dynamic"` → used `q4_k_m`; already corrected.
+- Phase 4 §4.3: actual GGUF path is `{STAR_MODEL_DIR}/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
+  (Unsloth's naming, not plan's `star-pipeline-advice.gguf`). Corrected in `test_local_gguf.py`.
+- Phase 4 / Phase 5: test data uses `test_with_advice.jsonl` (has structured DIAGNOSIS/ADVICE/ACTION responses).
+- Phase 5 LLM eval: run full 4,500 samples (use `--limit 0`), not 10.
+
+---
+
+## Phase 4: GGUF Export & Local Inference
+
+### Step 4.1: GGUF Export on Cloud Instance
+- **Started**: 2026-06-13 22:09 UTC (triggered during Phase 3 teardown)
+- **Completed**: 2026-06-13 22:12 UTC
+- **Status**: completed
+- **Deviation**: None conceptually; export ran as part of Phase 3 wrap-up sequence.
+  Unsloth's `save_pretrained_gguf` created `models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
+  (not `star-pipeline-advice.gguf` as the plan expected). The `_gguf` suffix + base-model name
+  is Unsloth's default output format — noted as D14.
+- **Commit**: 3e758a8 (export_gguf.py was committed as part of Phase 3 code)
+- **Notes**: Also produced a `Modelfile` (Ollama format) at no extra effort.
+
+### Step 4.2: Download Models to DUAL DRIVE
+- **Started**: 2026-06-13 (this session)
+- **Status**: in progress
+- **Deviation D15 — rsync unavailable + partial first download**: The instance pytorch image lacks
+  rsync. Used `tar cf - | ssh ... tar xf -` (no gzip for GGUF — already binary compressed, avoids
+  CPU bottleneck). Initial LoRA download via gzip was very slow; switched to no-gzip which was faster.
+  LoRA adapter files downloaded successfully. GGUF (4.7GB) download in progress.
+- **Commit**: pending (after download completes)
+- **Notes**:
+  - LoRA final files (167MB adapter + 11MB tokenizer + small configs) → DUAL DRIVE ✅
+  - GGUF (4.7GB) → in progress
+  - Checkpoints (~10GB of 39 intermediate saves) intentionally skipped — only final adapter matters.
+  - Instance 40838191 will be destroyed immediately after GGUF download completes.
+
+### Step 4.3: Local Inference Script
+- **Started**: 2026-06-13 (this session)
+- **Completed**: 2026-06-13 (code complete, lint passes; execution pending GGUF download)
+- **Status**: code complete, execution pending
+- **Deviation D16 — test data + GGUF path + limit**: Plan §4.3 used `test.jsonl` and `models/gguf/star-pipeline-advice.gguf`.
+  Corrected: uses `test_with_advice.jsonl` (has structured DIAGNOSIS/ADVICE/ACTION in expected response),
+  loads from `STAR_MODEL_DIR/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`. Default limit=100
+  for Phase 4 smoke test; Phase 5 will run full 4,500. Added `validate-inference` Makefile target.
+- **Commit**: 68783a3
+
+### Step 4.4: Local Dependencies
+- **Started**: 2026-06-13 (this session)
+- **Completed**: 2026-06-13
+- **Status**: completed
+- **Deviation**: `llama-cpp-python 0.3.29` installed (plan specified `>=0.2.50`; 0.3.x has improved
+  Metal API). Metal confirmed: `llama_supports_gpu_offload()=True`, M3 Max GPU detected, 30GB unified
+  memory available, `GPU family: MTLGPUFamilyApple9`.
+- **Commit**: 68783a3
 

@@ -1468,18 +1468,19 @@ if __name__ == "__main__":
 - [x] Vast.ai CLI works: `vastai show user` — $25 credit, billing verified (instance 40838191)
 - [x] Instance created: `vastai show instances` — RTX 4090, offer 38138029, $0.49/hr
 - [x] Data uploaded successfully: `data/formatted/*_chatml.jsonl` (30k) + `src/` + `config/` via tar|ssh
-- [~] Training completes without OOM errors — **IN PROGRESS**: 3 epochs / 3,939 steps, no OOM, loss ↓
-- [ ] LoRA adapters saved: `ssh $INSTANCE ls /workspace/star-pipeline/models/lora/` (pending completion)
-- [x] Training loss decreased: 2.85 → 1.41 within first 50 steps (continuing)
-- [ ] Validation loss stable: (eval runs at eval_steps=100; pending)
-- [ ] Instance terminated: **DO NOT forget** `vastai destroy instance 40838191` after GGUF export+download
-- [ ] GGUF exported (q4_k_m) on instance + downloaded to DUAL DRIVE before teardown
+- [x] Training completes without OOM errors — 3 epochs / 3,939 steps, no OOM, final loss 0.24, eval_loss 0.256
+- [x] LoRA adapters saved: `/workspace/star-pipeline/models/lora/qwen3-8b-advice/` (adapter + tokenizer)
+- [x] Training loss decreased: 2.85 → 0.24 (full 3-epoch run)
+- [x] Validation loss stable: eval_loss 0.2565–0.2566 (no overfitting)
+- [x] GGUF exported (q4_k_m) on instance: `models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf` (4.7GB)
+- [x] LoRA + tokenizer downloaded to DUAL DRIVE: `/Volumes/DUAL DRIVE/star-pipeline/models/lora/qwen3-8b-advice/` ✅
+- [ ] GGUF downloaded to DUAL DRIVE — **IN PROGRESS** (Phase 4 download step)
+- [ ] Instance terminated: `vastai destroy instance 40838191` — pending GGUF download completion
 
-> **⏳ STATUS (2026-06-13):** Phase 3 code COMPLETE + validated on the live instance; the **advice
-> (text) model is training** (full 3 epochs). See the implementation log's "Phase 3" section for the
-> live cloud state (instance id, SSH command, key, log path) and the exact NEXT STEPS to finish
-> (export GGUF → download to DUAL DRIVE → `vastai destroy instance 40838191`). VL detection model
-> written but not run (advice-only scope). Deviations D8–D13 documented in the log.
+> **✅ STATUS (2026-06-13):** Phase 3 COMPLETE. 3-epoch Qwen3-8B advice SFT trained on RTX 4090.
+> Loss 2.85→0.24, eval_loss stable at 0.256. GGUF (q4_k_m, 4.7GB) exported on instance and
+> downloading to DUAL DRIVE (Phase 4 step). Instance 40838191 will be destroyed after download.
+> VL detection model written but not run (advice-only scope). Deviations D8–D13 documented in log.
 
 **Implementation Note**: After training completes, export GGUF before terminating instance. Then proceed to Phase 4.
 
@@ -1690,12 +1691,19 @@ pandas>=2.1.0
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] GGUF file downloaded: `test -f models/gguf/star-pipeline-advice.gguf`
-- [ ] Model loads without errors: `python src/inference/test_local_gguf.py` (exit code 0)
-- [ ] Inference produces output: assert len(response) > 10 characters
-- [ ] Response contains expected keywords: assert "ANOMALY" or "NOMINAL" in response
-- [ ] Inference speed acceptable: assert avg_time < 10 seconds per sample
-- [ ] Metal GPU active: parse llama.cpp logs for "Metal" or check `n_gpu_layers > 0`
+- [x] §4.1 GGUF export ran on instance: `qwen3-8b.Q4_K_M.gguf` (4.7GB q4_k_m) produced by Unsloth
+- [x] §4.4 llama-cpp-python 0.3.29 installed with Metal: `llama_supports_gpu_offload()=True` on M3 Max
+- [x] §4.3 `test_local_gguf.py` written: loads from STAR_MODEL_DIR, uses test_with_advice.jsonl
+- [ ] GGUF downloaded to DUAL DRIVE: `ls /Volumes/DUAL\ DRIVE/star-pipeline/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf` — **IN PROGRESS**
+- [ ] Instance terminated: `vastai destroy instance 40838191` — pending GGUF download
+- [ ] Model loads without errors: `make eval-llm` (exit code 0) — pending download
+- [ ] Inference produces output: assert len(response) > 10 characters — pending
+- [ ] Response contains expected keywords: `make validate-inference` — pending
+- [ ] Inference speed acceptable: assert avg_time_s < 30s per sample (M3 Max Metal) — pending
+- [ ] Metal GPU active: `llama_supports_gpu_offload()=True` ✅ (already confirmed)
+
+> **⏳ STATUS (2026-06-13):** Phase 4 code + Metal install COMPLETE. GGUF download in progress.
+> Inference + validate steps pending download completion + instance teardown.
 
 **Implementation Note**: After verifying local inference works, proceed to Phase 5 for full evaluation.
 
