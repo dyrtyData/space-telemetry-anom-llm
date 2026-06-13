@@ -39,12 +39,13 @@ DEFAULT_DATA_DIR = Path(os.environ.get("ESA_DATA_DIR", "data/raw/esa-ad"))
 METADATA_FILES = ["channels.csv", "labels.csv", "anomaly_types.csv", "telecommands.csv"]
 
 
-def kaggle_pull(remote_rel: str, dest_dir: Path) -> Path:
+def kaggle_pull(remote_rel: str, dest_dir: Path, required: bool = True) -> Path | None:
     """Download one dataset file via the kaggle CLI and unzip its wrapper.
 
     Kaggle wraps single-file downloads in `<basename>.zip`; we extract the inner
     file (named like the original, no extension) into ``dest_dir`` and remove the
-    wrapper. Returns the path to the extracted file. Skips work if already present.
+    wrapper. Returns the path to the extracted file, or None if the file does not
+    exist on the dataset and ``required`` is False. Skips work if already present.
     """
     remote = f"ESA-Mission{MISSION}/ESA-Mission{MISSION}/{remote_rel}"
     basename = remote_rel.rsplit("/", 1)[-1]
@@ -53,7 +54,7 @@ def kaggle_pull(remote_rel: str, dest_dir: Path) -> Path:
         return final
 
     dest_dir.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
+    result = subprocess.run(
         [
             KAGGLE,
             "datasets",
@@ -65,9 +66,13 @@ def kaggle_pull(remote_rel: str, dest_dir: Path) -> Path:
             str(dest_dir),
             "--force",
         ],
-        check=True,
         capture_output=True,
     )
+    if result.returncode != 0:
+        if required:
+            raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+        print(f"  (skipping {basename} — not present in this mission)")
+        return None
 
     wrapper = dest_dir / f"{basename}.zip"
     if zipfile.is_zipfile(wrapper):
@@ -101,8 +106,9 @@ def main():
 
     print(f"Mission {MISSION} -> {mission_dir}")
     print("Downloading metadata CSVs...")
+    required_csvs = {"channels.csv", "labels.csv", "anomaly_types.csv"}
     for csv in METADATA_FILES:
-        kaggle_pull(csv, mission_dir)
+        kaggle_pull(csv, mission_dir, required=csv in required_csvs)
 
     channels = pd.read_csv(mission_dir / "channels.csv")["Channel"].tolist()
     print(f"{len(channels)} channels to fetch")

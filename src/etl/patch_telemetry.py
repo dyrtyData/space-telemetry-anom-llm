@@ -63,7 +63,13 @@ class RevINNormalizer:
 
 
 def load_channel_series(channel_file: Path) -> pd.Series:
-    """Load a per-channel pickled DataFrame and return a 1-column float Series."""
+    """Load a per-channel pickled DataFrame and return a 1-column float Series.
+
+    Mission3 channels are categorical (strings like 'value_0', 'value_1') rather
+    than continuous floats. We ordinal-encode them: extract the trailing integer so
+    'value_0'->0.0, 'value_1'->1.0, etc. This preserves the discrete state signal
+    and lets RevIN normalisation proceed normally.
+    """
     with open(channel_file, "rb") as f:
         df = pickle.load(f)
     if isinstance(df, pd.DataFrame):
@@ -71,6 +77,9 @@ def load_channel_series(channel_file: Path) -> pd.Series:
     else:
         series = df  # already a Series
     series.index = pd.to_datetime(series.index)
+    if series.dtype == object:
+        # Ordinal-encode categorical strings of the form 'value_N'
+        series = series.str.extract(r"(\d+)$", expand=False).astype("float32")
     return series.astype("float32")
 
 
@@ -210,7 +219,8 @@ def main():
 
         for channel in tqdm(channels_meta["Channel"].tolist(), desc=f"  {mission} channels"):
             channel_file = mission_dir / "channels" / channel / channel
-            if not channel_file.exists():
+            # macOS writes '._<name>' resource-fork entries on FAT32 volumes; skip them
+            if not channel_file.exists() or channel_file.name.startswith("."):
                 continue
             series = load_channel_series(channel_file)
             if args.resample.lower() != "none":
