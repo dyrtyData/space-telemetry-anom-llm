@@ -157,8 +157,13 @@ Re-audited true Phase 1 state against the plan's success criteria:
 - **Storage**: external thumb drive `DUAL DRIVE` (FAT32, 765 GB free) — raw data lives off the
   near-full internal disk. FAT32 4 GB-file limit is a non-issue for the Kaggle mirror (largest
   per-file < 200 MB). `ESA_DATA_DIR` / `--data-dir` point the pipeline at the drive.
-- **Raw-data lifecycle**: raw is needed through Phase 2 (LSTM reads it too), so it stays until
-  Phase 2; only then is it deletable. For "just Phase 1" we keep Mission1 raw on the drive.
+- **Raw-data lifecycle (updated 2026-06-13)**: **KEEP raw on `DUAL DRIVE` until the entire
+  project (Phases 1–5) is complete.** ~29 GB on a drive with 765 GB free is free insurance:
+  if any later phase needs a re-ETL (different resample cadence, a bug, new normalization,
+  re-windowing), we avoid a multi-hour throttled re-download. Deleting early only reclaims space
+  we aren't short on. Raw is off the internal disk anyway, so it never pressures local storage.
+  Teardown (rotate Kaggle key + delete raw) is a single end-of-project step — see the
+  "Project Teardown / Cleanup" checklist in the plan.
 
 ### PHASE 1 DATA PIPELINE — COMPLETE (Mission1)
 - **Download**: Mission1 fully fetched to `DUAL DRIVE` (76/76 channels, 8.3 GB unzipped pickles).

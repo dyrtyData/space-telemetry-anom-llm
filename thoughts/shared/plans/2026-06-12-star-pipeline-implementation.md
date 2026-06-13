@@ -1922,6 +1922,36 @@ git add thoughts/shared/implement/2026-06-12-star-pipeline-log.md
 git commit -m "[Setup] Initialize implementation log"
 ```
 
+## Project Teardown / Cleanup (run ONLY after Phases 1–5 are all complete & validated)
+
+Do **not** delete raw data or rotate the Kaggle key mid-project. Raw ESA-AD (~29 GB on
+`DUAL DRIVE`) is kept as re-ETL insurance through the entire project; the Kaggle key is needed
+for any re-download. Both are torn down together as the final step.
+
+**Preconditions (all must be true before teardown):**
+- [ ] Phase 5 evaluation complete and results committed.
+- [ ] Final models exported (GGUF) and stored on `DUAL DRIVE` and/or pushed to their cloud home.
+- [ ] No open question that could require re-running the ETL from raw.
+
+**Teardown steps:**
+1. [ ] **Rotate the Kaggle API token** — it was pasted in plaintext in-session on 2026-06-12
+   (`KGAT_25dc6d88f7c823b7c8a6a64b90cb45fd`). Go to kaggle.com → Settings → API → Expire Token,
+   then create a new one. Update `~/.kaggle/access_token` only if future downloads are expected;
+   otherwise just expire it.
+2. [ ] **Delete raw data** from the drive:
+   `rm -rf "/Volumes/DUAL DRIVE/esa-ad/ESA-Mission1" "ESA-Mission2" "ESA-Mission3"`
+   (or the whole `/Volumes/DUAL DRIVE/esa-ad/` if nothing else lives there).
+3. [ ] **Keep** on `DUAL DRIVE` / cloud: final GGUF models, LSTM checkpoints, and the small JSON
+   metrics + JSONL splits tracked in the repo. The splits (`data/splits/*.jsonl`) are the
+   reproducible product; raw is only needed to regenerate them.
+4. [ ] Note teardown completion (date + what was deleted) in the implementation log.
+
+> **Storage rule (reminder):** the internal disk is nearly full. Throughout the project, all
+> large artifacts (raw data, models, checkpoints) live on `DUAL DRIVE` or in the cloud — never on
+> the local drive. The git repo tracks only code + small JSON metrics.
+
+---
+
 ## References
 
 - Original issue: `thoughts/shared/issues/space_telemetry_anom_llm_ISSUE.md`
