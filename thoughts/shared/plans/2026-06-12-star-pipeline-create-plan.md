@@ -1488,24 +1488,27 @@ if __name__ == "__main__":
 
 ## Phase 4: GGUF Export & Local Inference
 
-> **⚠️ MUST-READ before implementing (added 2026-06-13 — STORAGE: local disk is nearly full):**
+> **⚠️ MUST-READ before implementing (updated 2026-06-13/14 — STORAGE):**
 >
-> 1. **§4.2 and §4.3 write models to the LOCAL disk — DON'T.** `download_models.sh` does
->    `mkdir -p models/gguf` / `./models/gguf/`, and `test_local_gguf.py` hard-codes
->    `GGUF_PATH = models/gguf/star-pipeline-advice.gguf`. An 8B GGUF is multi-GB; the internal
->    drive can't take it. **Download to and load from DUAL DRIVE** via a configurable root, e.g.
->    `STAR_MODEL_DIR="${STAR_MODEL_DIR:-/Volumes/DUAL DRIVE/star-pipeline/models}"` in the shell
->    script and `MODEL_DIR = Path(os.environ.get("STAR_MODEL_DIR", "/Volumes/DUAL DRIVE/star-pipeline/models"))`
->    in Python. Only the small `results/*.json` stay in the repo. `.gitignore` already excludes
->    `models/`, so even if a path slips it won't be committed — but the concern here is disk space,
->    not git.
-> 2. **`llama-cpp-python` must be built with Metal** for M3 Max GPU offload (`n_gpu_layers=-1`).
+> 1. **§4.2 GGUF cannot go on DUAL DRIVE (FAT32 4 GB file limit).** The GGUF is 5,027,784,160
+>    bytes (~4.68 GiB). FAT32 has a hard 4 GB-per-file limit — the download will corrupt or fail
+>    at the 4 GB mark. **Download the GGUF to the local APFS SSD instead:**
+>    `STAR_MODEL_DIR = /Users/laptop/Developer/fdl_technicalInterview/models`
+>    (63 GB free as of 2026-06-13). The Makefile default has been updated accordingly (D17).
+>    The LoRA adapter (167 MB each file) is fine on DUAL DRIVE; only the GGUF needs APFS.
+> 2. **Vast.ai instance location affects download speed.** The Phase 3 instance was in Hungary
+>    ($0.49/hr, cheapest RTX 4090 by price sort). For training this was fine; for downloading a
+>    5 GB artifact over SSH the trans-Atlantic path bottlenecked at ~300–400 KB/s (~3.5 h).
+>    For any future re-run: add `--region US` or filter by `geolocation=US` in the offer search
+>    to prefer US instances. A US RTX 4090 costs ~$0.55–0.70/hr; the extra $0.10–0.20/hr is
+>    trivially worthwhile vs. a multi-hour download. See D18.
+> 3. **`llama-cpp-python` must be built with Metal** for M3 Max GPU offload (`n_gpu_layers=-1`).
 >    Install with `CMAKE_ARGS="-DLLAMA_METAL=on" pip install llama-cpp-python` (or the current Metal
 >    build flag for the installed version) or GPU layers silently fall back to CPU.
-> 3. **§4.3 test set is fine as-is** (reads `data/splits/test.jsonl`, schema compatible). For the
+> 4. **§4.3 test set is fine as-is** (reads `data/splits/test.jsonl`, schema compatible). For the
 >    HYBRID/advice evaluation, point it at `test_with_advice.jsonl` so the expected `response`
 >    includes the diagnostic advice the model was trained to produce.
-> 4. **GGUF quantization name.** §3.4 lists `quantizations: ["dynamic"]`; the actual llama.cpp
+> 5. **GGUF quantization name.** §3.4 lists `quantizations: ["dynamic"]`; the actual llama.cpp
 >    quant types are e.g. `Q4_K_M`, `Q5_K_M`, `Q8_0` (Unsloth "dynamic"/"Dynamic 2.0" maps to
 >    specific types). Confirm the exact flag Unsloth's `save_pretrained_gguf`/export expects at
 >    implementation time.
@@ -1694,7 +1697,7 @@ pandas>=2.1.0
 - [x] §4.1 GGUF export ran on instance: `qwen3-8b.Q4_K_M.gguf` (4.7GB q4_k_m) produced by Unsloth
 - [x] §4.4 llama-cpp-python 0.3.29 installed with Metal: `llama_supports_gpu_offload()=True` on M3 Max
 - [x] §4.3 `test_local_gguf.py` written: loads from STAR_MODEL_DIR, uses test_with_advice.jsonl
-- [ ] GGUF downloaded to DUAL DRIVE: `ls /Volumes/DUAL\ DRIVE/star-pipeline/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf` — **IN PROGRESS**
+- [ ] GGUF downloaded to local SSD: `ls /Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf` — **IN PROGRESS** (D17: FAT32 limit; D18: slow Hungary SSH; testing native scp)
 - [ ] Instance terminated: `vastai destroy instance 40838191` — pending GGUF download
 - [ ] Model loads without errors: `make eval-llm` (exit code 0) — pending download
 - [ ] Inference produces output: assert len(response) > 10 characters — pending
@@ -1702,8 +1705,9 @@ pandas>=2.1.0
 - [ ] Inference speed acceptable: assert avg_time_s < 30s per sample (M3 Max Metal) — pending
 - [ ] Metal GPU active: `llama_supports_gpu_offload()=True` ✅ (already confirmed)
 
-> **⏳ STATUS (2026-06-13):** Phase 4 code + Metal install COMPLETE. GGUF download in progress.
-> Inference + validate steps pending download completion + instance teardown.
+> **⏳ STATUS (2026-06-13/14):** Phase 4 code + Metal install COMPLETE. GGUF download in progress
+> to local SSD (D17: FAT32 too small; D18: Hungary→US SSH slow ~300KB/s; testing native scp).
+> Inference + validate pending download completion + instance teardown.
 
 **Implementation Note**: After verifying local inference works, proceed to Phase 5 for full evaluation.
 

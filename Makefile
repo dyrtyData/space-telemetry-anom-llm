@@ -75,8 +75,10 @@ launch-vast:
 	./scripts/cloud/launch_vast.sh
 
 # Phase 4 -- Local GGUF inference on M3 Max.
-# STAR_MODEL_DIR must point to where the GGUF was downloaded (default: DUAL DRIVE).
-STAR_MODEL_DIR ?= /Volumes/DUAL DRIVE/star-pipeline/models
+# STAR_MODEL_DIR points to the directory containing gguf/ and lora/ subdirectories.
+# Default is local SSD (D17: GGUF is 5GB, exceeds FAT32 4GB file limit on DUAL DRIVE).
+# Override if you move the GGUF elsewhere: make eval-llm STAR_MODEL_DIR="/path/to/models"
+STAR_MODEL_DIR ?= /Users/laptop/Developer/fdl_technicalInterview/models
 
 # Install llama-cpp-python with Metal GPU support (M3 Max). Run once after Phase 4 download.
 install-local:

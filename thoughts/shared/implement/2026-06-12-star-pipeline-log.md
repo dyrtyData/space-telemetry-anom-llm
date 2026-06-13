@@ -428,17 +428,32 @@ code had known bugs flagged in the MUST-READ blocks). Files:
 - **Commit**: 3e758a8 (export_gguf.py was committed as part of Phase 3 code)
 - **Notes**: Also produced a `Modelfile` (Ollama format) at no extra effort.
 
-### Step 4.2: Download Models to DUAL DRIVE
+### Step 4.2: Download Models
 - **Started**: 2026-06-13 (this session)
-- **Status**: in progress
+- **Status**: in progress — GGUF download pending user native-terminal test
 - **Deviation D15 — rsync unavailable + partial first download**: The instance pytorch image lacks
   rsync. Used `tar cf - | ssh ... tar xf -` (no gzip for GGUF — already binary compressed, avoids
   CPU bottleneck). Initial LoRA download via gzip was very slow; switched to no-gzip which was faster.
-  LoRA adapter files downloaded successfully. GGUF (4.7GB) download in progress.
-- **Commit**: pending (after download completes)
+  LoRA adapter files downloaded successfully.
+- **Deviation D17 — GGUF (5GB) exceeds FAT32 4 GB file limit**: DUAL DRIVE is FAT32 and cannot
+  hold a single file larger than 4,294,967,295 bytes. The GGUF is 5,027,784,160 bytes (~4.68 GiB).
+  **Fix**: download GGUF to local APFS SSD at
+  `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/`
+  (63 GB free). Makefile STAR_MODEL_DIR default updated to this path. LoRA remains on DUAL DRIVE
+  (each file <200 MB, within FAT32 limit). Plan MUST-READ updated with FAT32 warning.
+- **Deviation D18 — Hungary instance → slow SSH transfer (300–400 KB/s aggregate)**: Instance 40838191
+  was selected by `vastai search offers ... --order 'dph_total asc'` (cheapest RTX 4090 first).
+  The cheapest happened to be in Hungary. For training (Phase 3), location is irrelevant. For
+  downloading a 5 GB GGUF, the trans-Atlantic SSH path is bottlenecked to ~300–400 KB/s even with
+  8 parallel streams, giving a ~3.5h ETA. Single stream to /dev/null confirmed: 100 MB in 6 min =
+  278 KB/s. Local internet is 567 Mbps (no VPN) — the bottleneck is the SSH TCP path, not local
+  network. **Mitigation**: user testing native terminal `scp` (tool sandbox may add overhead).
+  **Future prevention**: add `--region US` to offer search; US RTX 4090 ~$0.55–0.70/hr vs $0.49/hr
+  Hungary — small premium, but avoids multi-hour downloads. Plan §3.2 MUST-READ updated.
+- **Commit**: pending (after download + inference complete)
 - **Notes**:
   - LoRA final files (167MB adapter + 11MB tokenizer + small configs) → DUAL DRIVE ✅
-  - GGUF (4.7GB) → in progress
+  - GGUF (4.7GB) → downloading to local SSD (IN PROGRESS)
   - Checkpoints (~10GB of 39 intermediate saves) intentionally skipped — only final adapter matters.
   - Instance 40838191 will be destroyed immediately after GGUF download completes.
 
