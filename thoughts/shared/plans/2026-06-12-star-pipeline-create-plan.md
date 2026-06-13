@@ -1465,14 +1465,21 @@ if __name__ == "__main__":
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Vast.ai CLI works: `vastai show user`
-- [ ] Instance created: `vastai show instances`
-- [ ] Data uploaded successfully: SSH test command succeeds
-- [ ] Training completes without OOM errors (exit code 0)
-- [ ] LoRA adapters saved: `ssh $INSTANCE ls /workspace/star-pipeline/models/lora/`
-- [ ] Training loss decreased: parse logs, assert final < initial
-- [ ] Validation loss stable: assert val_loss[-1] < val_loss[0] * 1.5
-- [ ] Instance terminated: `vastai show instances` returns empty or destroyed
+- [x] Vast.ai CLI works: `vastai show user` — $25 credit, billing verified (instance 40838191)
+- [x] Instance created: `vastai show instances` — RTX 4090, offer 38138029, $0.49/hr
+- [x] Data uploaded successfully: `data/formatted/*_chatml.jsonl` (30k) + `src/` + `config/` via tar|ssh
+- [~] Training completes without OOM errors — **IN PROGRESS**: 3 epochs / 3,939 steps, no OOM, loss ↓
+- [ ] LoRA adapters saved: `ssh $INSTANCE ls /workspace/star-pipeline/models/lora/` (pending completion)
+- [x] Training loss decreased: 2.85 → 1.41 within first 50 steps (continuing)
+- [ ] Validation loss stable: (eval runs at eval_steps=100; pending)
+- [ ] Instance terminated: **DO NOT forget** `vastai destroy instance 40838191` after GGUF export+download
+- [ ] GGUF exported (q4_k_m) on instance + downloaded to DUAL DRIVE before teardown
+
+> **⏳ STATUS (2026-06-13):** Phase 3 code COMPLETE + validated on the live instance; the **advice
+> (text) model is training** (full 3 epochs). See the implementation log's "Phase 3" section for the
+> live cloud state (instance id, SSH command, key, log path) and the exact NEXT STEPS to finish
+> (export GGUF → download to DUAL DRIVE → `vastai destroy instance 40838191`). VL detection model
+> written but not run (advice-only scope). Deviations D8–D13 documented in the log.
 
 **Implementation Note**: After training completes, export GGUF before terminating instance. Then proceed to Phase 4.
 

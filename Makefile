@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline train-cloud export eval-all clean lint format validate-etl
+.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all clean lint format validate-etl validate-format
 
 PYTHON := python3
 VENV := .venv
@@ -52,6 +52,27 @@ print(f'avg_f1={f1:.3f} (sanity range 0.05 < f1 < 0.98)'); \
 assert 0.05 < f1 < 0.98, f'avg_f1 {f1} outside sanity range (recalibrate if needed)'; \
 print('validate-baseline OK') \
 "
+
+# Phase 3 -- LLM fine-tuning (cloud). format-train runs LOCALLY; the rest drive Vast.ai.
+# train_advice/train_detection run ON the instance (Unsloth needs CUDA), not via make.
+format-train:
+	$(PY) src/training/format_for_unsloth.py
+
+validate-format:
+	$(PY) -c "\
+import json; \
+files = {s: f'data/formatted/{s}_chatml.jsonl' for s in ['train','val','test']}; \
+[__import__('os').path.exists(p) or (_ for _ in ()).throw(AssertionError(f'missing {p}')) for p in files.values()]; \
+recs = {s: [json.loads(l) for l in open(p)] for s, p in files.items()}; \
+[ (_ for _ in ()).throw(AssertionError(f'{s}: bad keys')) for s, rs in recs.items() for r in rs if set(r) != {'text'}]; \
+[ (_ for _ in ()).throw(AssertionError(f'{s}: not chatml')) for s, rs in recs.items() if not rs[0]['text'].startswith('<|im_start|>system')]; \
+print({s: len(rs) for s, rs in recs.items()}); \
+print('validate-format OK') \
+"
+
+# Dry run: search offers + print cheapest (no charges). Add --create to launch.
+launch-vast:
+	./scripts/cloud/launch_vast.sh
 
 # Evaluation
 eval-all:

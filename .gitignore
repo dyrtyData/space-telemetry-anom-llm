@@ -33,3 +33,5 @@ access_token
 
 # Keep empty dir structure
 !**/.gitkeep
+
+.env

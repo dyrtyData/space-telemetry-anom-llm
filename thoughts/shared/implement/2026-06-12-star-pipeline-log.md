@@ -2,7 +2,7 @@
 
 **Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`
 **Started**: 2026-06-12
-**Status**: Phase 2 COMPLETE — Phase 3 next
+**Status**: Phase 3 IN PROGRESS — code complete + validated on cloud; advice SFT (3 epochs) training on Vast.ai
 
 ---
 
@@ -14,7 +14,7 @@
 | 1 (data pipeline) | **completed (all 3 missions)** | 2026-06-12 14:48 | 2026-06-12 23:45 | D2–D5; full dataset on DUAL DRIVE |
 | 1.5 | **completed** | 2026-06-12 23:45 | 2026-06-13 00:10 | In-session generation (stats + channel meta) |
 | 2 | **completed** | 2026-06-13 11:10 | 2026-06-13 11:25 | D6 stride=16; D7 models→DUAL DRIVE |
-| 3 | pending | - | - | - |
+| 3 | **in progress** | 2026-06-13 ~16:30 | - | D8–D13 (model ids, TRL 0.24 API, ssh key, pkill, env, formatter) |
 | 4 | pending | - | - | - |
 | 5 | pending | - | - | - |
 
@@ -295,4 +295,112 @@ Key issues caught (full detail in the plan blocks):
 - **Cross-cutting**: verify HF model IDs (`unsloth/Qwen3-8B-bnb-4bit`, `Qwen3-VL-8B`) exist at impl
   time; `evaluation_strategy`→`eval_strategy` rename in recent transformers; storage rule (large
   artifacts on DUAL DRIVE / cloud, never local) applies throughout.
+
+---
+
+## Phase 3: Cloud Setup & LLM Fine-tuning (IN PROGRESS, 2026-06-13)
+
+### What is DONE (committed code, all linted + locally validated)
+All Phase 3 placeholder files were rewritten (not copied verbatim — the plan's §3.4/§3.5/§3.6/§3.7
+code had known bugs flagged in the MUST-READ blocks). Files:
+- `src/training/format_for_unsloth.py` — reads the advice-enriched splits
+  `data/splits/{train,val,test}_with_advice.jsonl` (advice already merged into `response`) and
+  ChatML-wraps `instruction`+`response` → `data/formatted/{split}_chatml.jsonl` (single `text`
+  field). **Ran locally**: 21,000 / 4,500 / 4,500 records (5,221 / 1,113 / 1,123 anomalous).
+- `config/unsloth-train.yaml` — points train/eval at `data/formatted/*_chatml.jsonl`; model
+  `unsloth/Qwen3-8B-unsloth-bnb-4bit`; `eval_strategy`; gguf quant `q4_k_m`.
+- `src/training/train_advice.py` — Qwen3-8B QLoRA SFT. **Rewritten for the TRL 0.24 API actually
+  installed on the instance** (see D9): `SFTConfig` carries args + `dataset_text_field` +
+  `max_length`; tokenizer passed as `processing_class`; `import unsloth` first.
+- `src/training/train_detection.py` — Qwen3-VL SFT (written, **NOT run** — VL is out of this run's
+  scope; advice-only). Uses real Unsloth vision pattern (messages list + UnslothVisionDataCollator,
+  `processing_class`). Model `unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit`.
+- `src/training/export_gguf.py` — `save_pretrained_gguf(..., quantization_method="q4_k_m")`.
+- `scripts/cloud/launch_vast.sh` — searches offers, dry-run by default, `--create` to launch;
+  reads `VASTAI_API_KEY` from `.env`.
+- `scripts/cloud/upload_data.sh`, `download_models.sh` — rsync via `vastai ssh-url`. NOTE: these
+  use the account default key; this session had to use a custom passphraseless key (D11), so the
+  ACTUAL upload was done with a direct `tar | ssh` (see below), not these scripts. They also assume
+  `rsync` on the instance (the pytorch image lacks it — use tar/scp, see D12-adjacent note).
+- `Makefile` — added `format-train`, `validate-format`, `launch-vast` targets. `make validate-format`
+  passes (checks `text` field + ChatML prefix on all 3 splits).
+
+### Verified model IDs (web-researched 2026-06-13)
+- Text: `unsloth/Qwen3-8B-unsloth-bnb-4bit` (Dynamic 4-bit, preferred) — also valid:
+  `unsloth/Qwen3-8B-bnb-4bit`.
+- Vision: `unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit` — **the plan's `unsloth/Qwen3-VL-8B` does
+  NOT exist.**
+- `transformers >= 4.46` renamed `evaluation_strategy` → `eval_strategy`.
+
+### ▶▶ LIVE CLOUD STATE — how to resume (READ THIS FIRST in a fresh session) ◀◀
+- **Vast.ai instance**: id **40838191**, single RTX 4090 24 GB (offer 38138029, Hungary, $0.49/hr).
+  - SSH (direct): `ssh -i ~/.ssh/vast_star -p 60642 -o StrictHostKeyChecking=no -o IdentitiesOnly=yes root@81.183.231.113`
+  - SSH (proxy, fallback): port 38190 on `ssh3.vast.ai`, same key.
+  - CLI: `.venv/bin/vastai show instance 40838191`  (api-key already set from `.env`).
+- **SSH key**: `~/.ssh/vast_star` (passphraseless, generated this session, registered on the vast
+  account + attached to the instance). The user's `~/.ssh/id_ed25519` is **passphrase-protected** and
+  cannot be used non-interactively (D11) — use `vast_star`.
+- **Remote workdir**: `/workspace/star-pipeline` (has `data/formatted/`, `src/`, `config/`).
+- **Training**: full **3-epoch** advice SFT running under `setsid` (survives SSH drop).
+  - Log: `/workspace/train.log`  ·  total **3,939 steps** @ ~2.83 s/it → **~3.1 h** total.
+  - Check alive: `ssh ... "pgrep -fc '[t]rain_advice'"` (NOTE the `[t]` bracket trick — D12).
+  - Watch progress: `ssh ... "tr '\r' '\n' < /workspace/train.log | grep -aE 'loss|it/s]' | tail"`.
+  - Output LoRA → `/workspace/star-pipeline/models/lora/qwen3-8b-advice/`.
+- **Installed stack on instance** (do not "fix" — it works): torch 2.10.0+cu128, transformers 5.5.0,
+  trl 0.24.0, unsloth 2026.6.7, unsloth_zoo, Python 3.11. CUDA available, RTX 4090 detected.
+
+### ⏭️ NEXT STEPS to finish Phase 3 (when training completes)
+1. Confirm training finished: `ls /workspace/star-pipeline/models/lora/qwen3-8b-advice/` shows
+   adapter files; `grep -a "Training complete" /workspace/train.log`.
+2. Export GGUF **on the instance**:
+   `ssh ... "cd /workspace/star-pipeline && python src/training/export_gguf.py"` → writes
+   `models/gguf/star-pipeline-advice*.gguf` (q4_k_m).
+3. Download LoRA + GGUF to DUAL DRIVE (instance lacks rsync — use tar/scp like the upload):
+   `ssh ... "cd /workspace/star-pipeline && tar czf - models" | (cd "/Volumes/DUAL DRIVE/star-pipeline" && tar xzf -)`
+   (or fix `download_models.sh` to use scp). STORAGE RULE: models go on DUAL DRIVE, never local.
+4. **TEARDOWN the instance** (stops billing): `.venv/bin/vastai destroy instance 40838191`.
+   This is the *instance* teardown only — NOT the project-wide teardown (raw-data deletion / Kaggle
+   key rotation), which stays deferred until all Phases 1–5 are done.
+5. Mark Phase 3 success criteria in the plan; Phase 4 = local GGUF inference (build
+   `llama-cpp-python` with Metal; load GGUF from DUAL DRIVE via `STAR_MODEL_DIR`).
+6. **Budget**: user authorized up to **$50** ceiling (full run is ~$1.5–2 of that). Credit was $25
+   at start — check `vastai show user`.
+
+### Deviations (Phase 3)
+- **D8 — Model IDs corrected.** Plan's `Qwen3-8B-bnb-4bit` works but used the preferred Dynamic 4-bit
+  `unsloth/Qwen3-8B-unsloth-bnb-4bit`; plan's `Qwen3-VL-8B` does not exist → `Qwen3-VL-8B-Instruct-unsloth-bnb-4bit`.
+- **D9 — TRL 0.24 API rewrite.** The instance resolved to trl 0.24.0 / transformers 5.5.0. The
+  plan's SFTTrainer call (`tokenizer=`, `dataset_text_field=`, `max_seq_length=` kwargs +
+  `TrainingArguments`) is removed in this version. Rewrote `train_advice.py` to use `SFTConfig`
+  (with `dataset_text_field`, `max_length`, `eval_strategy`) + `processing_class=tokenizer`.
+  Introspected the live signatures to get field names exactly right before running.
+- **D10 — Formatter reads enriched splits.** Skipped the plan's synthetic
+  `mission_channel_start-end` advice lookup (always missed). Reads `*_with_advice.jsonl` where advice
+  is already in `response`.
+- **D11 — SSH key.** Account `id_ed25519` is passphrase-protected → `read_passphrase: can't open
+  /dev/tty` in non-interactive shell (server *accepts* the key, client can't unlock it). Generated a
+  passphraseless `~/.ssh/vast_star`, registered + attached it. Vast also has a post-boot key
+  propagation lag (~1–2 min) before auth succeeds.
+- **D12 — `pkill -f` self-match.** `pkill -f train_advice` killed the SSH management shell itself
+  (its own argv contains "train_advice") → exit 255 / blank output. Fixed with the `[t]rain_advice`
+  bracket pattern (regex matches the python process, not the literal pattern in my own command).
+- **D13 — Unsloth env setup.** The `git+unsloth[cu124]` onstart install pulled transformers 5.12 and
+  omitted `unsloth_zoo` (ImportError). Reinstalled from PyPI (`pip install unsloth unsloth_zoo`),
+  which pinned transformers 5.5.0 / trl 0.24.0 and upgraded torch to 2.10.0+cu128 (CUDA still works;
+  the torchaudio 2.5.1 version-conflict warning is harmless — torchaudio is unused).
+- **Upload method**: the pytorch image lacks `rsync`; used `tar czf - ... | ssh ... tar xzf -`
+  instead. zsh also doesn't word-split an `ssh -i ... -p ...` string stored in a variable — invoke
+  ssh directly.
+- **Epochs**: started at 3, briefly switched to 1 (fast loss convergence 2.85→1.4 by step 50), then
+  **user requested the full 3-epoch run** (budget OK). Final run = 3 epochs / 3,939 steps.
+- **Scope**: this run is **advice (text) model only**. The VL `train_detection.py` is written but not
+  run; plots were not uploaded. VL can be a follow-up if desired for the 3-way comparison.
+
+### Plan sections that may need updating based on this phase
+- Phase 4 §4.1 `export_gguf.py` `quantization_method="dynamic"` → use a real llama.cpp quant
+  (`q4_k_m`); already done in the rewritten file.
+- Phase 4 §4.3 / Phase 5: the trained model produces the structured `ANOMALY DETECTED … DIAGNOSIS/
+  ADVICE/ACTION` response from the enriched data — eval should parse that, and the test/eval should
+  use `test_with_advice.jsonl`.
+- Phase 5 LLM eval should run over the full test split (4,500), not 10 samples (already flagged).
 

@@ -1,3 +1,61 @@
-# Unsloth Training Configuration for STAR-Pipeline
-# See: thoughts/shared/plans/2026-06-12-star-pipeline-implementation.md
-# TODO: Implement in Phase 3
+# Unsloth Training Configuration for STAR-Pipeline (Phase 3, advice SFT)
+#
+# Consumed by src/training/train_advice.py (the script reads this file if present,
+# otherwise falls back to its module-level defaults). Run on the Vast.ai instance:
+#   python src/training/train_advice.py --config config/unsloth-train.yaml
+#
+# NOTE: dataset paths point at the ChatML output of format_for_unsloth.py
+# (data/formatted/*_chatml.jsonl, which have the `text` field) -- NOT the raw splits.
+
+model:
+  # Verified present on HF (2026-06). `-unsloth-bnb-4bit` is Unsloth's Dynamic 4-bit
+  # (higher accuracy, fits a 24 GB 4090 for an 8B model). Swap to
+  # `unsloth/Qwen3-8B-bnb-4bit` (plain BnB NF4) if VRAM is tight.
+  name: "unsloth/Qwen3-8B-unsloth-bnb-4bit"
+  max_seq_length: 2048
+  load_in_4bit: true
+
+lora:
+  rank: 16
+  alpha: 16
+  dropout: 0
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+
+dataset:
+  train_file: "data/formatted/train_chatml.jsonl"
+  eval_file: "data/formatted/val_chatml.jsonl"
+  text_field: "text"
+
+training:
+  batch_size: 2
+  gradient_accumulation_steps: 8
+  learning_rate: 2.0e-4
+  num_epochs: 3
+  warmup_ratio: 0.05
+  optim: "adamw_8bit"
+  lr_scheduler_type: "cosine"
+  max_grad_norm: 1.0
+  weight_decay: 0.01
+
+output:
+  lora_dir: "models/lora/qwen3-8b-advice"
+
+logging:
+  logging_steps: 10
+  save_steps: 100
+  eval_steps: 100
+  eval_strategy: "steps"   # transformers >= 4.46 renamed evaluation_strategy -> eval_strategy
+
+export:
+  gguf: true
+  # llama.cpp quant type. Unsloth "Dynamic 2.0" maps to specific types; Q4_K_M is the
+  # safe, widely-supported default for local M3 inference. Confirm the exact flag
+  # save_pretrained_gguf expects at export time (Phase 4).
+  quantization: "q4_k_m"
