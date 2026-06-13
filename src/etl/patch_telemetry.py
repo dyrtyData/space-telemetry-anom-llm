@@ -28,82 +28,29 @@ normalized window `values` (for plot generation) and the window's time span.
 
 import argparse
 import json
-import os
-import pickle
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-DEFAULT_RAW_DIR = Path(os.environ.get("ESA_DATA_DIR", "data/raw/esa-ad"))
+from src.etl.io import (
+    DEFAULT_RAW_DIR,
+    RevINNormalizer,
+    anomaly_mask_for_channel,
+    discover_missions,
+    iter_channels,
+    load_channel_series,
+    load_labels,
+    resample_series,
+)
+
 PROCESSED_DIR = Path("data/processed")
 JSONL_DIR = PROCESSED_DIR / "jsonl"
 SPLITS_DIR = Path("data/splits")
 
 WINDOW_SIZE = 32
 STRIDE = 16
-
-
-class RevINNormalizer:
-    """Reversible Instance Normalization for time series (per-channel)."""
-
-    def __init__(self, eps: float = 1e-5):
-        self.eps = eps
-        self.mean = None
-        self.std = None
-
-    def fit_transform(self, x: np.ndarray) -> np.ndarray:
-        self.mean = x.mean(axis=0, keepdims=True)
-        self.std = x.std(axis=0, keepdims=True) + self.eps
-        return (x - self.mean) / self.std
-
-    def inverse_transform(self, x: np.ndarray) -> np.ndarray:
-        return x * self.std + self.mean
-
-
-def load_channel_series(channel_file: Path) -> pd.Series:
-    """Load a per-channel pickled DataFrame and return a 1-column float Series.
-
-    Mission3 channels are categorical (strings like 'value_0', 'value_1') rather
-    than continuous floats. We ordinal-encode them: extract the trailing integer so
-    'value_0'->0.0, 'value_1'->1.0, etc. This preserves the discrete state signal
-    and lets RevIN normalisation proceed normally.
-    """
-    with open(channel_file, "rb") as f:
-        df = pickle.load(f)
-    if isinstance(df, pd.DataFrame):
-        series = df.iloc[:, 0]
-    else:
-        series = df  # already a Series
-    series.index = pd.to_datetime(series.index)
-    if series.dtype == object:
-        # Ordinal-encode categorical strings of the form 'value_N'
-        series = series.str.extract(r"(\d+)$", expand=False).astype("float32")
-    return series.astype("float32")
-
-
-def load_labels(mission_dir: Path) -> pd.DataFrame:
-    """Load labels.csv with parsed, tz-naive UTC interval bounds."""
-    labels = pd.read_csv(mission_dir / "labels.csv")
-    for col in ("StartTime", "EndTime"):
-        labels[col] = pd.to_datetime(labels[col], utc=True).dt.tz_localize(None)
-    return labels
-
-
-def anomaly_mask_for_channel(
-    index: pd.DatetimeIndex, channel: str, labels: pd.DataFrame
-) -> np.ndarray:
-    """Boolean mask over `index`: True where the timestamp lies in a labelled
-    anomaly interval for `channel`."""
-    mask = np.zeros(len(index), dtype=bool)
-    ch_labels = labels[labels["Channel"] == channel]
-    idx_values = index.values
-    for _, row in ch_labels.iterrows():
-        start = np.datetime64(row["StartTime"])
-        end = np.datetime64(row["EndTime"])
-        mask |= (idx_values >= start) & (idx_values <= end)
-    return mask
 
 
 def create_windows(
@@ -192,14 +139,6 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def discover_missions(data_dir: Path, missions: str) -> list[Path]:
-    dirs = sorted(d for d in data_dir.glob("ESA-Mission*") if d.is_dir())
-    if missions.strip().lower() != "all":
-        wanted = {int(x) for x in missions.split(",") if x.strip()}
-        dirs = [d for d in dirs if int(d.name.replace("ESA-Mission", "")) in wanted]
-    return dirs
-
-
 def main():
     args = parse_args()
     rng = np.random.default_rng(args.seed)
@@ -212,20 +151,12 @@ def main():
     for mission_dir in discover_missions(args.data_dir, args.missions):
         mission = mission_dir.name
         print(f"Processing {mission}")
-        channels_meta = pd.read_csv(mission_dir / "channels.csv")
-        if args.target_only:
-            channels_meta = channels_meta[channels_meta["Target"] == "YES"]
         labels = load_labels(mission_dir)
+        channels = list(iter_channels(mission_dir, target_only=args.target_only))
 
-        for channel in tqdm(channels_meta["Channel"].tolist(), desc=f"  {mission} channels"):
-            channel_file = mission_dir / "channels" / channel / channel
-            # macOS writes '._<name>' resource-fork entries on FAT32 volumes; skip them
-            if not channel_file.exists() or channel_file.name.startswith("."):
-                continue
+        for channel, channel_file in tqdm(channels, desc=f"  {mission} channels"):
             series = load_channel_series(channel_file)
-            if args.resample.lower() != "none":
-                series = series.resample(args.resample).mean().interpolate(limit_direction="both")
-            series = series.dropna()
+            series = resample_series(series, args.resample)
             if len(series) < args.window:
                 continue
 

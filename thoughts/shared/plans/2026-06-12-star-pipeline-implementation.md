@@ -661,31 +661,41 @@ grep '"is_anomaly": true' data/splits/*.jsonl | wc -l
 > **⚠️ MUST-READ before implementing (updated 2026-06-13):** The code blocks in §2.1 and §2.2
 > below are **SUPERSEDED** — they still load `telemetry.pkl`/`labels.pkl` and iterate
 > `telemetry.columns`, which is the **D2 bug we already fixed in Phase 1**. Do NOT copy them
-> verbatim. Instead:
+> verbatim. Use the shared loader and the decisions below instead.
 >
-> 1. **Reuse the real ESA-AD loader.** Phase 1's `src/etl/patch_telemetry.py` already has working,
->    tested functions: `load_channel_series()` (handles D5 categorical ordinal-encoding),
->    `load_labels()`, `anomaly_mask_for_channel()`, `discover_missions()`. **First step of Phase 2:
->    extract these into `src/etl/io.py`** and import them from `patch_telemetry.py`,
->    `train_lstm.py`, and `isolation_forest.py` (single source of truth).
-> 2. **Data location.** Raw data is on the external drive. Read `ESA_DATA_DIR`
->    (default `data/raw/esa-ad`) like the ETL does — do NOT hard-code `RAW_DIR = data/raw/esa-ad`.
->    Run with `ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" make baseline`.
-> 3. **Channel iteration.** Loop over `channels.csv` rows (filter `Target == "YES"` to match the
->    ETL's `--target-only` default = 58+100+24 channels), loading each per-channel pickle —
->    NOT `telemetry.columns`.
-> 4. **Resampling (recommended).** Resample each channel to **1h** before windowing, same as the
->    ETL. This keeps training tractable (native ~90s cadence = up to 15M rows/channel) AND makes
->    the LSTM↔LLM comparison apples-to-apples (both detect on the same 1h grid). Use the same
->    `WINDOW_SIZE = 32`.
-> 5. **Labels.** Build per-timestep anomaly masks from `labels.csv` intervals via
->    `anomaly_mask_for_channel()` — there are no per-column label arrays.
-> 6. **Categorical channels (D5).** `load_channel_series()` already ordinal-encodes Mission3's
->    `value_N` strings; reconstruction MSE on a near-binary signal will behave differently —
->    expect lower variance. Fine for a baseline; just don't be surprised by the error scale.
-> 7. **Success-criteria F1 range** (`0.3 < avg_f1 < 0.95`) is a guess from the original plan.
->    Telemanom-style reconstruction on resampled data may land lower; treat the range as a sanity
->    check to be re-calibrated against the first real run, not a hard gate.
+> **The shared loader already exists: `src/etl/io.py`** (created 2026-06-13, smoke-tested on all
+> 3 missions). `patch_telemetry.py` already imports from it. Import the same functions into the
+> baselines — do NOT re-implement loading:
+>
+> ```python
+> from src.etl.io import (
+>     DEFAULT_RAW_DIR,            # = Path($ESA_DATA_DIR or "data/raw/esa-ad")
+>     discover_missions,         # (data_dir, "all"|"1,2,3") -> [ESA-MissionN dirs]
+>     iter_channels,             # (mission_dir, target_only=True) -> yields (name, file); skips ._ forks
+>     load_channel_series,       # (file) -> float32 Series; ordinal-encodes D5 categoricals
+>     resample_series,           # (series, "1h") -> resampled+interpolated Series
+>     load_labels,               # (mission_dir) -> labels.csv DataFrame (tz-naive bounds)
+>     anomaly_mask_for_channel,  # (index, channel, labels) -> per-timestep bool mask
+>     RevINNormalizer,           # per-channel reversible instance norm
+> )
+> ```
+>
+> **Decisions already made (do not re-litigate — implement as stated):**
+>
+> | # | Decision | Implementation |
+> |---|----------|----------------|
+> | 1 | **Shared loader** | DONE — `src/etl/io.py` exists; import from it in both baselines. Don't duplicate loading logic. |
+> | 2 | **Data location** | Read `ESA_DATA_DIR` via `DEFAULT_RAW_DIR`; never hard-code `data/raw/esa-ad`. Run: `ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" make baseline`. |
+> | 3 | **Channel iteration** | `for ch, file in iter_channels(mission_dir, target_only=True)` — matches the ETL (58+100+24 target channels). NOT `telemetry.columns`. |
+> | 4 | **Resampling** | Resample each channel to **1h** (`resample_series(s, "1h")`) before windowing. Keeps training tractable (native ~90s = up to 15M rows/ch) AND makes LSTM↔LLM apples-to-apples (same grid). `WINDOW_SIZE = 32`. |
+> | 5 | **Labels** | Per-timestep masks from `labels.csv` via `anomaly_mask_for_channel()`. There are no per-column label arrays. |
+> | 6 | **Categorical (D5)** | `load_channel_series()` already ordinal-encodes Mission3's `value_N`. Reconstruction MSE on near-binary signals has low variance — expect a different error scale; fine for a baseline. |
+> | 7 | **F1 sanity range** | `0.3 < avg_f1 < 0.95` in `make validate-baseline` is a GUESS. Telemanom-style reconstruction on 1h data may land lower. Re-calibrate against the first real run and note the change in the log; it's a sanity check, not a hard gate. |
+> | 8 | **keras backend (verified)** | Installed: `keras 3.14.1` + `torch 2.12.0`. **tensorflow is NOT installed.** Keras 3 needs a backend, so **set `KERAS_BACKEND=torch`** before importing keras (in the script via `os.environ.setdefault("KERAS_BACKEND","torch")` BEFORE `import keras`, and in the Makefile `baseline` target). The `[lstm]` extra only pins `keras>=3.0.0` — torch is already in the venv; do not add tensorflow (no room / not needed). `keras.Sequential`/LSTM layers in §2.1 work unchanged on the torch backend. |
+> | 9 | **Output storage (CRITICAL — local disk is nearly full)** | The internal drive is out of space. **All large artifacts go on `DUAL DRIVE` or the cloud, never local.** Trained models (`models/lstm/`) and any per-channel reconstruction dumps must write under a configurable root that defaults to the drive — add `MODELS_DIR ?= /Volumes/DUAL DRIVE/star-pipeline/models` (or read an env var like `STAR_OUTPUT_DIR`) to the Makefile/scripts. Keep only small JSON metrics (`results/lstm/*.json`, a few KB) in the repo. `.gitignore` already excludes `models/`, `results/**/*.json`, and the raw data. |
+>
+> Everything large stays off the internal disk: raw data is on `DUAL DRIVE`; models/checkpoints
+> go on `DUAL DRIVE` (or cloud in Phase 3); the repo tracks only code + small JSON metrics.
 
 ### Overview
 Train a Telemanom-style per-channel LSTM to establish baseline detection performance.

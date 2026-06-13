@@ -216,13 +216,29 @@ Re-audited true Phase 1 state against the plan's success criteria:
   severities ⊆ {low, medium, high}
 - **Commit**: 0868cc2 · pushed to remote
 
-### Phase 2 (LSTM Baseline)
-- `train_lstm.py` / `isolation_forest.py` make the **same `telemetry.pkl`/`labels.pkl`
-  assumption** as the ETL (plan lines 795–798, 868–871). They will need the same loader fix
-  as D2. Recommend extracting a shared `load_mission_data()` into a small `src/etl/io.py`
-  once the real ESA-AD structure is confirmed, and importing it from all three scripts.
+### Phase 2 prep — shared loader extracted (2026-06-13, ready for new thread)
+- **`src/etl/io.py` created** as the single source of truth for ESA-AD loading. Exports:
+  `DEFAULT_RAW_DIR`, `discover_missions`, `iter_channels` (skips missing + macOS `._` forks),
+  `channel_file_path`, `list_channels`, `load_channel_series` (D5 categorical ordinal-encoding),
+  `resample_series`, `load_labels`, `anomaly_mask_for_channel`, `RevINNormalizer`.
+- **`patch_telemetry.py` refactored** to import from `io.py` (removed its duplicate copies of
+  RevIN/loader/discover/mask). Smoke-tested read-only on all 3 missions (Mission3 categorical
+  channel: 15.4M raw rows → 70,200 @1h, mask + RevIN correct). `make lint` ✅.
+  **Did NOT re-run the full ETL** (would overwrite the good 3-mission splits) — refactor is
+  behaviour-preserving; the read-only smoke test exercised every shared function.
+- **Phase 2 plan section updated** with a MUST-READ block: the io.py import surface, a 9-row
+  decisions table (loader, ESA_DATA_DIR, iter_channels, 1h resample, labels, D5, F1 range,
+  keras backend, output storage), and the storage rule. The new thread should only need to read
+  the plan.
+- **keras backend (verified)**: venv has `keras 3.14.1` + `torch 2.12.0`, NO tensorflow →
+  set `KERAS_BACKEND=torch` before `import keras`.
+- **Storage rule (local disk nearly full)**: raw data on `DUAL DRIVE`; Phase 2 models/checkpoints
+  must also go on `DUAL DRIVE` (configurable root, e.g. `STAR_OUTPUT_DIR` /
+  `MODELS_DIR ?= /Volumes/DUAL DRIVE/star-pipeline/models`); repo tracks only code + small JSON
+  metrics. `.gitignore` already excludes `models/`, `results/**/*.json`, raw data.
+- **Commits**: see below (io.py + refactor + plan/log updates).
 
 ### Phase 3-5 (Cloud Training, Export, Evaluation)
-- No changes needed yet; depend on Phase 1 output format, which may shift slightly once D2 is
-  resolved (JSONL schema is expected to stay stable).
+- No changes needed yet; depend on Phase 1 output format (JSONL schema is stable).
+- Same storage rule applies: cloud GPU artifacts stay in the cloud / on `DUAL DRIVE`, never local.
 
