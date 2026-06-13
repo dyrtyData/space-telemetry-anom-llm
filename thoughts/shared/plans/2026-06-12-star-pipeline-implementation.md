@@ -602,16 +602,19 @@ data/
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause for in-session advice label generation (Step 1.6) before proceeding to Phase 2.
 
-> **⚠️ Implementation status (updated 2026-06-12):** Phase 1 **code** is complete and committed
-> (`make setup`/`make lint` pass). The Phase 1 **data pipeline is NOT complete** — download,
-> ETL, splits, and plots have never run. Two deviations were found during the resumed session;
-> see `thoughts/shared/implement/2026-06-12-star-pipeline-log.md` (CORRECTION section):
-> - **D1**: a corrupt partial `ESA-Mission1.zip` was deleted. ESA-AD = 3 zips, 11.6 GB total.
-> - **D2 (blocker)**: `load_mission_data` (below, §1.3) assumes per-mission `telemetry.pkl`/
->   `labels.pkl` directories, but ESA-AD actually ships **zipped CSV channel data**. The ETL
->   loader must be rewritten (unzip + CSV) before `make etl` can pass. **The same fix applies
->   to Phase 2's `train_lstm.py` and `isolation_forest.py`**, which share the assumption —
->   extract a shared loader into `src/etl/io.py` once the real structure is confirmed.
+> **✅ Implementation status (updated 2026-06-13):** Phase 1 AND Phase 1.5 are **COMPLETE**
+> (all 3 missions downloaded, combined ETL → 30,000 patches / 7,457 anomalous, 6,000 plots,
+> 7,457 advice labels). `make setup`/`make lint`/`make validate-etl`/`make validate-advice`
+> all pass. See `thoughts/shared/implement/2026-06-12-star-pipeline-log.md` for full detail.
+> Five deviations were resolved during the resumed sessions:
+> - **D1**: a corrupt partial `ESA-Mission1.zip` was deleted.
+> - **D2**: `patch_telemetry.py` rewritten — ESA-AD ships **per-channel pickled DataFrames**
+>   (DatetimeIndex + 1 column) + `channels.csv`/`labels.csv`, NOT `telemetry.pkl`/`labels.pkl`.
+> - **D3**: data source switched Zenodo → Kaggle mirror `sammahoney/esa-anomaly-dataset` (speed).
+> - **D4**: resample to 1h + balanced subsampling (keep all anomalous, 3× nominal, cap 30k).
+> - **D5**: Mission3 channels are categorical (`value_0`/`value_1`) → ordinal-encoded; macOS
+>   `._` resource-fork files on FAT32 filtered.
+> **Raw data lives on the external `DUAL DRIVE` (`ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad"`).**
 
 ---
 
@@ -654,6 +657,35 @@ grep '"is_anomaly": true' data/splits/*.jsonl | wc -l
 ---
 
 ## Phase 2: LSTM Baseline
+
+> **⚠️ MUST-READ before implementing (updated 2026-06-13):** The code blocks in §2.1 and §2.2
+> below are **SUPERSEDED** — they still load `telemetry.pkl`/`labels.pkl` and iterate
+> `telemetry.columns`, which is the **D2 bug we already fixed in Phase 1**. Do NOT copy them
+> verbatim. Instead:
+>
+> 1. **Reuse the real ESA-AD loader.** Phase 1's `src/etl/patch_telemetry.py` already has working,
+>    tested functions: `load_channel_series()` (handles D5 categorical ordinal-encoding),
+>    `load_labels()`, `anomaly_mask_for_channel()`, `discover_missions()`. **First step of Phase 2:
+>    extract these into `src/etl/io.py`** and import them from `patch_telemetry.py`,
+>    `train_lstm.py`, and `isolation_forest.py` (single source of truth).
+> 2. **Data location.** Raw data is on the external drive. Read `ESA_DATA_DIR`
+>    (default `data/raw/esa-ad`) like the ETL does — do NOT hard-code `RAW_DIR = data/raw/esa-ad`.
+>    Run with `ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" make baseline`.
+> 3. **Channel iteration.** Loop over `channels.csv` rows (filter `Target == "YES"` to match the
+>    ETL's `--target-only` default = 58+100+24 channels), loading each per-channel pickle —
+>    NOT `telemetry.columns`.
+> 4. **Resampling (recommended).** Resample each channel to **1h** before windowing, same as the
+>    ETL. This keeps training tractable (native ~90s cadence = up to 15M rows/channel) AND makes
+>    the LSTM↔LLM comparison apples-to-apples (both detect on the same 1h grid). Use the same
+>    `WINDOW_SIZE = 32`.
+> 5. **Labels.** Build per-timestep anomaly masks from `labels.csv` intervals via
+>    `anomaly_mask_for_channel()` — there are no per-column label arrays.
+> 6. **Categorical channels (D5).** `load_channel_series()` already ordinal-encodes Mission3's
+>    `value_N` strings; reconstruction MSE on a near-binary signal will behave differently —
+>    expect lower variance. Fine for a baseline; just don't be surprised by the error scale.
+> 7. **Success-criteria F1 range** (`0.3 < avg_f1 < 0.95`) is a guess from the original plan.
+>    Telemanom-style reconstruction on resampled data may land lower; treat the range as a sanity
+>    check to be re-calibrated against the first real run, not a hard gate.
 
 ### Overview
 Train a Telemanom-style per-channel LSTM to establish baseline detection performance.
