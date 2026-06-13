@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline train-cloud export eval-all clean lint format validate-etl
+.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline train-cloud export eval-all clean lint format validate-etl
 
 PYTHON := python3
 VENV := .venv
@@ -27,9 +27,31 @@ etl:
 	ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/etl/patch_telemetry.py --missions $(MISSION)
 	$(PY) src/etl/generate_plots.py
 
-# Baselines
+# Baselines -- keras 3 runs on the torch backend (no tensorflow installed); raw data
+# comes from ESA_DATA_DIR, trained models go under STAR_OUTPUT_DIR (external drive).
 baseline:
-	$(PY) src/baselines/train_lstm.py
+	KERAS_BACKEND=torch ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/baselines/train_lstm.py --missions $(MISSION)
+
+baseline-if:
+	ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/baselines/isolation_forest.py --missions $(MISSION)
+
+validate-baseline:
+	$(PY) -c "\
+import json, math; \
+d = json.load(open('results/lstm/baseline_results.json')); \
+s = d['summary']; \
+ch = [c for c in d['channels'] if 'error' not in c]; \
+print('Summary:', s); \
+assert s.get('n_channels_scored', 0) > 0, 'No channels scored'; \
+vals = [c[k] for c in ch for k in ('precision','recall','f1','final_loss','initial_loss')]; \
+assert all(math.isfinite(v) for v in vals), 'Non-finite metric found'; \
+dec = [c for c in ch if 'final_loss' in c and c['final_loss'] < c['initial_loss']]; \
+assert dec, 'No channel showed a loss decrease'; \
+f1 = s['avg_f1']; \
+print(f'avg_f1={f1:.3f} (sanity range 0.05 < f1 < 0.98)'); \
+assert 0.05 < f1 < 0.98, f'avg_f1 {f1} outside sanity range (recalibrate if needed)'; \
+print('validate-baseline OK') \
+"
 
 # Evaluation
 eval-all:
