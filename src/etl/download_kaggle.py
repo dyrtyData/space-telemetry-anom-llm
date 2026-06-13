@@ -70,7 +70,9 @@ def kaggle_pull(remote_rel: str, dest_dir: Path, required: bool = True) -> Path 
     )
     if result.returncode != 0:
         if required:
-            raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+            raise subprocess.CalledProcessError(
+                result.returncode, result.args, result.stdout, result.stderr
+            )
         print(f"  (skipping {basename} — not present in this mission)")
         return None
 

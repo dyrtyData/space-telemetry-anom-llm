@@ -2,7 +2,7 @@
 
 **Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-implementation.md`
 **Started**: 2026-06-12
-**Status**: In Progress
+**Status**: Phase 1 COMPLETE — Phase 1.5 next
 
 ---
 
@@ -11,7 +11,7 @@
 | Phase | Status | Started | Completed | Deviations |
 |-------|--------|---------|-----------|------------|
 | 1 (code) | completed | 2026-06-12 14:35 | 2026-06-12 14:55 | pyproject.toml needed hatch build config |
-| 1 (data pipeline) | **completed (Mission1)** | 2026-06-12 14:48 | 2026-06-12 16:50 | D2 ETL rewrite + D3 Kaggle source + D4 resample/subsample; Mission2/3 pending |
+| 1 (data pipeline) | **completed (all 3 missions)** | 2026-06-12 14:48 | 2026-06-12 23:45 | D2–D5; full dataset on DUAL DRIVE |
 | 1.5 | pending | - | - | - |
 | 2 | pending | - | - | - |
 | 3 | pending | - | - | - |
@@ -175,18 +175,37 @@ Re-audited true Phase 1 state against the plan's success criteria:
   but single-stream transfers ran ~2 MB/s — high-latency single-connection limit, not the source.
 - **.gitignore added**: raw/processed/plots/splits/models/.venv excluded; `.gitkeep` structure kept.
 
-Remaining for full-dataset scope (user opted for all 3 missions, mission-by-mission):
-- Repeat download+ETL for **Mission2** (4.1 GB) and **Mission3** (3.7 GB). Mission2's source zip on
-  Zenodo is >4 GB but the Kaggle mirror is per-file (<200 MB), so FAT32 is fine either way.
-- Re-run ETL with `--missions 1,2,3` once all three are on the drive to build the combined set.
+### Deviation D5 — Mission3 channels are categorical (RESOLVED)
+- Mission3 channels store discrete state as ordinal strings (`'value_0'`, `'value_1'`) rather
+  than float telemetry. `load_channel_series` crashed with `ValueError: could not convert string
+  to float: 'value_0'` on the first Mission3 channel.
+- **Fix (commit a6362c7)**: ordinal-encode categorical strings by extracting the trailing integer
+  (`value_N` → float N). Also filtered macOS `._` resource-fork entries that appear on FAT32
+  volumes (cause `NotADirectoryError`). `download_kaggle.py` made `telecommands.csv`
+  non-fatal (absent from Mission3).
+
+### PHASE 1 DATA PIPELINE — COMPLETE (all 3 missions, 2026-06-12 23:45)
+- **Download** (all on DUAL DRIVE):
+  - Mission1: 76 channels, 8.3 GB  
+  - Mission2: 100 channels, 9.1 GB  
+  - Mission3: 48 channels, 12 GB  
+- **Combined ETL** (`patch_telemetry.py --missions 1,2,3 --resample 1h`):
+  - **30,000 patches** (capped): **7,457 anomalous (24.9%) / 22,543 nominal**
+  - Splits: `train.jsonl` 21,000 · `val.jsonl` 4,500 · `test.jsonl` 4,500 (70/15/15)
+  - All 3 missions represented in every split
+- **Plots** (`generate_plots.py --max-per-split 2000`): 6,000 PNGs + 3 `*_metadata.jsonl`
+- **Validation** (`make validate-etl` ✅): 30,000 total · 7,457 anomalous · 3 missions
+- **Lint** (`make lint` ✅): all 17 files pass ruff check + format
+- **Commits**: a6362c7 (categorical fix), 0270817 (validate-etl fix), pushed to remote
 
 ---
 
 ## Notes for Future Phases
 
 ### Phase 1.5 (Advice Label Generation)
-- Awaiting ETL completion with **real data** before generating advice labels
+- ETL complete with real full-dataset data — ready to generate advice labels in-session
 - Will generate advice in-session to avoid API costs
+- Input: `data/splits/train.jsonl` (anomalous windows with channel/mission/time metadata)
 
 ### Phase 2 (LSTM Baseline)
 - `train_lstm.py` / `isolation_forest.py` make the **same `telemetry.pkl`/`labels.pkl`
