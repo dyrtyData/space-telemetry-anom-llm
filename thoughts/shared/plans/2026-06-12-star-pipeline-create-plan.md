@@ -1718,29 +1718,54 @@ pandas>=2.1.0
 
 ## Phase 5: Evaluation & Comparison
 
-> **⚠️ MUST-READ before implementing (added 2026-06-13):**
+> **⚠️ MUST-READ before implementing (updated 2026-06-14 with Phase 4 actual schemas):**
 >
-> 1. **Cross-phase schema dependency.** `load_lstm_results()` reads
->    `results/lstm/baseline_results.json` and expects per-channel `precision`/`recall`/`f1` keys.
->    The Phase 2 thread MUST emit that schema (it's in the Phase 2 §2.1 return dict). If Phase 2
->    changes field names, update §5.1 to match.
-> 2. **§5.1 LLM eval is a 10-sample toy.** `test_local_gguf.py` caps at `samples[:10]`, and
->    `load_llm_results()` reads that. For a *meaningful* comparison on the full 3-mission test set
->    (4,500 records), raise the cap (or add `--limit`) and run over the whole split. 10 samples
->    cannot produce a credible precision/recall. Budget inference time accordingly (M3 Max, ~1–5 s
->    each → minutes for the full split).
+> 1. **`evaluate.py` schema mismatches — rewrite `load_lstm_results()` and `load_llm_results()`.**
+>    The plan's code was written before Phase 2/4 ran; both loader functions use wrong keys:
+>
+>    **`results/lstm/baseline_results.json`** actual schema:
+>    ```json
+>    {"summary": {...}, "config": {...}, "channels": [{"channel":…,"mission":…,"precision":…,"recall":…,"f1":…,...}]}
+>    ```
+>    Fix `load_lstm_results()`: read `d["channels"]` (a list of 3 channel dicts), average
+>    `precision`/`recall`/`f1` across them. Drop the `"error" not in r` guard (no error key).
+>
+>    **`results/inference_test.json`** actual schema:
+>    ```json
+>    {"summary": {"n_samples":100,"accuracy":…,"precision":…,"recall":…,"f1":…,"avg_time_s":…,…},
+>     "results": [{"index":…,"is_anomaly":…,"predicted":"ANOMALY"|"NOMINAL","actual_response":…,...}]}
+>    ```
+>    Fix `load_llm_results()`: read `d["summary"]` directly (it already has precision/recall/f1/n_samples).
+>    The `r["actual"]` key does not exist — use `r["actual_response"]`; or skip re-computing and just
+>    return `d["summary"]` fields. Note: `d["results"][i]["predicted"]` is pre-computed as
+>    `"ANOMALY"/"NOMINAL"/"UNKNOWN"` — no need to re-parse.
+>
+> 2. **Phase 4 smoke test = 100 samples; Phase 5 needs the full 4,500.**
+>    `results/inference_test.json` already exists from Phase 4 (`n_samples=100, f1=0.508`).
+>    Before running `make eval-all`, **first** run `make eval-llm LIMIT=0` to overwrite it with
+>    all 4,500 test samples. At 1.96s/sample on M3 Max Metal that's ~2.5 h. Budget accordingly.
+>    The `--limit 0` flag in the Makefile means "run all". Only then will LLM metrics be
+>    meaningful for the comparison table.
+>
 > 3. **`affinity_f1()` is defined but never called.** The temporally-aware metric the issue asks
 >    for isn't wired into `main()`. If temporal/interval evaluation is in scope, compute predicted
 >    vs. ground-truth intervals from `labels.csv` (use `load_labels` + `anomaly_mask_for_channel`
 >    from `src/etl/io.py`) and call it; otherwise drop it to avoid implying a metric that isn't run.
+>
 > 4. **Hardcoded "Key Findings" are placeholders.** `generate_report()` literally writes
 >    "~0.7 F1" and "combines best of both" regardless of results. Replace with values computed
 >    from the actual metrics, or the report will misreport.
-> 5. **Three approaches, three result sources.** LSTM → `results/lstm/baseline_results.json`
->    (Phase 2); LLM detection → `results/inference_test.json` (Phase 4); Hybrid (LSTM flags +
->    LLM advice) isn't wired yet — define how it's scored before claiming it in the table.
-> 6. **Storage:** evaluation only reads small JSON + the test split and writes small markdown/JSON
->    to `results/` — fine on local. Models it loads come from DUAL DRIVE (see Phase 4).
+>
+> 5. **Three approaches, three result sources.**
+>    - LSTM → `results/lstm/baseline_results.json` (Phase 2, 3-channel smoke test)
+>    - LLM detection → `results/inference_test.json` (Phase 4, **re-run at LIMIT=0 first**)
+>    - Hybrid (LSTM flags + LLM advice) isn't wired yet — define how it's scored before claiming it
+>
+> 6. **GGUF is on local APFS SSD, not DUAL DRIVE.**
+>    `STAR_MODEL_DIR=/Users/laptop/Developer/fdl_technicalInterview/models` (updated in Makefile).
+>    The Phase 4 storage note about DUAL DRIVE applied to LoRA only; the GGUF exceeded FAT32's
+>    4 GB file limit (D17) and was redirected to APFS. Phase 5 only needs to read
+>    `results/inference_test.json` (already on local disk), so no model loading needed.
 
 ### Overview
 Evaluate all three approaches (LSTM, LLM detection, Hybrid) and produce comparison report.

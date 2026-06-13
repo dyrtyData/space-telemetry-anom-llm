@@ -522,5 +522,31 @@ issue was local environment. Ran background HF upload on Hungary:
 - **HF Repo**: `dyrtyData/star-pipeline-qwen3-8b-advice-gguf` (public)
 - **Vast.ai instances destroyed**: Hungary 40838191 + relay 40866462
 - **Total Vast.ai cost**: ~$2.33 ($50 ceiling, well within budget)
-- **Phase 5 ready**: `make eval-all` for full 4,500-sample comparison report
+
+### Phase 5 Pre-flight (READ BEFORE STARTING)
+Phase 5 implements `src/inference/evaluate.py` and runs `make eval-all`. The plan's code
+placeholders have schema bugs caught post-Phase-4 — see plan §5 MUST-READ #1 for the fix.
+Recommended start sequence:
+1. `make eval-llm LIMIT=0` — full 4,500-sample LLM run (~2.5 h, overwrites the 100-sample
+   smoke test result). STAR_MODEL_DIR is already set in Makefile.
+2. Rewrite `evaluate.py` using actual schemas (see plan MUST-READ #1 for key names).
+3. `make eval-all` → comparison table + report.
+
+**Actual result file schemas (confirmed Phase 4):**
+
+`results/inference_test.json`:
+```json
+{"summary": {"n_samples":100,"accuracy":0.69,"precision":0.432,"recall":0.615,"f1":0.508,
+             "tp":16,"fp":21,"fn":10,"tn":53,"unknown_responses":0,"avg_time_s":1.962},
+ "results": [{"index":0,"mission":"...","channel":"...","is_anomaly":bool,
+              "predicted":"ANOMALY"|"NOMINAL","correct":bool,
+              "expected_response":"...","actual_response":"...","elapsed_s":float}]}
+```
+
+`results/lstm/baseline_results.json`:
+```json
+{"summary": {...}, "config": {...},
+ "channels": [{"channel":"...","mission":"...","precision":float,"recall":float,"f1":float,
+               "threshold":float,"n_sequences":int,"n_anomaly_windows":int,...}]}
+```
 
