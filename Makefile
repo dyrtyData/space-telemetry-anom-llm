@@ -50,12 +50,18 @@ format:
 	$(VENV)/bin/ruff format src/
 
 validate-etl:
-	$(PY) -c "import json; \
-		files = ['data/splits/train.jsonl', 'data/splits/val.jsonl', 'data/splits/test.jsonl']; \
-		total = 0; anomalies = 0; \
-		[exec('total += 1; anomalies += int(json.loads(line)[\"metadata\"][\"is_anomaly\"])') for f in files for line in open(f)]; \
-		print(f'Total: {total}, Anomalies: {anomalies}'); \
-		assert 100 < anomalies < 10000, f'Anomaly count {anomalies} out of expected range'"
+	$(PY) -c "\
+import json; \
+files = ['data/splits/train.jsonl', 'data/splits/val.jsonl', 'data/splits/test.jsonl']; \
+records = [json.loads(l) for f in files for l in open(f)]; \
+total = len(records); \
+anomalies = sum(r['metadata']['is_anomaly'] for r in records); \
+missions = {r['metadata']['mission'] for r in records}; \
+print(f'Total: {total}, Anomalies: {anomalies} ({100*anomalies/total:.1f}%), Missions: {sorted(missions)}'); \
+assert total == 30000, f'Expected 30000, got {total}'; \
+assert 100 < anomalies < 10000, f'Anomaly count {anomalies} out of range'; \
+assert len(missions) == 3, f'Expected 3 missions, got {missions}' \
+"
 
 clean:
 	rm -rf $(VENV) __pycache__ .pytest_cache
