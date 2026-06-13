@@ -49,6 +49,23 @@ lint:
 format:
 	$(VENV)/bin/ruff format src/
 
+advice:
+	ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/etl/generate_advice_labels.py
+
+validate-advice:
+	$(PY) -c "\
+import json; \
+advice = json.load(open('data/labels/anomaly_advice.json')); \
+ids = [a['anomaly_id'] for a in advice]; \
+assert len(ids) == len(set(ids)), 'Duplicate anomaly_ids found'; \
+required = {'advice','severity','recommended_action','pattern','mission','channel'}; \
+missing = [a['anomaly_id'] for a in advice if not required.issubset(a)]; \
+assert not missing, f'{len(missing)} records missing required fields'; \
+sevs = {a['severity'] for a in advice}; \
+assert sevs <= {'low','medium','high'}, f'Unexpected severity values: {sevs}'; \
+print(f'advice OK: {len(advice)} records, severities={dict((s, sum(1 for a in advice if a[\"severity\"]==s)) for s in [\"low\",\"medium\",\"high\"])}') \
+"
+
 validate-etl:
 	$(PY) -c "\
 import json; \
