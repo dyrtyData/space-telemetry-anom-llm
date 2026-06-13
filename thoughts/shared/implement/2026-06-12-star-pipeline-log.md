@@ -524,9 +524,9 @@ issue was local environment. Ran background HF upload on Hungary:
 - **Total Vast.ai cost**: ~$2.33 ($50 ceiling, well within budget)
 
 ### Phase 5 Pre-flight (READ BEFORE STARTING)
-Phase 5 implements `src/inference/evaluate.py` and runs `make eval-all`. The plan's code
-placeholders have schema bugs caught post-Phase-4 — see plan §5 MUST-READ #1 for the fix.
-Recommended start sequence:
+**`src/inference/evaluate.py` is currently a 3-line TODO stub** — Phase 5 must write it
+from scratch using the plan §5 code as a starting point (with the schema fixes in MUST-READ #1).
+`make eval-all` calls `python src/inference/evaluate.py --all`. Recommended start sequence:
 1. `make eval-llm LIMIT=0` — full 4,500-sample LLM run (~2.5 h, overwrites the 100-sample
    smoke test result). STAR_MODEL_DIR is already set in Makefile.
 2. Rewrite `evaluate.py` using actual schemas (see plan MUST-READ #1 for key names).
