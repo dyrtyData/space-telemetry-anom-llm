@@ -996,8 +996,36 @@ if __name__ == "__main__":
 
 ## Phase 3: Cloud Setup & LLM Fine-tuning
 
-### Overview
-Set up Vast.ai account, spin up RTX 4090 instance, and fine-tune Qwen3 models using Unsloth.
+> **⚠️ MUST-READ before implementing (added 2026-06-13, from Phase 1/1.5 findings):**
+>
+> 1. **§3.5 advice-key MISMATCH (real bug).** The formatter builds
+>    `advice_key = f"{mission}_{channel}_{start_idx}-{end_idx}"`, but Phase 1.5's real
+>    `anomaly_id` is **`f"{mission}__{channel}__{start_time}"`** (double underscore, ISO time with
+>    `T`, NOT indices). As written the lookup **always misses → advice is never merged**.
+>    **Fix (recommended):** skip the lookup entirely and read the **already-enriched splits
+>    `data/splits/{train,val,test}_with_advice.jsonl`** that Phase 1.5 produced — advice is already
+>    merged into the `response` field there (with `DIAGNOSIS/ADVICE/ACTION` lines). The formatter
+>    just needs to ChatML-wrap `instruction` + `response`. If you instead keep a lookup, match the
+>    real `anomaly_id` format from `src/etl/generate_advice_labels.py`.
+> 2. **§3.4 train/eval paths are inconsistent with §3.5.** The YAML points `train_file` at
+>    `data/splits/train.jsonl` with `text_field: "text"`, but raw splits have
+>    `instruction`/`response`, not `text`. Point `train_file`/`eval_file` at the formatter's output
+>    **`data/formatted/{train,val}_chatml.jsonl`** (which has the `text` field). Run
+>    `format_for_unsloth.py` before training.
+> 3. **§3.3 upload omits the plots.** The VL/AnomSeer path (§3.7) trains on
+>    `data/processed/plots/` (PNGs + `{split}_metadata.jsonl`), but the upload script only sends
+>    `data/splits/` + `data/labels/`. **Add `data/processed/plots/` to the rsync** if doing §3.7.
+>    Note: plots are capped at 2,000/split (≈6,000 PNGs), not the full 30k — fine for a VL demo.
+>    The metadata schema is confirmed correct (`image_path`, `is_anomaly`, `mission`, `channel`).
+> 4. **Data is on DUAL DRIVE.** The splits/labels/plots that §3.3 uploads live under the repo
+>    (`data/...`) — those derived artifacts ARE in the repo working tree, so upload-from-repo is
+>    fine. Only the multi-GB RAW data is on the external drive (not needed for cloud training).
+> 5. **Cloud outputs stay in the cloud, then DUAL DRIVE.** LoRA/GGUF land on the instance during
+>    training; when you pull them down (Phase 4) they go to DUAL DRIVE, never the local disk.
+> 6. **Model/dataset names are aspirational — verify availability.** `unsloth/Qwen3-8B-bnb-4bit`,
+>    `unsloth/Qwen3-VL-8B`: confirm the exact repo IDs exist on Hugging Face at implementation time
+>    (names/tags drift); the latest capable Qwen variant is fine. `evaluation_strategy=` was renamed
+>    to `eval_strategy` in recent `transformers` — check the installed version.
 
 ### Changes Required:
 
@@ -1447,6 +1475,28 @@ if __name__ == "__main__":
 
 ## Phase 4: GGUF Export & Local Inference
 
+> **⚠️ MUST-READ before implementing (added 2026-06-13 — STORAGE: local disk is nearly full):**
+>
+> 1. **§4.2 and §4.3 write models to the LOCAL disk — DON'T.** `download_models.sh` does
+>    `mkdir -p models/gguf` / `./models/gguf/`, and `test_local_gguf.py` hard-codes
+>    `GGUF_PATH = models/gguf/star-pipeline-advice.gguf`. An 8B GGUF is multi-GB; the internal
+>    drive can't take it. **Download to and load from DUAL DRIVE** via a configurable root, e.g.
+>    `STAR_MODEL_DIR="${STAR_MODEL_DIR:-/Volumes/DUAL DRIVE/star-pipeline/models}"` in the shell
+>    script and `MODEL_DIR = Path(os.environ.get("STAR_MODEL_DIR", "/Volumes/DUAL DRIVE/star-pipeline/models"))`
+>    in Python. Only the small `results/*.json` stay in the repo. `.gitignore` already excludes
+>    `models/`, so even if a path slips it won't be committed — but the concern here is disk space,
+>    not git.
+> 2. **`llama-cpp-python` must be built with Metal** for M3 Max GPU offload (`n_gpu_layers=-1`).
+>    Install with `CMAKE_ARGS="-DLLAMA_METAL=on" pip install llama-cpp-python` (or the current Metal
+>    build flag for the installed version) or GPU layers silently fall back to CPU.
+> 3. **§4.3 test set is fine as-is** (reads `data/splits/test.jsonl`, schema compatible). For the
+>    HYBRID/advice evaluation, point it at `test_with_advice.jsonl` so the expected `response`
+>    includes the diagnostic advice the model was trained to produce.
+> 4. **GGUF quantization name.** §3.4 lists `quantizations: ["dynamic"]`; the actual llama.cpp
+>    quant types are e.g. `Q4_K_M`, `Q5_K_M`, `Q8_0` (Unsloth "dynamic"/"Dynamic 2.0" maps to
+>    specific types). Confirm the exact flag Unsloth's `save_pretrained_gguf`/export expects at
+>    implementation time.
+
 ### Overview
 Export fine-tuned models to GGUF format and set up local inference on M3 Max.
 
@@ -1640,6 +1690,30 @@ pandas>=2.1.0
 ---
 
 ## Phase 5: Evaluation & Comparison
+
+> **⚠️ MUST-READ before implementing (added 2026-06-13):**
+>
+> 1. **Cross-phase schema dependency.** `load_lstm_results()` reads
+>    `results/lstm/baseline_results.json` and expects per-channel `precision`/`recall`/`f1` keys.
+>    The Phase 2 thread MUST emit that schema (it's in the Phase 2 §2.1 return dict). If Phase 2
+>    changes field names, update §5.1 to match.
+> 2. **§5.1 LLM eval is a 10-sample toy.** `test_local_gguf.py` caps at `samples[:10]`, and
+>    `load_llm_results()` reads that. For a *meaningful* comparison on the full 3-mission test set
+>    (4,500 records), raise the cap (or add `--limit`) and run over the whole split. 10 samples
+>    cannot produce a credible precision/recall. Budget inference time accordingly (M3 Max, ~1–5 s
+>    each → minutes for the full split).
+> 3. **`affinity_f1()` is defined but never called.** The temporally-aware metric the issue asks
+>    for isn't wired into `main()`. If temporal/interval evaluation is in scope, compute predicted
+>    vs. ground-truth intervals from `labels.csv` (use `load_labels` + `anomaly_mask_for_channel`
+>    from `src/etl/io.py`) and call it; otherwise drop it to avoid implying a metric that isn't run.
+> 4. **Hardcoded "Key Findings" are placeholders.** `generate_report()` literally writes
+>    "~0.7 F1" and "combines best of both" regardless of results. Replace with values computed
+>    from the actual metrics, or the report will misreport.
+> 5. **Three approaches, three result sources.** LSTM → `results/lstm/baseline_results.json`
+>    (Phase 2); LLM detection → `results/inference_test.json` (Phase 4); Hybrid (LSTM flags +
+>    LLM advice) isn't wired yet — define how it's scored before claiming it in the table.
+> 6. **Storage:** evaluation only reads small JSON + the test split and writes small markdown/JSON
+>    to `results/` — fine on local. Models it loads come from DUAL DRIVE (see Phase 4).
 
 ### Overview
 Evaluate all three approaches (LSTM, LLM detection, Hybrid) and produce comparison report.

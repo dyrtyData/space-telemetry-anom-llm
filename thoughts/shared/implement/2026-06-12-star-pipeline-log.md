@@ -1,6 +1,6 @@
 # STAR-Pipeline Implementation Log
 
-**Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-implementation.md`
+**Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`
 **Started**: 2026-06-12
 **Status**: Phase 1 COMPLETE — Phase 1.5 next
 
@@ -243,7 +243,20 @@ Re-audited true Phase 1 state against the plan's success criteria:
   metrics. `.gitignore` already excludes `models/`, `results/**/*.json`, raw data.
 - **Commits**: see below (io.py + refactor + plan/log updates).
 
-### Phase 3-5 (Cloud Training, Export, Evaluation)
-- No changes needed yet; depend on Phase 1 output format (JSONL schema is stable).
-- Same storage rule applies: cloud GPU artifacts stay in the cloud / on `DUAL DRIVE`, never local.
+### Phase 3-5 — plan reviewed & corrected (2026-06-13)
+Audited Phases 3–5 against the Phase 1/1.5 findings; added MUST-READ blocks to each in the plan.
+Key issues caught (full detail in the plan blocks):
+- **Phase 3 §3.5 advice-key bug**: formatter keys advice by `{mission}_{channel}_{start_idx}-{end_idx}`,
+  but the real `anomaly_id` is `{mission}__{channel}__{start_time}` → lookup always misses. Fix:
+  read the enriched `data/splits/*_with_advice.jsonl` (advice already in `response`) instead.
+- **Phase 3 §3.4 paths**: train/eval should point at `data/formatted/*_chatml.jsonl` (has `text`
+  field), not raw splits. **§3.3 upload** omits `data/processed/plots/` needed by VL training §3.7.
+- **Phase 4 §4.2/§4.3 storage violation**: download/load GGUF from LOCAL `models/gguf/`; an 8B GGUF
+  is multi-GB → must use DUAL DRIVE via `STAR_MODEL_DIR`. Also: build `llama-cpp-python` with Metal.
+- **Phase 5**: LLM eval is a 10-sample toy (raise to full 4,500 test split); `affinity_f1` defined
+  but never called; "Key Findings" are hardcoded placeholders; Hybrid scoring undefined;
+  `load_lstm_results` depends on Phase 2 emitting per-channel precision/recall/f1.
+- **Cross-cutting**: verify HF model IDs (`unsloth/Qwen3-8B-bnb-4bit`, `Qwen3-VL-8B`) exist at impl
+  time; `evaluation_strategy`→`eval_strategy` rename in recent transformers; storage rule (large
+  artifacts on DUAL DRIVE / cloud, never local) applies throughout.
 
