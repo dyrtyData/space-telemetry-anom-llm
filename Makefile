@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base frontier-select frontier-assemble eval-vision
+.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision
 
 PYTHON := python3
 VENV := .venv
@@ -121,6 +121,15 @@ eval-base:
 		--results-file results/inference_base.json \
 		--approach-label "Base Qwen3-8B (zero-shot)" \
 		--limit $(LIMIT) --resume --checkpoint-every 250
+
+# Phase 6: "prompting instead of fine-tuning" baseline — same base weights, but 2 in-context
+# examples per class (from TRAIN, no test leakage) + Qwen3 /no_think so it emits parseable
+# verdicts. The fair, hardest comparison: does the fine-tune beat good prompting on detection?
+eval-base-fewshot:
+	$(PY) src/inference/test_local_gguf.py --gguf "$(BASE_GGUF)" \
+		--results-file results/inference_base_fewshot.json \
+		--approach-label "Base Qwen3-8B (few-shot, no fine-tune)" \
+		--few-shot 2 --no-think --limit $(LIMIT) --resume --checkpoint-every 100
 
 # Phase 6: frozen stratified frontier-eval sample (seed 42). frontier-select writes the
 # leak-free prompts; the frontier model (Claude session) classifies into

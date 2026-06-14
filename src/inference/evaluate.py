@@ -29,12 +29,14 @@ LSTM_FILE = RESULTS_DIR / "lstm" / "baseline_results.json"
 IF_FILE = RESULTS_DIR / "isolation_forest" / "if_results.json"
 LLM_FILE = RESULTS_DIR / "inference_test.json"
 BASE_FILE = RESULTS_DIR / "inference_base.json"  # Phase 6: un-fine-tuned base control
+BASE_FS_FILE = RESULTS_DIR / "inference_base_fewshot.json"  # Phase 6: base + few-shot prompting
 FRONTIER_FILE = RESULTS_DIR / "inference_frontier_sample.json"  # Phase 6: frontier zero-shot
 VISION_FILE = RESULTS_DIR / "inference_vision.json"  # Phase 8: Qwen3-VL detector on PNG plots
 TEST_WITH_ADVICE = Path("data/splits/test_with_advice.jsonl")
 
 LLM_APPROACH = "LLM Detection"
 BASE_APPROACH = "Base Qwen3-8B (zero-shot)"
+BASE_FS_APPROACH = "Base Qwen3-8B (few-shot, no fine-tune)"
 FRONTIER_APPROACH = "Frontier zero-shot (Claude, n=150 sample)"
 VISION_APPROACH = "LLM Detection (vision, Qwen3-VL)"
 
@@ -234,6 +236,15 @@ def load_base_results() -> dict:
     return _summarize_detection(BASE_FILE, BASE_APPROACH, with_affinity=False)
 
 
+def load_base_fewshot_results() -> dict:
+    """Load Phase-6 base + few-shot prompting control ('prompt instead of fine-tune').
+
+    Same base weights as the zero-shot control, but with in-context examples + /no_think so
+    it emits parseable verdicts -- isolating whether fine-tuning beats prompting on detection.
+    """
+    return _summarize_detection(BASE_FS_FILE, BASE_FS_APPROACH, with_affinity=False)
+
+
 def load_frontier_results() -> dict:
     """Load Phase-6 frontier zero-shot sample (Claude session model as detector)."""
     return _summarize_detection(FRONTIER_FILE, FRONTIER_APPROACH, with_affinity=False)
@@ -375,8 +386,9 @@ def generate_finetuning_section(results: list[dict]) -> list[str]:
     by = {r["approach"]: r for r in results if "error" not in r}
     ft = by.get(LLM_APPROACH)
     base = by.get(BASE_APPROACH)
+    base_fs = by.get(BASE_FS_APPROACH)
     frontier = by.get(FRONTIER_APPROACH)
-    if not ft or (not base and not frontier):
+    if not ft or not (base or base_fs or frontier):
         return []
 
     lines = ["\n## Did fine-tuning help?\n"]
@@ -403,6 +415,8 @@ def generate_finetuning_section(results: list[dict]) -> list[str]:
     if base:
         nb = f"{base.get('n_units', '?')} windows" + (" (partial)" if base.get("partial") else "")
         lines.append(row(base, nb))
+    if base_fs:
+        lines.append(row(base_fs, f"{base_fs.get('n_units', '?')} windows"))
     if frontier:
         lines.append(row(frontier, f"{frontier.get('n_units', '?')}-window sample"))
 
@@ -423,6 +437,31 @@ def generate_finetuning_section(results: list[dict]) -> list[str]:
             f"{ft.get('advice_structured_frac', 0) * 100:.0f}% of its flags (Δ "
             f"**{d_adv * 100:+.0f} pts**)."
         )
+    if base_fs:
+        d_f1 = ft["f1"] - base_fs["f1"]
+        verdict = (
+            "fine-tuning still wins"
+            if d_f1 > 0.03
+            else (
+                "the gap is small"
+                if abs(d_f1) <= 0.03
+                else "few-shot prompting matches/beats it on this sample"
+            )
+        )
+        lines.append(
+            f"- **vs. the base with few-shot prompting (same base weights, 2 in-context "
+            f"examples + /no_think, n={base_fs.get('n_units', '?')}):** prompting alone *does* "
+            f"recover output compliance ({base_fs.get('format_compliance', 0) * 100:.0f}% "
+            f"parseable verdicts) and a real detection score (F1 {base_fs['f1']:.3f}, precision "
+            f"{base_fs['precision']:.3f}, recall {base_fs['recall']:.3f}) — but at "
+            f"{base_fs.get('avg_time_s') or '?'}s/window vs {ft.get('avg_time_s') or '?'}s for "
+            f"the fine-tune, and with **no structured advice** "
+            f"({base_fs.get('advice_structured_frac', 0) * 100:.0f}% vs "
+            f"{ft.get('advice_structured_frac', 0) * 100:.0f}%). On detection F1 the fine-tune is "
+            f"{ft['f1']:.3f} (Δ **{d_f1:+.3f}** — {verdict}). This is the honest, hardest "
+            f"comparison: it asks whether the fine-tune beats good *prompting*, not just the "
+            f"raw base."
+        )
     if frontier:
         lines.append(
             f"- **vs. a frontier model zero-shot (Claude, {frontier.get('n_units', '?')}-window "
@@ -434,10 +473,12 @@ def generate_finetuning_section(results: list[dict]) -> list[str]:
             f"learned during fine-tuning, not in general reasoning over a few normalized values."
         )
     lines.append(
-        "- **Takeaway:** fine-tuning's clearest, most reliable win here is *task and format "
-        "adaptation* — turning a capable but non-compliant base into a model that reliably "
-        "emits the exact terse verdict + structured advice the downstream pipeline consumes. "
-        "Detection F1 improves too, but the operational unlock is compliance."
+        "- **Takeaway:** fine-tuning's clearest, most reliable wins here are *task/format "
+        "adaptation, structured advice, and latency* — turning a capable but non-compliant base "
+        "into a model that reliably emits the exact terse verdict + structured advice the "
+        "downstream pipeline consumes, faster. Few-shot prompting can recover compliance and a "
+        "comparable detection score, but not the structured advice or the speed; raw zero-shot "
+        "(base and frontier) recovers neither. The operational unlock is compliance + advice."
     )
     return lines
 
@@ -542,12 +583,13 @@ def main() -> None:
     # so the report (and `make validate-eval`, which forbids error rows) stays valid before
     # the base-model run has finished scoring.
     base = load_base_results()
+    base_fs = load_base_fewshot_results()  # Phase 6: base + few-shot prompting
     frontier = load_frontier_results()
     vision = load_vision_results()  # Phase 8: Qwen3-VL on PNG plots
 
-    # Report order: baselines, fine-tuned text LLM, vision LLM, base + frontier controls, hybrid.
+    # Report order: baselines, fine-tuned text LLM, vision LLM, base controls, frontier, hybrid.
     results = [iso, lstm, llm]
-    results += [r for r in (vision, base, frontier) if "error" not in r]
+    results += [r for r in (vision, base, base_fs, frontier) if "error" not in r]
     results.append(hybrid)
 
     report = generate_report(results)

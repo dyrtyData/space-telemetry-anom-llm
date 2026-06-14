@@ -30,6 +30,7 @@ STAR_MODEL_DIR = Path(os.environ.get("STAR_MODEL_DIR", "/Volumes/DUAL DRIVE/star
 GGUF_PATH = STAR_MODEL_DIR / "gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf"
 
 TEST_FILE = Path("data/splits/test_with_advice.jsonl")
+TRAIN_FILE = Path("data/splits/train_with_advice.jsonl")  # few-shot examples (no test leakage)
 RESULTS_FILE = Path("results/inference_test.json")
 
 SYSTEM_PROMPT = (
@@ -39,10 +40,40 @@ SYSTEM_PROMPT = (
 )
 
 
-def format_prompt(instruction: str) -> str:
-    """Format as ChatML prompt (matches training format from format_for_unsloth.py)."""
+def build_fewshot_prefix(n_each: int = 1) -> str:
+    """Build ChatML few-shot example turns from the TRAIN split (never the test set).
+
+    Used by the Phase-6 'prompting instead of fine-tuning' base baseline: showing the base
+    model a worked NOMINAL and a worked ANOMALY example teaches it the exact terse output
+    contract (verdict + DIAGNOSIS/ADVICE/ACTION) so it emits parseable verdicts instead of
+    rambling. Examples are drawn from TRAIN to avoid any test-set leakage.
+    """
+    if not TRAIN_FILE.exists():
+        raise FileNotFoundError(f"Few-shot needs the train split: {TRAIN_FILE}")
+    train = [json.loads(line) for line in TRAIN_FILE.open()]
+    nominal = [r for r in train if not r["metadata"]["is_anomaly"]][:n_each]
+    anomaly = [r for r in train if r["metadata"]["is_anomaly"]][:n_each]
+    turns = []
+    for r in nominal + anomaly:  # show a nominal then an anomaly
+        turns.append(
+            f"<|im_start|>user\n{r['instruction']}<|im_end|>\n"
+            f"<|im_start|>assistant\n{r['response']}<|im_end|>\n"
+        )
+    return "".join(turns)
+
+
+def format_prompt(instruction: str, fewshot_prefix: str = "", no_think: bool = False) -> str:
+    """Format as ChatML prompt (matches training format from format_for_unsloth.py).
+
+    `fewshot_prefix` (optional) injects worked example turns after the system message;
+    `no_think` appends Qwen3's ``/no_think`` switch so the base model answers directly
+    instead of spending its token budget on a <think> block. Both default off, so the
+    fine-tuned eval is byte-identical to Phase 4/5.
+    """
+    system = SYSTEM_PROMPT + (" /no_think" if no_think else "")
     return (
-        f"<|im_start|>system\n{SYSTEM_PROMPT}<|im_end|>\n"
+        f"<|im_start|>system\n{system}<|im_end|>\n"
+        f"{fewshot_prefix}"
         f"<|im_start|>user\n{instruction}<|im_end|>\n"
         "<|im_start|>assistant\n"
     )
@@ -173,11 +204,30 @@ def main() -> None:
         default="LLM Detection (Qwen3-8B advice SFT Q4_K_M)",
         help="Label stored in the summary's 'approach' field (cosmetic; evaluate.py relabels).",
     )
+    parser.add_argument(
+        "--few-shot",
+        type=int,
+        default=0,
+        help=(
+            "N few-shot examples PER CLASS from the TRAIN split (e.g. 1 -> 1 nominal + 1 "
+            "anomaly). Phase-6 'prompting instead of fine-tuning' baseline. Default 0 (off)."
+        ),
+    )
+    parser.add_argument(
+        "--no-think",
+        action="store_true",
+        help="Append Qwen3 '/no_think' so the base answers directly (skips <think> block).",
+    )
     args = parser.parse_args()
 
     gguf_path = Path(args.gguf) if args.gguf else GGUF_PATH
     results_file = Path(args.results_file) if args.results_file else RESULTS_FILE
     approach_label = args.approach_label
+    fewshot_prefix = build_fewshot_prefix(args.few_shot) if args.few_shot > 0 else ""
+    if fewshot_prefix:
+        print(f"Few-shot: {args.few_shot} example(s)/class from {TRAIN_FILE}", flush=True)
+    if args.no_think:
+        print("Decoding with Qwen3 /no_think (direct answer).", flush=True)
 
     if not TEST_FILE.exists():
         raise FileNotFoundError(f"Test file not found: {TEST_FILE}")
@@ -215,7 +265,7 @@ def main() -> None:
     recent: list[float] = []
     for i in range(start, len(samples)):
         sample = samples[i]
-        prompt = format_prompt(sample["instruction"])
+        prompt = format_prompt(sample["instruction"], fewshot_prefix, args.no_think)
         t0 = time.perf_counter()
 
         output = model(
