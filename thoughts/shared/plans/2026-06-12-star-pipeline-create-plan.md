@@ -2136,14 +2136,14 @@ Keep the laptop plugged in + lid open (caffeinate can't beat lid-close sleep on 
 No cloud, no API.
 
 **Success criteria:**
-- [~] Base Qwen3-8B scored → `results/inference_base.json`. **IN PROGRESS** (adopted an
-      externally-started run scoring **500** windows, not 4,500 — see D26). Same harness as the
-      fine-tuned LLM. Row appears in the report automatically once the file finalizes.
+- [x] Base Qwen3-8B scored → `results/inference_base.json` (zero-shot n=100, all-UNKNOWN) +
+      `results/inference_base_fewshot.json` (few-shot n=500, F1=0.420). Same harness as the
+      fine-tuned LLM. Both rows render in the report.
 - [x] Frontier zero-shot scored on a fixed stratified sample → `results/inference_frontier_sample.json`
       (n=150, seed-42 stratified, frozen indices). **F1=0.254 (P=0.308, R=0.216)**.
-- [x] `evaluate.py` emits a "Did fine-tuning help?" table: fine-tuned vs base vs frontier, with
-      detection metrics AND `format_compliance` + `advice_structured_frac` (base expected ≈ 0%).
-- [ ] Base GGUF deleted from local SSD after scoring (deferred until the base run finalizes).
+- [x] `evaluate.py` emits a "Did fine-tuning help?" table: fine-tuned vs base-zero-shot vs
+      base-few-shot vs frontier, with detection metrics AND `format_compliance` + `advice_structured_frac`.
+- [x] Base GGUF deleted from local SSD after scoring (reclaimed ~5 GB).
 
 > **✅ Phase 6 status (2026-06-14):** Code + frontier eval COMPLETE & committed; base run in
 > flight (500-window external run adopted). Files added: `src/inference/select_frontier_sample.py`
@@ -2157,7 +2157,17 @@ No cloud, no API.
 > | LLM Detection (fine-tuned, n=4500) | 0.453 | 0.994 | 0.996 |
 > | Frontier zero-shot (Claude, n=150) | 0.254 | 1.000 | 1.000 |
 > | Base Qwen3-8B zero-shot (n=100) | **0.000** | **0.000** | **0.000** | (100/100 UNKNOWN — run stopped early, see D26) |
-> | Base Qwen3-8B few-shot (n=500) | _pending_ (n=30 probe ≈0.57) | _pending (~1.0)_ | _pending (~0)_ |
+> | Base Qwen3-8B few-shot (n=500) | **0.420** | **1.000** | **0.129** | (P=0.282 R=0.824 CEF0.5=0.325; 8.56s/win; anomaly-biased) |
+>
+> **Phase-6 final read (all four contrasts):** fine-tune F1 0.453 / CEF0.5 0.392 / advice 99.6% /
+> 2.77s. **Zero-shot base** collapses to all-UNKNOWN (0/0/0) — proves fine-tuning was required for
+> output compliance. **Few-shot base** nearly matches detection F1 (0.420, Δ−0.032) and recovers
+> compliance (100%), BUT loses on the precision-weighted CEF0.5 (0.325 vs 0.392 — it over-flags,
+> R=0.82/P=0.28), on structured advice (12.9% — it only sometimes copies the demonstrated format),
+> and on latency (8.56s vs 2.77s, 3×). **Frontier zero-shot** (Claude, n=150) trails everything on
+> detection (F1 0.254). **Conclusion:** fine-tuning's defensible wins are *precision-weighted
+> detection + reliable structured advice + 3× speed* — not raw F1, where good prompting gets close.
+> This is the honest version of "did fine-tuning help"; it survives a skeptic.
 >
 > **D30 — Added a few-shot base baseline ("prompting instead of fine-tuning").** The zero-shot
 > base scores all-UNKNOWN under the strict harness → P=R=F1=0, a clean *compliance* finding but

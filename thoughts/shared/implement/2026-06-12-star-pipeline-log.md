@@ -837,17 +837,30 @@ and delete raw ESA-AD from DUAL DRIVE. Not yet done; deliberately deferred.
   `a6f26a6` (vision eval harness + evaluate.py vision row). evaluate.py/Makefile now carry BOTH
   Phase-6 and Phase-8 code; I edit only my sections and stage only my files.
 
-### Remaining to close Phase 6 (when the FEW-SHOT run finalizes — monitor armed)
-1. Confirm `results/inference_base_fewshot.json` shows `partial=false` (n=500): process gone +
-   file finalized. (`pgrep -fl '[t]est_local_gguf'`; check `summary.partial`.)
-2. `make eval-all && make validate-eval` → few-shot row + the "prompting vs fine-tuning" delta
-   bullet populate automatically.
-3. Update the n=500 few-shot numbers in the plan's Phase-6 table + this log (replace the n=30
-   probe estimate F1≈0.57 with the real n=500 figure).
-4. Delete the base GGUF: `rm -rf models/gguf/base-qwen3-8b/` (reclaim 5 GB) — same weights served
-   both the zero-shot and few-shot runs, so it's done after this.
-5. Commit: `[Phase 6] Few-shot base scored — fine-tuning deltas finalized` (stage ONLY my files;
-   the Phase-8 thread may have WIP in `train_detection.py`/elsewhere).
+### Phase 6 CLOSED (2026-06-14) — few-shot run finished, final numbers in
+- **Few-shot base run complete** (n=500/500, partial=false): **F1=0.420, P=0.282, R=0.824,
+  CEF0.5=0.325, compliance=1.000, structured-advice=0.129, 8.56s/window**, 397/500 flagged ANOMALY
+  (anomaly-biased). The real n=500 figure (F1=0.420) is close to the n=30 probe (≈0.57) but lower
+  and more stable.
+- **Final four-way "Did fine-tuning help?" read:**
+
+  | Model | F1 | CEF0.5 | compliance | structured-advice | s/window |
+  |---|---|---|---|---|---|
+  | Fine-tuned LLM (n=4500) | **0.453** | **0.392** | 0.994 | **0.996** | **2.77** |
+  | Base few-shot (n=500) | 0.420 | 0.325 | 1.000 | 0.129 | 8.56 |
+  | Base zero-shot (n=100) | 0.000 | 0.000 | 0.000 | 0.000 | — |
+  | Frontier zero-shot (n=150) | 0.254 | 0.284 | 1.000 | 1.000 | — |
+
+  **Conclusion:** few-shot prompting nearly matches detection F1 (Δ−0.032) and recovers compliance,
+  but the fine-tune wins on precision-weighted **CEF0.5** (0.392 vs 0.325 — few-shot over-flags),
+  **structured advice** (99.6% vs 12.9% — few-shot only sometimes copies the demonstrated format),
+  and **latency** (3× faster). Zero-shot base/frontier recover neither compliance nor competitive
+  detection. This is the skeptic-proof version of the headline claim.
+- **Base GGUF deleted** (`rm -rf models/gguf/base-qwen3-8b/`, ~5 GB reclaimed) — same weights served
+  both base runs, so it's no longer needed.
+- `make eval-all` + `make validate-eval` → OK with all four contrasts present.
+- **Phase 6 = COMPLETE.** Remaining project work: Phases 7 (full LSTM), 8 (vision — concurrent
+  thread), 9 (semantic advice grading), 10 (teardown).
 
 ---
 
