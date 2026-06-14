@@ -24,6 +24,7 @@ free, no cloud/API). Teardown is now Phase 10 (precondition: Phases 1–9 done).
 | 5 | **completed** | 2026-06-14 | 2026-06-14 | D21–D24 (loader schemas, CEF from P/R, Affinity-F1 degenerate, IF + Hybrid added) |
 | 6 (code+frontier) | **completed** | 2026-06-14 | 2026-06-14 | D26–D29 (adopted ext 500 base run, identical-harness, frontier sub-agent, graceful rows) |
 | 6 (base run) | **in flight** | 2026-06-14 | — | external 500-window base run; finalize report + delete base GGUF after |
+| 8 (vision) | **in progress** | 2026-06-14 | — | D31–D33 (3 never-run train_detection bugs, A6000 GPU, torchvision upgrade); ⚠️ instance 40936091 LIVE/billing |
 
 ---
 
@@ -847,3 +848,98 @@ and delete raw ESA-AD from DUAL DRIVE. Not yet done; deliberately deferred.
    both the zero-shot and few-shot runs, so it's done after this.
 5. Commit: `[Phase 6] Few-shot base scored — fine-tuning deltas finalized` (stage ONLY my files;
    the Phase-8 thread may have WIP in `train_detection.py`/elsewhere).
+
+---
+
+## Phase 8: Vision detector (Qwen3-VL on PNG plots) — IN PROGRESS (2026-06-14)
+
+**Status: local code COMPLETE & committed; cloud env READY; training BLOCKED on a smoke test
+that is fix-applied-but-unconfirmed (session interrupted right before re-running it).**
+**⚠️ A Vast.ai instance is LIVE and BILLING ($0.401/hr) — resume promptly or destroy it.**
+
+### What was built (committed)
+- **`src/inference/eval_vision.py`** (commit `a6f26a6`): on-instance VL eval harness. Loads the
+  trained Qwen3-VL adapter via `FastVisionModel.from_pretrained` + `for_inference`, classifies
+  test PNGs from `data/processed/plots/test_metadata.jsonl`, writes
+  `results/inference_vision.json` in the SAME `{summary, results}` schema as `test_local_gguf.py`
+  (so evaluate.py's shared `_summarize_detection` loader works unchanged). Has
+  `--limit/--resume/--checkpoint-every` for durability.
+- **`src/inference/evaluate.py`** (commit `a6f26a6`): `VISION_FILE`/`VISION_APPROACH`,
+  `load_vision_results()` (unit `windows (PNG)`), row wired into `main()` with graceful
+  degradation (row appears only when the file loads cleanly), methodology note. NOTE: this file
+  ALSO carries Phase-6 (base/few-shot) code from the concurrent thread — edit only your sections,
+  stage per-file.
+- **`Makefile`** (commit `a6f26a6`): `eval-vision` target.
+- **`src/training/train_detection.py`** (commit `0daa2ec`): THREE latent runtime bugs fixed (it
+  was written in Phase 3 but NEVER run). See D31. lint passes. Synced to the instance (md5 match).
+
+### ▶▶ LIVE CLOUD STATE — how to resume (READ FIRST) ◀◀
+- **Instance**: id **40936091**, 1× **RTX A6000 46 GB**, Delaware US-East, **$0.401/hr**, rel 0.999.
+  Chosen over RTX 4090 for VL VRAM headroom AND it was cheaper + 8.5 Gbps both ways (fast HF I/O).
+- **SSH (direct)**: `ssh -i ~/.ssh/vast_star -p 40995 -o StrictHostKeyChecking=no -o IdentitiesOnly=yes root@38.29.145.20`
+  (proxy fallback: `ssh6.vast.ai` port `16090`). The passphraseless `~/.ssh/vast_star` key (from
+  Phase 3) is registered on the account + attached. zsh won't word-split an ssh-in-a-var string —
+  invoke ssh directly or write a tiny wrapper script (I used `/tmp/vssh`, ephemeral).
+- **CLI**: `set -a; source .env; set +a; .venv/bin/vastai set api-key "$VASTAI_API_KEY"` then
+  `.venv/bin/vastai show instance 40936091`. Vast credit was $20.09 at start.
+- **Remote workdir**: `/workspace/star-pipeline` — has `data/processed/plots/` (6,000 PNGs, the
+  macOS `._` AppleDouble forks were deleted), `data/processed/plots/{train,val,test}_metadata.jsonl`,
+  `src/`, `config/`, and the FIXED `train_detection.py` (md5 `6738a1dc…`, in sync with the repo).
+- **Env on instance (DO NOT "fix" — it works)**: Python 3.11.9 (conda), unsloth 2026.6.7,
+  unsloth_zoo 2026.6.5, **torch 2.10.0+cu128**, **torchvision 0.25.0+cu128 (manually upgraded from
+  the image's 0.19 — REQUIRED; unsloth's torch 2.10 needs torchvision≥0.25)**, transformers 5.5.0,
+  trl 0.24.0. Base image: `pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel`. `HF_TOKEN` exported in
+  `/root/.bashrc` + written to `/root/.cache/huggingface/token`.
+- **Base VL model**: `unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit` (the plan's `Qwen3-VL-8B`
+  does NOT exist) — already downloaded/cached on the instance during smoke tests.
+
+### ⏭️ NEXT STEPS to finish Phase 8 (resume here)
+1. **Confirm the smoke test passes** (the interrupted step): from the instance,
+   `cd /workspace/star-pipeline && HF_TOKEN=$HF_TOKEN python src/training/train_detection.py --limit 32 --epochs 1`
+   → expect it to get PAST trainer construction and show training step logs (loss). The repro of
+   the exact trainer build (unsloth-first imports) already succeeded, so this should now work.
+2. **Launch full training detached** (survives SSH drop), ~250 opt-steps for 2 epochs over 2,000
+   train PNGs (batch 1 × grad-accum 16). On the A6000 estimate ~30–60 min; measure after step 10.
+   `cd /workspace/star-pipeline && ( setsid env HF_TOKEN=$HF_TOKEN nohup python src/training/train_detection.py --epochs 2 > /workspace/train_vl.log 2>&1 < /dev/null & )`
+   Watch: `tr '\r' '\n' < /workspace/train_vl.log | grep -aE 'loss|epoch' | tail`. Output LoRA →
+   `/workspace/star-pipeline/models/lora/qwen3-vl-detection/`.
+3. **Push to HF BEFORE teardown** (preserve regardless of local inference): adapter (+ merged +
+   GGUF + `mmproj` if exporting), e.g. `dyrtyData/star-pipeline-qwen3-vl-8b-detection`. Use the
+   on-instance `huggingface_hub` (already installed); token is set.
+4. **Eval ON the instance** (multimodal GGUF on Metal is patchy → do NOT rely on local):
+   `cd /workspace/star-pipeline && python src/inference/eval_vision.py --resume --checkpoint-every 250`
+   → `results/inference_vision.json`. ~2,000 test PNGs. Then `scp` it back to the repo's `results/`.
+5. **Destroy the instance**: `.venv/bin/vastai destroy instance 40936091` (STOPS billing). Only the
+   *instance* teardown — NOT the project-wide Phase-10 teardown.
+6. `make eval-all && make validate-eval` locally → the vision row appears automatically. Update the
+   Phase-8 table in the plan + this log. Commit (stage ONLY Phase-8 files; Phase-6 thread shares
+   the tree). `rm -f /tmp/vssh` if used.
+
+### Deviations (Phase 8)
+- **D31 — `train_detection.py` had 3 never-run bugs (fixed, commit `0daa2ec`).** It was written in
+  Phase 3 but never executed, so: (a) **import order** — `from trl import SFTTrainer` ran BEFORE
+  `from unsloth import …`, binding the UNPATCHED TRL trainer; that path can't handle the Qwen3VL
+  processor and raises `ValueError: eos_token '<EOS_TOKEN>' not in vocab`. Fixed by importing
+  unsloth first (+ `# noqa: I001` so ruff's isort doesn't re-sort `trl` ahead of `unsloth`).
+  (b) `SFTConfig(max_seq_length=…)` → `max_length` (TRL 0.24 rename, the same D9 fix
+  `train_advice.py` got). (c) pinned `eos_token="<|im_end|>"` (Unsloth's `for_training` swaps
+  `tokenizer.eos_token` for a `<EOS_TOKEN>` placeholder absent from the vocab). Root cause = (a);
+  (b)/(c) are belt-and-suspenders. A faithful repro with unsloth-first imports built the trainer OK.
+- **D32 — GPU choice: A6000 (not RTX 4090).** The plan suggested 4090 (consider A6000). A single
+  US A6000 was both cheaper ($0.401/hr) and 48 GB → VL headroom; Delaware host had 8.5 Gbps both
+  ways (avoids the Phase-4 Hungary download crawl). Picked it directly by offer id (offers are
+  ephemeral — the first verified id expired; re-searched and launched a fresh one).
+- **D33 — env: torchvision upgrade required.** `pip install unsloth unsloth_zoo` upgraded torch to
+  2.10.0+cu128 but left the image's torchvision 0.19; vision modeling needs ≥0.25. Installed
+  `torchvision==0.25.0` from the cu128 wheel index. (Onstart cmd was
+  `pip install unsloth unsloth_zoo huggingface_hub pillow`; the torchvision pin is the only manual add.)
+- **Upload method**: tar-stream over SSH (`tar czf - … | ssh … tar xzf -`); the pytorch image lacks
+  rsync (D12/D15). macOS adds `._` AppleDouble forks to the tar → they also matched `*.png` (12,000
+  vs 6,000); deleted with `find … -name '._*' -delete`. Harmless anyway (train/eval iterate the
+  metadata file, not a glob).
+
+### Plan sections that may need updating based on this phase
+- Phase 8 step 3 (HF push) + step 5 (local-vs-cloud eval): the eval is best run ON the instance via
+  `eval_vision.py` (already written for that); local Metal VL inference is the patchy fallback the
+  plan flagged — we default to on-instance. Capture `inference_vision.json` BEFORE teardown.
+- `train_detection.py` defaults: 2 epochs, batch 1 × grad-accum 16, lr 1e-4, r=α=16, all layers.
