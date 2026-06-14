@@ -2156,7 +2156,23 @@ No cloud, no API.
 > |---|---|---|---|
 > | LLM Detection (fine-tuned, n=4500) | 0.453 | 0.994 | 0.996 |
 > | Frontier zero-shot (Claude, n=150) | 0.254 | 1.000 | 1.000 |
-> | Base Qwen3-8B (n=500) | _pending_ | _pending (smoke: ~0)_ | _pending (≈0)_ |
+> | Base Qwen3-8B zero-shot (n=100) | **0.000** | **0.000** | **0.000** | (100/100 UNKNOWN — run stopped early, see D26) |
+> | Base Qwen3-8B few-shot (n=500) | _pending_ (n=30 probe ≈0.57) | _pending (~1.0)_ | _pending (~0)_ |
+>
+> **D30 — Added a few-shot base baseline ("prompting instead of fine-tuning").** The zero-shot
+> base scores all-UNKNOWN under the strict harness → P=R=F1=0, a clean *compliance* finding but
+> a degenerate *detection* comparison (a skeptic reads "base=0" as a rigged parser). On user
+> request, added the fairer/harder baseline: same base weights + **2 in-context examples/class
+> from TRAIN (no test leakage) + Qwen3 `/no_think`** (`--few-shot 2 --no-think` in
+> `test_local_gguf.py`; `make eval-base-fewshot`). This makes the base emit parseable verdicts and
+> a real detection score. **Tuning note:** 1 example/class collapsed to always-ANOMALY (recency/
+> label bias); 2/class discriminates (n=30 probe: F1≈0.57, P=0.44, R=0.83 — but anomaly-biased,
+> ~6.6 s/window, **no structured advice**). The 500-window run is in flight; the report row +
+> deltas populate via `make eval-all`. The honest takeaway: prompting recovers *compliance* and a
+> *comparable detection score*, but not the structured advice or the latency — those remain
+> fine-tuning's wins. `evaluate.py` now reports four contrasts: fine-tuned vs base-zero-shot vs
+> base-few-shot vs frontier-zero-shot. The other thread's concurrent Phase-8 work (`train_detection.py`,
+> committed `a6f26a6`) was kept strictly separate — only my own files were staged per commit.
 >
 > **D26 — Adopted an external 500-window base run (not the planned 4,500).** When this session
 > began, a base run started concurrently (PID 45306, `--limit 500`, label "Qwen3-8B BASE",

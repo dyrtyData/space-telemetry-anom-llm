@@ -817,10 +817,33 @@ and delete raw ESA-AD from DUAL DRIVE. Not yet done; deliberately deferred.
   deterministically regenerable); ignore `*.log`, `inference_base.json`, `inference_frontier_sample.json`,
   the report, and the base GGUF.
 
-### Remaining to close Phase 6 (when the base run finalizes — monitor armed)
-1. Confirm `results/inference_base.json` shows `partial=false` (n=500): the base run process gone +
+### Update 2026-06-14 (later) — base run stopped at n=100; few-shot baseline added (D30)
+- **Base zero-shot run stopped early at n=100** (user request): 100/100 UNKNOWN confirmed the run
+  goes to P=R=F1=0. That is a conclusive *compliance* finding at any n; finishing the other 400
+  added nothing. `results/inference_base.json` (n=100, partial=true) is the compliance datapoint;
+  the base row now renders F1=0.000, format_compliance=0.000 in the report.
+- **D30 — few-shot base baseline ("prompting instead of fine-tuning").** Added `--few-shot N`
+  (per-class examples from TRAIN, no test leakage) + `--no-think` to `test_local_gguf.py`;
+  `load_base_fewshot_results()` + a row + a dedicated bullet in evaluate.py's "Did fine-tuning
+  help?" section; `make eval-base-fewshot`. **1 example/class collapsed to always-ANOMALY**
+  (recency/label bias, F1=0.5 = base rate); **2/class discriminates** (n=30 probe: F1≈0.57,
+  P=0.44, R=0.83; anomaly-biased; ~6.6 s/window; no structured advice). 500-window run launched
+  detached (`results/inference_base_fewshot.json`). Honest framing: prompting recovers compliance
+  + a comparable detection score, but NOT structured advice or latency — those stay fine-tuning's
+  wins. Committed `1fc9534` (only my files; the Phase-8 thread's `train_detection.py` WIP left
+  untouched — concurrent-edit hazard managed by per-file staging).
+- **Concurrency note:** the Phase-8 (vision) thread shares this working tree and committed
+  `a6f26a6` (vision eval harness + evaluate.py vision row). evaluate.py/Makefile now carry BOTH
+  Phase-6 and Phase-8 code; I edit only my sections and stage only my files.
+
+### Remaining to close Phase 6 (when the FEW-SHOT run finalizes — monitor armed)
+1. Confirm `results/inference_base_fewshot.json` shows `partial=false` (n=500): process gone +
    file finalized. (`pgrep -fl '[t]est_local_gguf'`; check `summary.partial`.)
-2. `make eval-all && make validate-eval` → base row + full "Did fine-tuning help?" deltas populate.
-3. Update the n=500 base numbers in the plan's Phase-6 table + this log.
-4. Delete the base GGUF: `rm -rf models/gguf/base-qwen3-8b/` (reclaim 5 GB).
-5. Commit: `[Phase 6] Base-model control scored — fine-tuning deltas finalized`.
+2. `make eval-all && make validate-eval` → few-shot row + the "prompting vs fine-tuning" delta
+   bullet populate automatically.
+3. Update the n=500 few-shot numbers in the plan's Phase-6 table + this log (replace the n=30
+   probe estimate F1≈0.57 with the real n=500 figure).
+4. Delete the base GGUF: `rm -rf models/gguf/base-qwen3-8b/` (reclaim 5 GB) — same weights served
+   both the zero-shot and few-shot runs, so it's done after this.
+5. Commit: `[Phase 6] Few-shot base scored — fine-tuning deltas finalized` (stage ONLY my files;
+   the Phase-8 thread may have WIP in `train_detection.py`/elsewhere).
