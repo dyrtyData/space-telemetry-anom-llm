@@ -7,7 +7,7 @@ End-to-end comparison of anomaly-detection approaches on the ESA-AD test split. 
 | Approach | Precision | Recall | F1 | CEF0.5 | Affinity-F1 | Eval unit |
 |----------|-----------|--------|----|--------|-------------|-----------|
 | Isolation Forest | 0.127 | 0.459 | 0.188 | 0.149 | N/A | 3 channels |
-| LSTM Baseline | 0.837 | 0.599 | 0.698 | 0.775 | 0.607 | 1 channels |
+| LSTM Baseline | 0.785 | 0.451 | 0.552 | 0.684 | 0.649 | 58 channels |
 | LLM Detection | 0.360 | 0.609 | 0.453 | 0.392 | 0.456 | 4500 windows |
 | LLM Detection (vision, Qwen3-VL) | 0.769 | 0.325 | 0.457 | 0.604 | N/A | 2000 windows (PNG) |
 | Base Qwen3-8B (zero-shot) | 0 | 0.000 | 0 | 0.000 | N/A | 100 windows |
@@ -15,13 +15,13 @@ End-to-end comparison of anomaly-detection approaches on the ESA-AD test split. 
 | Frontier zero-shot (Claude, n=150 sample) | 0.308 | 0.216 | 0.254 | 0.284 | N/A | 150 windows |
 | Frontier few-shot (Claude, n=150 sample) | 0.200 | 0.297 | 0.239 | 0.214 | N/A | 150 windows |
 | Always-anomaly (trivial baseline) | 0.250 | 1.000 | 0.399 | 0.294 | N/A | 4500 windows |
-| Hybrid (LSTM + LLM advice) | 0.837 | 0.599 | 0.698 | 0.775 | N/A | 1 channels |
+| Hybrid (LSTM + LLM advice) | 0.785 | 0.451 | 0.552 | 0.684 | N/A | 58 channels |
 
 ## Key Findings
 
-- Highest detection F1: **LSTM Baseline** (F1=0.698, precision=0.837, recall=0.599).
-- Best precision-weighted score (CEF0.5, the operationally relevant metric for costly false alarms): **LSTM Baseline** (CEF0.5=0.775).
-- The LSTM baseline detects with higher precision (0.837 vs 0.360); the LLM trades precision for recall (0.609 vs 0.599) while adding a capability the baselines lack: free-text diagnostic advice.
+- Highest detection F1: **LSTM Baseline** (F1=0.552, precision=0.785, recall=0.451).
+- Best precision-weighted score (CEF0.5, the operationally relevant metric for costly false alarms): **LSTM Baseline** (CEF0.5=0.684).
+- The LSTM baseline detects with higher precision (0.785 vs 0.360); the LLM trades precision for recall (0.609 vs 0.451) while adding a capability the baselines lack: free-text diagnostic advice.
 - LLM advice coherence: 100% of the 1898 anomaly predictions emitted structured DIAGNOSIS+ADVICE text (responses persisted truncated at 300 chars) -- the hybrid's added value over the bare LSTM.
 - LLM inference cost: 2.77s/window on M3 Max Metal over 4500 windows (vs near-instant scoring for the baselines).
 - Affinity-F1 (interval-aware) for the LLM = 0.456 over 1052 ground-truth intervals; on this shuffled, subsampled test split it largely reduces to window-level F1 (see methodology note).
