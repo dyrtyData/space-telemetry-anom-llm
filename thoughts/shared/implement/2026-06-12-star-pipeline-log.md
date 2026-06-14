@@ -5,14 +5,19 @@
 **Status**: ✅ **Phases 1–6 COMPLETE & committed (HEAD `4d27cdd`).** Phase 8 (vision) is IN
 PROGRESS in a **concurrent thread sharing this working tree** (commits `a6f26a6`/`0daa2ec`/`81c0bb6`).
 
-> **▶▶ NEXT = PHASE 7 (full LSTM). FRESH THREAD: read the plan's "Phase 7" section — it has a
-> self-contained FRESH-THREAD START HERE block with the exact command, the two code changes
-> (persist per-window preds + LSTM Affinity-F1 in evaluate.py), durability notes, and the
-> concurrency rules. ◀◀** Phase 7 is free/local (~70–90 min). Then Phase 9 (advice grading, free),
-> Phase 8 (vision, concurrent), Phase 10 (teardown — must be LAST; it deletes the raw data Phase 7
-> needs). **CONCURRENCY RULE: `evaluate.py`/`Makefile` are shared with the Phase-8 thread — edit
-> only your sections and `git add` ONLY your own files (never `-A`/`-am`); run `git status --short`
-> before each commit.**
+> **▶▶ NEXT = PHASE 7 (full LSTM). The Phase-7 CODE IS DONE & committed (`2a01b15`)** — per-window
+> persistence + `--resume`/atomic flush in `train_lstm.py`, LSTM Affinity-F1 in `evaluate.py`,
+> `MAX_CHANNELS` in the Makefile. **Only the 58-channel RUN + report regen + checkboxes remain.**
+> Run: `make baseline MISSION=1 MAX_CHANNELS=58 ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" STAR_OUTPUT_DIR="/Volumes/DUAL DRIVE/star-pipeline"`
+> (~70–90 min, detached + caffeinate, laptop plugged in). `baseline_results.json` currently holds a
+> 1-channel smoke of the new code; the full run supersedes it. See the plan's "Phase 7" FRESH-THREAD
+> block. Then Phase 9 (advice grading, free), Phase 8 (vision, concurrent), Phase 10 (teardown LAST).
+> **CONCURRENCY: `evaluate.py`/`Makefile`/`train_lstm.py` are shared with the Phase-8 thread — edit
+> only your sections and `git add` ONLY your own files (never `-A`/`-am`); `git status --short` first.**
+>
+> **RESULTS ARE NOW TRACKED IN GIT** (commit `77d4f5f`, `.gitignore` updated): all `results/*.json`
+> + the comparison report are committed (~3.5 MB) — no more regenerating hours of inference. Only
+> `*.log` stays ignored. When you finish a run, COMMIT the updated result file + report.
 
 **Phase 6 result (closed 2026-06-14):** four-way "Did fine-tuning help?" — fine-tune F1=0.453 /
 CEF0.5=0.392 / advice=99.6% / 2.77s beats base-zero-shot (all-UNKNOWN, 0/0/0), base-few-shot

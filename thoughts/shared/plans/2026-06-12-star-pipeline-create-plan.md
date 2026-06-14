@@ -2280,35 +2280,31 @@ fine-tuned 99.6%) is a near-guaranteed clean win even if detection is closer.
 > - Models output dir convention: `STAR_OUTPUT_DIR` (default `/Volumes/DUAL DRIVE/star-pipeline`);
 >   `models/lstm/ESA-Mission1/` already exists from the smoke run.
 >
-> **The exact run command** (the Makefile `baseline` target does NOT pass `--max-channels`, and the
-> default is **5**, NOT 3 as an earlier note said — so call the script directly OR add a
-> `MAX_CHANNELS` var to the Makefile):
-> ```bash
-> KERAS_BACKEND=torch ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" \
->   STAR_OUTPUT_DIR="/Volumes/DUAL DRIVE/star-pipeline" \
->   .venv/bin/python src/baselines/train_lstm.py --missions 1 --max-channels 58
-> ```
-> ~75 s/channel × 58 ≈ **70–75 min**. ⚠️ **`train_lstm.py` has NO checkpoint/resume** — it writes
-> `baseline_results.json` only at the very end. Two options: (a) **add incremental flushing** (write
-> the results JSON after each channel + a `--resume` that skips channels already in the file) BEFORE
-> the long run — recommended, cheap, and matches the project's durability rule; or (b) run it
-> **detached + `caffeinate -dimsu`** and just re-run if it dies (≤70 min lost). Keep the laptop
-> **plugged in + lid open** either way.
+> **✅ UPDATE 2026-06-14 — the Phase-7 CODE IS DONE & committed (`2a01b15`).** Both code changes
+> below are already implemented and linted: `train_lstm.py` now persists sparse `pred_starts`/
+> `gt_starts` (+`window`/`stride`) per channel, has `--resume` (skips already-scored channels), and
+> **atomically flushes `baseline_results.json` after every channel** (a death costs one channel);
+> `evaluate.py` has `_per_channel_affinity()` wiring the LSTM Affinity-F1; the Makefile has
+> `MAX_CHANNELS` (default 5) + `--resume` on the `baseline` target. **All that remains is the actual
+> 58-channel RUN + report regen + doc/checkbox update.** (`baseline_results.json` currently holds a
+> **1-channel** smoke of the new code — the full run supersedes it.)
 >
-> **The two code changes (do these BEFORE the long run):**
-> 1. **Persist per-window predictions** in `train_lstm.py::train_channel_model` (around lines
->    137–168, which already compute `predicted` (bool) and `actual` = `window_is_anomaly`). The
->    sliding windows are at stride `--seq-stride` (default 16) on the resampled (1h) grid. Add to the
->    per-channel result dict a **sparse** record — the *window start indices* (in grid units) of
->    predicted-anomalous and truly-anomalous windows, plus the window length and stride, e.g.
->    `"pred_starts": [int,...], "gt_starts": [int,...], "window": 32, "stride": 16`. Sparse (not the
->    full ~16k-window arrays) keeps the JSON small. `baseline_results.json` is gitignored
->    (`results/**/*.json`) so size isn't a commit concern, but stay lean anyway.
-> 2. **Add an LSTM Affinity-F1 path in `evaluate.py`.** Today `_load_per_channel()` (the LSTM/IF
->    loader) sets `affinity_f1: None`. Add a helper that, when the per-channel `pred_starts`/`gt_starts`
->    exist, builds `grouped[(mission, channel)] = {"pred": [(s, s+window), ...], "gt": [...]}` and
->    calls the EXISTING `affinity_f1(grouped)` (already in evaluate.py, with `_merge_intervals`).
->    Set the LSTM row's `affinity_f1`. **Key point:** unlike the LLM's *shuffled* test split (where
+> **The exact run command** (Makefile now threads `MAX_CHANNELS` + `--resume`):
+> ```bash
+> make baseline MISSION=1 MAX_CHANNELS=58 \
+>   ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" STAR_OUTPUT_DIR="/Volumes/DUAL DRIVE/star-pipeline"
+> ```
+> ~75 s/channel × 58 ≈ **70–90 min**. Durability is built in (`--resume` + per-channel atomic flush),
+> so if it dies just re-run the same command — it skips done channels. Still run it **detached +
+> `caffeinate -dimsu`**, laptop **plugged in + lid open**. Then `make eval-all && make validate-eval`
+> and commit `results/lstm/baseline_results.json` + the regenerated report (results are tracked now).
+>
+> **The two code changes (ALREADY DONE — reference only):**
+> 1. ✅ **Per-window predictions persisted** in `train_lstm.py::train_channel_model`: sparse
+>    `pred_starts`/`gt_starts` (window start indices on the resampled grid) + `window`/`stride`.
+> 2. ✅ **LSTM Affinity-F1 path in `evaluate.py`** (`_per_channel_affinity()`): builds
+>    `grouped[(mission, channel)] = {"pred": [(s, s+window), ...], "gt": [...]}` and calls the
+>    existing `affinity_f1()`. **Key point:** unlike the LLM's *shuffled* test split (where
 >    Affinity-F1 ≈ window-F1 and is near-degenerate), the LSTM scores **contiguous per-channel
 >    timelines**, so its Affinity-F1 is genuinely meaningful — call that out in the report/log.
 >
