@@ -130,6 +130,32 @@ def affinity_f1(
 # --------------------------------------------------------------------------- #
 # Loaders
 # --------------------------------------------------------------------------- #
+def _per_channel_affinity(channels: list[dict]) -> dict | None:
+    """Compute interval-aware Affinity-F1 from per-channel window predictions, if present.
+
+    Phase 7 persists sparse `pred_starts`/`gt_starts` (window start indices on the
+    resampled grid) per channel in the LSTM results. Unlike the LLM's *shuffled* test
+    split (where Affinity-F1 ~= window-F1), these are **contiguous per-channel timelines**,
+    so merging adjacent anomalous windows into intervals is genuinely meaningful.
+    Returns None when no channel carries the per-window record (older smoke-run files).
+    """
+    grouped: dict[tuple, dict[str, list]] = defaultdict(lambda: {"pred": [], "gt": []})
+    found = False
+    for c in channels:
+        if "pred_starts" not in c or "gt_starts" not in c:
+            continue
+        found = True
+        window = int(c.get("window", 32))
+        key = (c.get("mission", ""), c.get("channel", ""))
+        for s in c["pred_starts"]:
+            grouped[key]["pred"].append((int(s), int(s) + window))
+        for s in c["gt_starts"]:
+            grouped[key]["gt"].append((int(s), int(s) + window))
+    if not found:
+        return None
+    return affinity_f1(grouped)
+
+
 def _load_per_channel(path: Path, approach: str) -> dict:
     """Load a Phase-2 baseline file (LSTM or IF): macro-average over channels."""
     if not path.exists():
@@ -144,13 +170,17 @@ def _load_per_channel(path: Path, approach: str) -> dict:
     precision = sum(c["precision"] for c in channels) / n
     recall = sum(c["recall"] for c in channels) / n
     f1 = sum(c["f1"] for c in channels) / n
+    # Phase 7: real interval-aware Affinity-F1 when per-window predictions were persisted
+    # (LSTM full-channel run); None for older smoke runs / IF (counts only).
+    affinity = _per_channel_affinity(channels)
     return {
         "approach": approach,
         "precision": round(precision, 4),
         "recall": round(recall, 4),
         "f1": round(f1, 4),
         "cef_0.5": round(cef_from_pr(precision, recall), 4),
-        "affinity_f1": None,  # per-window predictions not persisted for baselines
+        "affinity_f1": affinity["affinity_f1"] if affinity else None,
+        "affinity_detail": affinity,
         "n_units": n,
         "unit": "channels",
         "averaging": "macro (mean over channels)",

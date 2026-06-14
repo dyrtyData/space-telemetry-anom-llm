@@ -9,6 +9,9 @@ PY := $(VENV)/bin/python
 #   make download ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad"
 ESA_DATA_DIR ?= data/raw/esa-ad
 MISSION ?= 1
+# Channels per mission for the LSTM baseline. Default 5 (quick smoke); set to 58 for the
+# full Mission-1 target-channel sweep (Phase 7): make baseline MAX_CHANNELS=58
+MAX_CHANNELS ?= 5
 
 # Setup
 setup:
@@ -30,7 +33,7 @@ etl:
 # Baselines -- keras 3 runs on the torch backend (no tensorflow installed); raw data
 # comes from ESA_DATA_DIR, trained models go under STAR_OUTPUT_DIR (external drive).
 baseline:
-	KERAS_BACKEND=torch ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/baselines/train_lstm.py --missions $(MISSION)
+	KERAS_BACKEND=torch ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/baselines/train_lstm.py --missions $(MISSION) --max-channels $(MAX_CHANNELS) --resume
 
 baseline-if:
 	ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/baselines/isolation_forest.py --missions $(MISSION)

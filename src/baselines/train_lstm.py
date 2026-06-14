@@ -153,6 +153,15 @@ def train_channel_model(
         model_path.parent.mkdir(parents=True, exist_ok=True)
         model.save(model_path)
 
+    # Persist a SPARSE per-window prediction record so evaluate.py can compute an
+    # interval-aware Affinity-F1 (Phase 7). Windows are at stride `seq_stride` on the
+    # resampled grid, so window i covers grid units [i*stride, i*stride + window).
+    # We store only the *start indices* of anomalous windows (predicted + ground-truth),
+    # not the full ~16k-window arrays -- keeps the JSON small while remaining exact.
+    stride = int(args.seq_stride)
+    pred_starts = [int(i) * stride for i in np.nonzero(predicted)[0]]
+    gt_starts = [int(i) * stride for i in np.nonzero(actual)[0]]
+
     return {
         "channel": channel_name,
         "mission": mission,
@@ -165,6 +174,10 @@ def train_channel_model(
         "initial_loss": float(losses[0]),
         "final_loss": float(losses[-1]),
         "epochs_ran": len(losses),
+        "window": int(args.window),
+        "stride": stride,
+        "pred_starts": pred_starts,
+        "gt_starts": gt_starts,
     }
 
 
@@ -193,6 +206,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--save-models", action="store_true", default=True)
     p.add_argument("--no-save-models", dest="save_models", action="store_false")
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument(
+        "--resume",
+        action="store_true",
+        help="skip channels already present in results/lstm/baseline_results.json",
+    )
     return p.parse_args()
 
 
@@ -209,6 +227,25 @@ def summarize(results: list[dict]) -> dict:
     }
 
 
+def write_output(all_results: list[dict], args: argparse.Namespace, results_file: Path) -> dict:
+    """Atomically (temp + replace) write the current results to disk and return the summary.
+
+    Called after every channel so a death costs at most one channel, not the whole run
+    (train_lstm.py is otherwise a single long pass with no checkpointing).
+    """
+    summary = summarize(all_results)
+    output = {
+        "summary": summary,
+        "config": vars(args) | {"data_dir": str(args.data_dir)},
+        "channels": all_results,
+    }
+    tmp = results_file.with_suffix(".json.tmp")
+    with open(tmp, "w") as f:
+        json.dump(output, f, indent=2, default=str)
+    os.replace(tmp, results_file)
+    return summary
+
+
 def main():
     args = parse_args()
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -218,7 +255,17 @@ def main():
     print(f"keras backend: {keras.backend.backend()}  |  raw data: {args.data_dir}")
     print(f"models -> {MODELS_DIR if args.save_models else '(not saved)'}")
 
+    results_file = RESULTS_DIR / "baseline_results.json"
+
+    # --resume: keep channels already scored in a prior run; skip re-training them.
     all_results: list[dict] = []
+    done: set[tuple[str, str]] = set()
+    if args.resume and results_file.exists():
+        prior = json.loads(results_file.read_text())
+        all_results = prior.get("channels", [])
+        done = {(c.get("mission"), c.get("channel")) for c in all_results}
+        print(f"resume: {len(done)} channel(s) already scored, skipping those")
+
     for mission_dir in discover_missions(args.data_dir, args.missions):
         mission = mission_dir.name
         labels = load_labels(mission_dir)
@@ -226,24 +273,20 @@ def main():
         print(f"\n{mission}: training {len(channels)} channel(s)")
 
         for channel, channel_file in tqdm(channels, desc=f"  {mission}"):
+            if (mission, channel) in done:
+                continue
             series = resample_series(load_channel_series(channel_file), args.resample)
             if len(series) < args.window:
                 all_results.append({"channel": channel, "mission": mission, "error": "too short"})
-                continue
-            point_mask = anomaly_mask_for_channel(series.index, channel, labels)
-            all_results.append(
-                train_channel_model(series.values, point_mask, channel, mission, args)
-            )
+            else:
+                point_mask = anomaly_mask_for_channel(series.index, channel, labels)
+                all_results.append(
+                    train_channel_model(series.values, point_mask, channel, mission, args)
+                )
+            # Flush after every channel so an interruption is a cheap re-run (with --resume).
+            write_output(all_results, args, results_file)
 
-    summary = summarize(all_results)
-    output = {
-        "summary": summary,
-        "config": vars(args) | {"data_dir": str(args.data_dir)},
-        "channels": all_results,
-    }
-    results_file = RESULTS_DIR / "baseline_results.json"
-    with open(results_file, "w") as f:
-        json.dump(output, f, indent=2, default=str)
+    summary = write_output(all_results, args, results_file)
 
     print("\nLSTM baseline summary:")
     for k, v in summary.items():
