@@ -82,9 +82,13 @@ def main() -> None:
     args = parser.parse_args()
 
     # Heavy imports inside main() so --help / lint work without a GPU stack.
-    from trl import SFTConfig, SFTTrainer
-    from unsloth import FastVisionModel
+    # IMPORTANT: import unsloth BEFORE trl/transformers/peft. Unsloth monkey-patches TRL's
+    # SFTTrainer/SFTConfig (incl. correct VLM eos_token handling) at import time; if `trl`
+    # is imported first, SFTTrainer binds to the UNPATCHED class and the Qwen3VL processor
+    # trips a "<EOS_TOKEN>" not-in-vocab ValueError. Order matters here.
+    from unsloth import FastVisionModel  # noqa: I001  (unsloth MUST precede trl; do not sort)
     from unsloth.trainer import UnslothVisionDataCollator
+    from trl import SFTConfig, SFTTrainer
 
     model, processor = FastVisionModel.from_pretrained(
         model_name=args.model,
@@ -111,6 +115,13 @@ def main() -> None:
 
     FastVisionModel.for_training(model)
 
+    # TRL 0.24 + Qwen3VLProcessor: SFTTrainer validates SFTConfig.eos_token against the
+    # processor vocab. Unsloth's for_training() swaps tokenizer.eos_token for a literal
+    # "<EOS_TOKEN>" placeholder that is NOT in the vocab, so reading it dynamically (or
+    # leaving eos_token=None) makes SFTTrainer raise. Pin the canonical Qwen3 chat EOS,
+    # which IS in the vocab (id 151645).
+    eos_token = "<|im_end|>"
+
     trainer = SFTTrainer(
         model=model,
         processing_class=processor,  # TRL 0.24: `tokenizer=` kwarg removed
@@ -136,7 +147,8 @@ def main() -> None:
             remove_unused_columns=False,
             dataset_kwargs={"skip_prepare_dataset": True},
             dataset_num_proc=1,
-            max_seq_length=MAX_SEQ_LENGTH,
+            max_length=MAX_SEQ_LENGTH,  # TRL 0.24: `max_seq_length` renamed to `max_length` (D9)
+            eos_token=eos_token,  # avoid TRL's "<EOS_TOKEN>" placeholder (not in VL vocab)
         ),
     )
 
