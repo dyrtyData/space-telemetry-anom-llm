@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision
+.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision grade-advice-select grade-advice-assemble
 
 PYTHON := python3
 VENV := .venv
@@ -142,6 +142,17 @@ frontier-select:
 
 frontier-assemble:
 	$(PY) src/inference/select_frontier_sample.py --assemble results/frontier_classifications.json
+
+# Phase 9: semantic advice grading (free, in-session judge). grade-advice-select freezes a
+# seed-42 sample of the fine-tuned model's anomaly predictions + window context + gold ref to
+# data/advice_grading/advice_sample.jsonl; the Claude session model scores each on a 0-2 rubric
+# (correctness/actionability/grounding) into results/advice_judgments.json; grade-advice-assemble
+# joins them into results/advice_grading_sample.json (consumed by evaluate.py's report).
+grade-advice-select:
+	$(PY) src/inference/grade_advice_sample.py --select --n $(or $(N),120)
+
+grade-advice-assemble:
+	$(PY) src/inference/grade_advice_sample.py --assemble results/advice_judgments.json
 
 # Phase 8: Qwen3-VL vision detector eval. Runs ON the Vast.ai instance (Unsloth + the
 # trained adapter), NOT locally — multimodal GGUF on Metal is patchy, so we score where

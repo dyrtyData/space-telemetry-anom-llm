@@ -40,6 +40,21 @@ The headline claim is that fine-tuning an open model adapts it to a localized, m
 - **vs. a frontier model zero-shot (Claude, 150-window stratified sample, no fine-tuning):** the frontier detector scores F1 0.254 (precision 0.308, recall 0.216) on the same input the fine-tune saw — a far stronger general model still trails the small fine-tuned model (F1 0.453) on this specialized task, because the signal lives in mission/channel-specific patterns learned during fine-tuning, not in general reasoning over a few normalized values.
 - **Takeaway:** fine-tuning's clearest, most reliable wins here are *task/format adaptation, structured advice, and latency* — turning a capable but non-compliant base into a model that reliably emits the exact terse verdict + structured advice the downstream pipeline consumes, faster. Few-shot prompting can recover compliance and a comparable detection score, but not the structured advice or the speed; raw zero-shot (base and frontier) recovers neither. The operational unlock is compliance + advice.
 
+## Advice quality (semantic) — Phase 9
+
+The detection table above shows the fine-tuned model emits structured advice on ~all of its flags. This grades whether that advice is *correct*. A frozen seed-42 sample of **120** of the model's anomaly predictions (TP/FP ratio preserved) was graded by Claude (session model) — no API, no fine-tuning. Rubric: correctness / actionability / grounding, each 0-2 (total 0-6).
+
+| Subset | n | Correctness | Actionability | Grounding | Mean total /6 | High-quality |
+|--------|---|-------------|---------------|-----------|---------------|--------------|
+| All flags | 120 | 0.64 | 1.03 | 1.01 | 2.68 | 34% |
+| True positives (correct flags) | 43 | 1.79 | 1.93 | 1.86 | 5.58 | 95% |
+| False positives (false alarms) | 77 | 0.00 | 0.53 | 0.53 | 1.06 | 0% |
+
+- **When the model is right to flag (true positives), its advice is genuinely good:** mean 5.58/6, 95% high-quality, 100% grounded (correct channel/subsystem/unit and a magnitude consistent with the window), 100% carrying a severity-appropriate recommended action.
+- **Advice quality is gated by detection precision.** On false alarms (77/120 of the sampled flags — the model's precision is ~0.36) the advice is built on a false premise, so correctness is 0.00/2 by construction; the model often fabricates a confident 'persistent/100% anomalous' narrative on a truly-nominal window. Overall mean drops to 2.68/6 (34% high-quality).
+- **Implication for the recommendation:** the fine-tuned model is best deployed as the *advisor* on top of a high-precision detector (the Hybrid: LSTM flags at precision ≈0.84, the LLM explains each flag), not as the standalone detector — its diagnostic writing is strong, but only as trustworthy as whatever decided to call the anomaly.
+- **Caveats:** sample of 120 only; judge is the Claude session model (not human SMEs); gold advice labels are synthetic (statistic-derived, Phase 1.5) and used only as an optional reference; advice text was scored from the 300-char-truncated DIAGNOSIS+ADVICE (the ACTION line is clipped in storage).
+
 ## Methodology Notes
 
 - **Baselines (LSTM, Isolation Forest)** are scored per channel and macro-averaged over the channels evaluated (Phase-2 smoke run: 3 Mission-1 target channels). Per-window predictions were not persisted, so Affinity-F1 is N/A for them.

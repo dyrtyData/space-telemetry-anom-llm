@@ -32,6 +32,7 @@ BASE_FILE = RESULTS_DIR / "inference_base.json"  # Phase 6: un-fine-tuned base c
 BASE_FS_FILE = RESULTS_DIR / "inference_base_fewshot.json"  # Phase 6: base + few-shot prompting
 FRONTIER_FILE = RESULTS_DIR / "inference_frontier_sample.json"  # Phase 6: frontier zero-shot
 VISION_FILE = RESULTS_DIR / "inference_vision.json"  # Phase 8: Qwen3-VL detector on PNG plots
+ADVICE_GRADE_FILE = RESULTS_DIR / "advice_grading_sample.json"  # Phase 9: semantic advice grading
 TEST_WITH_ADVICE = Path("data/splits/test_with_advice.jsonl")
 
 LLM_APPROACH = "LLM Detection"
@@ -513,6 +514,76 @@ def generate_finetuning_section(results: list[dict]) -> list[str]:
     return lines
 
 
+def generate_advice_quality_section() -> list[str]:
+    """Render the Phase-9 'Advice quality (semantic)' subsection, if the grading file exists.
+
+    Phase 5/6 measured the *structural* compliance of the advice (≈99.6% of flags emit
+    DIAGNOSIS+ADVICE). Phase 9 grades a frozen seed-42 sample of those flags semantically
+    (correctness / actionability / grounding, 0-2 each) with the Claude session model as
+    judge -- converting "99.6% structured" into "X% actually correct/actionable". Returns []
+    when the grading hasn't been run, so the report degrades gracefully.
+    """
+    if not ADVICE_GRADE_FILE.exists():
+        return []
+    d = json.loads(ADVICE_GRADE_FILE.read_text())
+    s = d["summary"]
+    o, tp, fp = s["overall"], s["true_positives"], s["false_positives"]
+
+    lines = ["\n## Advice quality (semantic) — Phase 9\n"]
+    lines.append(
+        f"The detection table above shows the fine-tuned model emits structured advice on "
+        f"~all of its flags. This grades whether that advice is *correct*. A frozen seed-42 "
+        f"sample of **{s['n_samples']}** of the model's anomaly predictions (TP/FP ratio "
+        f"preserved) was graded by {s['judge']}. Rubric: {s['rubric']}.\n"
+    )
+    lines.append(
+        "| Subset | n | Correctness | Actionability | Grounding | Mean total /6 | High-quality |"
+    )
+    lines.append(
+        "|--------|---|-------------|---------------|-----------|---------------|--------------|"
+    )
+
+    def row(label: str, g: dict) -> str:
+        hq = g["pct_high_quality"] * 100
+        return (
+            f"| {label} | {g['n']} | {g['mean_correctness']:.2f} | {g['mean_actionability']:.2f} | "
+            f"{g['mean_grounding']:.2f} | {g['mean_total']:.2f} | {hq:.0f}% |"
+        )
+
+    lines.append(row("All flags", o))
+    lines.append(row("True positives (correct flags)", tp))
+    lines.append(row("False positives (false alarms)", fp))
+    lines.append("")
+    lines.append(
+        f"- **When the model is right to flag (true positives), its advice is genuinely good:** "
+        f"mean {tp['mean_total']:.2f}/6, {tp['pct_high_quality'] * 100:.0f}% high-quality, "
+        f"{tp['pct_grounded'] * 100:.0f}% grounded (correct channel/subsystem/unit and a "
+        f"magnitude consistent with the window), {tp['pct_actionable'] * 100:.0f}% carrying a "
+        f"severity-appropriate recommended action."
+    )
+    lines.append(
+        f"- **Advice quality is gated by detection precision.** On false alarms "
+        f"({fp['n']}/{s['n_samples']} of the sampled flags — the model's precision is ~0.36) the "
+        f"advice is built on a false premise, so correctness is {fp['mean_correctness']:.2f}/2 by "
+        f"construction; the model often fabricates a confident 'persistent/100% anomalous' "
+        f"narrative on a truly-nominal window. Overall mean drops to {o['mean_total']:.2f}/6 "
+        f"({o['pct_high_quality'] * 100:.0f}% high-quality)."
+    )
+    lines.append(
+        "- **Implication for the recommendation:** the fine-tuned model is best deployed as the "
+        "*advisor* on top of a high-precision detector (the Hybrid: LSTM flags at precision "
+        "≈0.84, the LLM explains each flag), not as the standalone detector — its diagnostic "
+        "writing is strong, but only as trustworthy as whatever decided to call the anomaly."
+    )
+    lines.append(
+        f"- **Caveats:** sample of {s['n_samples']} only; judge is the Claude session model "
+        "(not human SMEs); gold advice labels are synthetic (statistic-derived, Phase 1.5) and "
+        "used only as an optional reference; advice text was scored from the 300-char-truncated "
+        "DIAGNOSIS+ADVICE (the ACTION line is clipped in storage)."
+    )
+    return lines
+
+
 def generate_report(results: list[dict]) -> str:
     llm = next((r for r in results if r["approach"] == "LLM Detection"), {})
     n_llm = llm.get("n_units", "?")
@@ -544,6 +615,8 @@ def generate_report(results: list[dict]) -> str:
     lines.extend(generate_findings(results))
 
     lines.extend(generate_finetuning_section(results))
+
+    lines.extend(generate_advice_quality_section())
 
     lines.append("\n## Methodology Notes\n")
     lines.append(

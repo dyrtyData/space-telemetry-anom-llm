@@ -2415,6 +2415,20 @@ Assets are ready (PNGs + `train_detection.py`); only the training run + eval rem
 **Goal:** turn "99.6% structured" into "X% actually correct." Distinct from Phase 6's frontier
 *detection* — here Claude is a *judge* of OUR fine-tuned model's advice.
 
+> **✅ Phase 9 status: COMPLETE (2026-06-14).** `src/inference/grade_advice_sample.py`
+> (`--select`/`--assemble`, seed-42, mirrors `select_frontier_sample.py`) freezes 120 of the
+> fine-tuned model's anomaly predictions (TP/FP ratio preserved) → judged in-session on a 0-2
+> rubric (correctness/actionability/grounding) → `results/advice_grading_sample.json`. The report
+> now carries an **"Advice quality (semantic) — Phase 9"** subsection. Headline:
+> **on true positives the advice is genuinely good (5.58/6, 95% high-quality, 100% grounded &
+> actionable); on false positives it is built on a false premise (1.06/6) → overall 2.68/6.**
+> The grounding is verifiably strong (119/119 correct channel naming; only 3/120 subsystem
+> mislabels), so advice quality is *gated by detection precision* — the evidence for recommending
+> the fine-tune as the **advisor on a high-precision detector (the Hybrid)**, not the standalone
+> detector. `make eval-all && make validate-eval` → OK. Did NOT touch Phase 7 (full LSTM, still
+> pending its 58-channel run), the raw data, or the cloud. See the implementation log's Phase 9
+> section for deviations. Makefile targets: `grade-advice-select`, `grade-advice-assemble`.
+
 > **✅ FRESH-THREAD READINESS (added 2026-06-14, after Phase 8) — Phase 9 can start NOW; it does
 > NOT depend on Phase 7.** Phase 9 reads only the fine-tuned TEXT model's already-persisted outputs
 > + the gold advice labels; it never touches the LSTM, the raw ESA-AD data, or the cloud. So it is

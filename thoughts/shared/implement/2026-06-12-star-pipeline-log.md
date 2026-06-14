@@ -39,6 +39,7 @@ CEF0.5=0.392 / advice=99.6% / 2.77s beats base-zero-shot (all-UNKNOWN, 0/0/0), b
 | 6 (code+frontier) | **completed** | 2026-06-14 | 2026-06-14 | D26–D29 (adopted ext 500 base run, identical-harness, frontier sub-agent, graceful rows) |
 | 6 (base run) | **in flight** | 2026-06-14 | — | external 500-window base run; finalize report + delete base GGUF after |
 | 8 (vision) | **completed** | 2026-06-14 | 2026-06-14 | D31–D34 (3 never-run train_detection bugs, A6000 GPU, torchvision upgrade, eval faster than est); F1=0.457, instance destroyed |
+| 9 (advice grading) | **completed** | 2026-06-14 | 2026-06-14 | D35–D37 (verifiable rubric, GT-gated correctness, gold-as-reference); TP advice 5.58/6 (95% HQ), gated by precision |
 
 ---
 
@@ -1006,3 +1007,86 @@ that is fix-applied-but-unconfirmed (session interrupted right before re-running
 - `evaluate.py` + `Makefile` are SHARED with the concurrent Phase-6 thread (base zero-shot/few-shot
   rows). The committed report now carries 8 approaches: IF, LSTM, text-LLM, **vision-LLM**, base
   zero-shot, base few-shot, frontier, hybrid. Stage Phase-8 files individually when committing.
+
+---
+
+## Phase 9: Semantic advice grading (in-session Claude as judge) — COMPLETE (2026-06-14)
+
+**Status: COMPLETE.** Ran fully independently of Phase 7 (full LSTM still pending its 58-channel
+run — `baseline_results.json` still holds the 1-channel smoke of the new code), the raw data, and
+the cloud. Free, no API.
+
+### What was built
+- **`src/inference/grade_advice_sample.py`** (NEW, mirrors `select_frontier_sample.py`):
+  - `--select [--n 120]`: filters `results/inference_test.json` to the model's ANOMALY predictions
+    (1,898 of 4,500), takes a **seed-42 sample preserving the population TP/FP ratio** (684 TP /
+    1,214 FP → 43 TP / 77 FP in the sample), joins each to `test_with_advice.jsonl[index]` for the
+    window context + true `anomaly_ratio`, and attaches the time-overlapping gold-advice record
+    (per `(mission, channel)`) as an optional reference. Writes
+    `data/advice_grading/advice_sample.jsonl`.
+  - `--assemble PATH`: joins an in-session judgments JSON (per-record correctness/actionability/
+    grounding, 0-2) → `results/advice_grading_sample.json` with overall + **TP-split / FP-split**
+    summary stats (mean per axis, mean total /6, pct_correct/actionable/grounded/high_quality).
+- **`evaluate.py`**: added `generate_advice_quality_section()` → renders an
+  **"Advice quality (semantic) — Phase 9"** subsection (degrades gracefully to nothing when the
+  grading file is absent). Added `ADVICE_GRADE_FILE` constant; wired the section after the
+  "Did fine-tuning help?" block.
+- **Makefile**: `grade-advice-select`, `grade-advice-assemble` targets (+ `.PHONY`).
+
+### Judging methodology (transparent, fact-grounded rubric)
+The in-session judge applied a consistent rubric anchored in **verifiable** signals rather than
+vibes (the advice is templated, so its semantic content is checkable):
+- **Grounding** is verifiably strong: **119/119** flagged windows name the *correct* channel; the
+  physical unit (temperature/pressure/binary) is consistent; only **3/120** mislabel the subsystem
+  vs gold (cross-mission `channel_N` collisions).
+- **Correctness** keys on ground truth: a flag on a truly-nominal window (FP) is incorrect by
+  construction (correctness 0); on a true anomaly (TP), 2 if the diagnosed pattern/severity matches
+  the true `anomaly_ratio`, 1 if it over/under-calls severity.
+- **Actionability**: severity-appropriate guidance present → 2; proportionate-but-generic → 1;
+  high-severity "investigate" raised on a nominal window (a costly false alarm) → 0.
+The judgments file (`results/advice_judgments.json`) carries a per-record `note` with the rationale.
+
+### Results (`results/advice_grading_sample.json`, n=120)
+| Subset | n | Correctness | Actionability | Grounding | Mean /6 | High-quality |
+|--------|---|------|------|------|------|------|
+| All flags | 120 | 0.64 | 1.03 | 1.01 | 2.68 | 34% |
+| True positives | 43 | 1.79 | 1.93 | 1.86 | **5.58** | **95%** |
+| False positives | 77 | 0.00 | 0.53 | 0.53 | 1.06 | 0% |
+
+**Finding:** when the model is *right to flag*, its advice is genuinely good (5.58/6, 95%
+high-quality, 100% grounded & actionable). On false alarms (≈64% of flags, precision ≈0.36) the
+advice is built on a false premise. So **advice quality is gated by detection precision** — the
+direct evidence for recommending the fine-tune as the **advisor on a high-precision detector
+(the Hybrid: LSTM precision ≈0.84 + LLM advice)**, not as the standalone detector. This converts
+Phase 5/6's "99.6% structured" into a defensible "95% high-quality *when correctly triggered*".
+
+### Verification
+- `make eval-all` → report regenerated with the Phase-9 subsection; `make validate-eval` → **OK**
+  (8 detection approaches still valid; the advice section is additive, not a scored row).
+- `make lint` (ruff check + format) → clean on all 22 files.
+
+### Deviations
+- **D35 — judge is a transparent rubric, not free-form scoring.** The plan said "the in-session
+  agent reviews … score on a small rubric." Because the advice is templated, the judge encoded the
+  rubric as deterministic, *verifiable* criteria (channel-name match, stated-% vs true ratio,
+  severity↔pattern coherence, GT-gated correctness) for reproducibility, with per-record notes.
+  This is stricter and more defensible than impressionistic scoring; same rubric the plan specified.
+- **D36 — correctness is GT-gated (FP ⇒ 0).** Grading advice on a false-positive window scores
+  correctness 0 by construction (no real anomaly to diagnose). Reported TP/FP-split so the
+  advisory quality "when the model is right" (the operationally relevant number) is not masked by
+  the false-alarm rate. Stated explicitly in the report + the file's `note`.
+- **D37 — gold advice used as optional reference only.** As the Phase-9 readiness block predicted,
+  `inference_test.json` carries no `pattern`/`start_time` for a strict 1:1 gold join; the join is by
+  `(mission, channel)` time-overlap and is advisory. Primary grading is against window context +
+  ground-truth label, which needs no gold join.
+
+### Impact on the rest of the plan
+- **No changes needed to other phases.** Phase 9 is read-only w.r.t. all prior artifacts; it only
+  *adds* a report subsection + two result JSONs + one script + two Makefile targets.
+- **Concurrency:** `evaluate.py`, `Makefile`, `comparison_report.md` are shared with the Phase-7
+  thread. Verified no Phase-7 process is running and the tree was clean; the report diff is **+15
+  lines (the Phase-9 section only)** — Phase 6/7/8 numbers untouched. When Phase 7's full
+  58-channel LSTM run lands, it will regenerate the report and the Phase-9 section persists. Staged
+  Phase-9 files individually (never `git add -A`).
+- **Phase 10 teardown** precondition "Phases 5–9 complete (Phase 8 optional)" now needs only
+  Phase 7's full LSTM run to be finished-or-skipped.

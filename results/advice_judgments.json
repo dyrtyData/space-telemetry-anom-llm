@@ -1,0 +1,842 @@
+[
+ {
+  "index": 4,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 14,
+  "correctness": 1,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=subtle/low/3%; UNDER-called severity"
+ },
+ {
+  "index": 23,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=6%; model=subtle/low/3%"
+ },
+ {
+  "index": 35,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/6% -> false anomaly claim"
+ },
+ {
+  "index": 36,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 38,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=persistent/high/100%"
+ },
+ {
+  "index": 58,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/medium/21% -> false anomaly claim"
+ },
+ {
+  "index": 108,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/6% -> false anomaly claim"
+ },
+ {
+  "index": 159,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 216,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=3%; model=subtle/low/3%"
+ },
+ {
+  "index": 220,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/medium/18% -> false anomaly claim"
+ },
+ {
+  "index": 331,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 344,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 370,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 414,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=other/None/95% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 450,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=persistent/high/100%"
+ },
+ {
+  "index": 509,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 583,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=3%; model=subtle/low/6%"
+ },
+ {
+  "index": 636,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=9%; model=subtle/medium/43%"
+ },
+ {
+  "index": 653,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 675,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 690,
+  "correctness": 1,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=3%; model=persistent/None/100%; OVER-called severity"
+ },
+ {
+  "index": 716,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 727,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=3%; model=subtle/low/3%"
+ },
+ {
+  "index": 741,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 786,
+  "correctness": 1,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=47%; model=persistent/high/100%; OVER-called severity"
+ },
+ {
+  "index": 788,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/6% -> false anomaly claim"
+ },
+ {
+  "index": 810,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/9% -> false anomaly claim"
+ },
+ {
+  "index": 831,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 868,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=3%; model=subtle/low/3%"
+ },
+ {
+  "index": 929,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 974,
+  "correctness": 2,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "TP true_ratio=100%; model=subtle/high/65%; internal incoherence (subtle+high/large)"
+ },
+ {
+  "index": 1014,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 1017,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 1109,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 1145,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 1260,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=persistent/high/100%"
+ },
+ {
+  "index": 1279,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 1,
+  "note": "TP true_ratio=6%; model=subtle/low/9%; subsystem mislabel vs gold"
+ },
+ {
+  "index": 1319,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 1354,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 1407,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=3%; model=subtle/low/3%"
+ },
+ {
+  "index": 1424,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 1559,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=drift/medium/None% -> false anomaly claim"
+ },
+ {
+  "index": 1581,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/93% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 1629,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=9%; model=subtle/low/3%"
+ },
+ {
+  "index": 1671,
+  "correctness": 1,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=subtle/low/9%; UNDER-called severity"
+ },
+ {
+  "index": 1677,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=persistent/high/100%"
+ },
+ {
+  "index": 1820,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=subtle/high/62% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 1863,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=3%; model=subtle/low/3%"
+ },
+ {
+  "index": 1969,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 2036,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 2041,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=3%; model=subtle/low/3%"
+ },
+ {
+  "index": 2055,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=sustained/high/100%"
+ },
+ {
+  "index": 2085,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=9%; model=subtle/low/3%"
+ },
+ {
+  "index": 2090,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=sustained/high/100%"
+ },
+ {
+  "index": 2126,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 2156,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=12%; model=subtle/low/6%"
+ },
+ {
+  "index": 2199,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 2243,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=subtle/high/71% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 2252,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 2256,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 2383,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 2386,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/9% -> false anomaly claim"
+ },
+ {
+  "index": 2390,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=3%; model=subtle/low/3%"
+ },
+ {
+  "index": 2394,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 2410,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 2445,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 1,
+  "note": "TP true_ratio=3%; model=subtle/low/3%; subsystem mislabel vs gold"
+ },
+ {
+  "index": 2515,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 2529,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 2531,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/9% -> false anomaly claim"
+ },
+ {
+  "index": 2540,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 2553,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/93% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 2635,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=3%; model=subtle/low/6%"
+ },
+ {
+  "index": 2665,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=subtle/high/65% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 2667,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=sustained/high/100%"
+ },
+ {
+  "index": 2698,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=other/None/None% -> false anomaly claim"
+ },
+ {
+  "index": 2800,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/medium/41% -> false anomaly claim"
+ },
+ {
+  "index": 2849,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 2903,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=91%; model=persistent/high/100%"
+ },
+ {
+  "index": 2927,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=sustained/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 2935,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=16%; model=subtle/low/6%"
+ },
+ {
+  "index": 2961,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 3001,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 3127,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 3137,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 3183,
+  "correctness": 1,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=subtle/low/3%; UNDER-called severity"
+ },
+ {
+  "index": 3188,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 3230,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=persistent/high/100%"
+ },
+ {
+  "index": 3297,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 1,
+  "note": "TP true_ratio=3%; model=subtle/low/9%; subsystem mislabel vs gold"
+ },
+ {
+  "index": 3356,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 3371,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=persistent/high/100%"
+ },
+ {
+  "index": 3385,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=subtle/high/62% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 3477,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=subtle/high/68% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 3494,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 3568,
+  "correctness": 1,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "TP true_ratio=3%; model=subtle/high/65%; OVER-called severity; internal incoherence (subtle+high/large)"
+ },
+ {
+  "index": 3584,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 3639,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/9% -> false anomaly claim"
+ },
+ {
+  "index": 3740,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=persistent/high/100%"
+ },
+ {
+  "index": 3793,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/6% -> false anomaly claim"
+ },
+ {
+  "index": 3809,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/9% -> false anomaly claim"
+ },
+ {
+  "index": 3832,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 3861,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 3929,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/medium/21% -> false anomaly claim"
+ },
+ {
+  "index": 3941,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=subtle/high/53% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 4009,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=19%; model=subtle/low/3%"
+ },
+ {
+  "index": 4067,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 4073,
+  "correctness": 1,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=53%; model=subtle/medium/46%; UNDER-called severity"
+ },
+ {
+  "index": 4087,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 4093,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 4113,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=sustained/high/100%"
+ },
+ {
+  "index": 4127,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 4136,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 4174,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/low/3% -> false anomaly claim"
+ },
+ {
+  "index": 4176,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=subtle/high/53% -> false anomaly claim; fabricated strong signal on nominal window"
+ },
+ {
+  "index": 4188,
+  "correctness": 1,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=12%; model=persistent/high/100%; OVER-called severity"
+ },
+ {
+  "index": 4202,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=100%; model=sustained/high/100%"
+ },
+ {
+  "index": 4228,
+  "correctness": 1,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "TP true_ratio=3%; model=subtle/high/56%; OVER-called severity; internal incoherence (subtle+high/large)"
+ },
+ {
+  "index": 4278,
+  "correctness": 2,
+  "actionability": 2,
+  "grounding": 2,
+  "note": "TP true_ratio=3%; model=subtle/low/3%"
+ },
+ {
+  "index": 4441,
+  "correctness": 0,
+  "actionability": 1,
+  "grounding": 1,
+  "note": "FP (truly nominal); model=subtle/medium/25% -> false anomaly claim"
+ },
+ {
+  "index": 4490,
+  "correctness": 0,
+  "actionability": 0,
+  "grounding": 0,
+  "note": "FP (truly nominal); model=persistent/high/100% -> false anomaly claim; fabricated strong signal on nominal window"
+ }
+]
