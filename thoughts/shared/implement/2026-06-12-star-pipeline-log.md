@@ -2,20 +2,19 @@
 
 **Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`
 **Started**: 2026-06-12
-**Status**: ✅ **Phases 1–6 COMPLETE & committed (HEAD `4d27cdd`).** Phase 8 (vision) is IN
-PROGRESS in a **concurrent thread sharing this working tree** (commits `a6f26a6`/`0daa2ec`/`81c0bb6`).
+**Status**: ✅ **Phases 1–9 COMPLETE & committed.** Phase 7 closed at HEAD `41a1c09` (full 58-channel
+LSTM). Phase 8 (vision) closed at `4397e8e`; Phase 9 (advice grading) at `3e305c3`. **Only Phase 10
+(teardown) remains.**
 
-> **▶▶ NEXT = PHASE 7 (full LSTM). The Phase-7 CODE IS DONE & committed (`2a01b15`)** — per-window
-> persistence + `--resume`/atomic flush in `train_lstm.py`, LSTM Affinity-F1 in `evaluate.py`,
-> `MAX_CHANNELS` in the Makefile. **Only the 58-channel RUN + report regen + checkboxes remain.**
-> Run: `make baseline MISSION=1 MAX_CHANNELS=58 ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" STAR_OUTPUT_DIR="/Volumes/DUAL DRIVE/star-pipeline"`
-> (~70–90 min, detached + caffeinate, laptop plugged in). `baseline_results.json` currently holds a
-> 1-channel smoke of the new code; the full run supersedes it. See the plan's "Phase 7" FRESH-THREAD
-> block. Then Phase 9 (advice grading, free), Phase 8 (vision, concurrent), Phase 10 (teardown LAST).
-> **CONCURRENCY: `evaluate.py`/`Makefile`/`train_lstm.py` are shared with the Phase-8 thread — edit
-> only your sections and `git add` ONLY your own files (never `-A`/`-am`); `git status --short` first.**
+> **▶▶ NEXT = PHASE 10 (teardown — must be LAST). ◀◀** Its precondition ("Phases 5–9 complete,
+> Phase 8 optional") is now SATISFIED. Teardown deletes the raw ESA-AD (~29 GB) from
+> `/Volumes/DUAL DRIVE/esa-ad/` and rotates the Kaggle token — **irreversible**, so confirm with the
+> user before running it. See the plan's "Phase 10" checklist.
+> **CONCURRENCY (if any parallel thread still runs): `evaluate.py`/`Makefile`/`comparison_report.md`
+> are shared — edit only your sections and `git add` ONLY your own files (never `-A`/`-am`);
+> `git status --short` first.**
 >
-> **RESULTS ARE NOW TRACKED IN GIT** (commit `77d4f5f`, `.gitignore` updated): all `results/*.json`
+> **RESULTS ARE TRACKED IN GIT** (commit `77d4f5f`, `.gitignore` updated): all `results/*.json`
 > + the comparison report are committed (~3.5 MB) — no more regenerating hours of inference. Only
 > `*.log` stays ignored. When you finish a run, COMMIT the updated result file + report.
 
@@ -38,6 +37,8 @@ CEF0.5=0.392 / advice=99.6% / 2.77s beats base-zero-shot (all-UNKNOWN, 0/0/0), b
 | 5 | **completed** | 2026-06-14 | 2026-06-14 | D21–D24 (loader schemas, CEF from P/R, Affinity-F1 degenerate, IF + Hybrid added) |
 | 6 (code+frontier) | **completed** | 2026-06-14 | 2026-06-14 | D26–D29 (adopted ext 500 base run, identical-harness, frontier sub-agent, graceful rows) |
 | 6 (base run) | **in flight** | 2026-06-14 | — | external 500-window base run; finalize report + delete base GGUF after |
+| 7 (code) | **completed** | 2026-06-14 | 2026-06-14 | committed `2a01b15` (pred persistence + --resume/flush + MAX_CHANNELS + evaluate affinity) |
+| 7 (full 58-ch run) | **completed** | 2026-06-14 | 2026-06-14 | D38 (harness-child death after ch1 → relaunch detached); F1=0.552, Affinity-F1=0.649 (now real) |
 | 8 (vision) | **completed** | 2026-06-14 | 2026-06-14 | D31–D34 (3 never-run train_detection bugs, A6000 GPU, torchvision upgrade, eval faster than est); F1=0.457, instance destroyed |
 | 9 (advice grading) | **completed** | 2026-06-14 | 2026-06-14 | D35–D37 (verifiable rubric, GT-gated correctness, gold-as-reference); TP advice 5.58/6 (95% HQ), gated by precision |
 
@@ -1110,3 +1111,63 @@ Phase 5/6's "99.6% structured" into a defensible "95% high-quality *when correct
   Phase-9 files individually (never `git add -A`).
 - **Phase 10 teardown** precondition "Phases 5–9 complete (Phase 8 optional)" now needs only
   Phase 7's full LSTM run to be finished-or-skipped.
+
+---
+
+## Phase 7: Level the detection field (full LSTM)
+
+### Step 7.1: Code (already done before this thread)
+- **Status**: completed — committed in `2a01b15` by an earlier handoff thread.
+- The per-window-prediction persistence (`pred_starts`/`gt_starts`/`window`/`stride` in
+  `train_channel_model`), `--resume` + atomic per-channel flush in `train_lstm.py`, the
+  `_per_channel_affinity()` helper in `evaluate.py`, and `MAX_CHANNELS` in the Makefile were
+  ALL already in HEAD. This thread independently re-derived the same edits (Edit calls produced a
+  zero git-diff vs HEAD — on-disk == committed), so no code re-commit was needed. The handoff
+  (`96c1e12`) had explicitly split "code done" from "only the 58-channel run remains."
+
+### Step 7.2: Full 58-channel run
+- **Started**: 2026-06-14
+- **Completed**: 2026-06-14
+- **Status**: completed
+- **Commit**: `41a1c09` (result files only)
+- **Command**:
+  `( nohup caffeinate -dimsu env KERAS_BACKEND=torch ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" STAR_OUTPUT_DIR="/Volumes/DUAL DRIVE/star-pipeline" PYTHONUNBUFFERED=1 .venv/bin/python src/baselines/train_lstm.py --missions 1 --max-channels 58 --resume >> /tmp/phase7_lstm.log 2>&1 < /dev/null & )`
+- **Result (58 Mission-1 target channels, macro-avg over channels with anomalies):**
+  - precision=0.785, recall=0.451, **F1=0.552**, CEF0.5=0.684, **Affinity-F1=0.649**
+  - ~100 s/channel × 58 ≈ 95 min wall-clock.
+- **Before/after (kept for honesty):** the Phase-2 *3-channel smoke* was F1=0.663 (cherry-favourable
+  channels). The full 58-channel sweep is lower (0.552) and is the honest, apples-to-apples number
+  vs the LLM (which faced all 4,500 windows untuned). The LSTM is STILL the top detector on both F1
+  and CEF0.5 across all 10 approaches in the report.
+- **Affinity-F1 is now REAL (0.649), no longer N/A.** Unlike the LLM's *shuffled* test split (where
+  Affinity-F1 ≈ window-F1, near-degenerate), the LSTM scores **contiguous per-channel timelines**, so
+  merging adjacent anomalous windows into intervals is genuinely meaningful (verified on a probe
+  channel: 172 anomalous windows → 60 merged intervals). The Hybrid row inherits the LSTM detection
+  metrics by construction (its Affinity-F1 left N/A — derived row, not separately scored).
+- **Verification (all ✅):** `make validate-baseline` (avg_f1=0.552 ∈ 0.05–0.98 sanity range),
+  `make validate-eval` (no errored rows; all metrics ∈ [0,1]; report sections present),
+  `ruff check` clean on `train_lstm.py` + `evaluate.py`.
+
+### Deviation D38 — first launch died after 1 channel (harness-child trap)
+- The initial run was launched via the Bash tool's `run_in_background`, which makes the job a
+  **child of the Claude Code harness**. A session/MCP hiccup killed the harness child after channel 1
+  (log showed a clean `resource_tracker` shutdown, no traceback). **Recovery was free** thanks to the
+  per-channel atomic flush + `--resume` (channel 1 was already persisted).
+- **Fix**: relaunched fully detached via `( nohup caffeinate -dimsu … & )` — a subshell that
+  reparents to launchd (PID 1) and survives session/turn ends. `--resume` skipped channel 1 and the
+  remaining 57 ran to completion. This is exactly the durability rule in `~/.claude/CLAUDE.md`
+  ("Detach from the session"): the harness `run_in_background` is only safe for jobs that finish
+  within the session; multi-hour jobs need true detachment. Trade-off: no harness completion
+  notification → polled the checkpoint file (channels count) + `pgrep` instead.
+
+### Impact on the rest of the plan
+- **No code changes needed to other phases.** Phase 7 only *updates* result files; the report
+  regeneration preserved every other approach's row (vision, frontier zero/few-shot, base
+  zero/few-shot, trivial baseline, IF, LLM) — diff was strictly the LSTM + Hybrid rows (1→58
+  channels, Affinity 0.607→0.649).
+- **Concurrency honoured**: staged ONLY `results/lstm/baseline_results.json`,
+  `results/comparison_report.md`, `results/comparison_metrics.json` (never `git add -A`); no
+  Phase-8/9 WIP swept up. The working tree was clean before and after.
+- **Phase 10 teardown** precondition ("Phases 5–9 complete, Phase 8 optional") is now FULLY
+  satisfied — teardown is the only remaining step. It deletes the raw data Phase 7 depended on, so it
+  must stay last and be user-confirmed (irreversible).

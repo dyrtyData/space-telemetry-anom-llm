@@ -2337,9 +2337,22 @@ fine-tuned 99.6%) is a near-guaranteed clean win even if detection is closer.
 3-channel smoke run with per-channel tuned thresholds; the LLM faced all 4,500 windows untuned.
 
 **Success criteria:**
-- [ ] LSTM re-run on all 58 Mission-1 target channels → updated `results/lstm/baseline_results.json`.
-- [ ] LSTM persists per-window predictions so Affinity-F1 is computable (no longer N/A).
-- [ ] Report regenerated; old 3-channel numbers kept in the log for before/after honesty.
+- [x] LSTM re-run on all 58 Mission-1 target channels → updated `results/lstm/baseline_results.json`.
+- [x] LSTM persists per-window predictions so Affinity-F1 is computable (no longer N/A).
+- [x] Report regenerated; old 3-channel numbers kept in the log for before/after honesty.
+
+> **✅ Phase 7 CLOSED (2026-06-14, commit `41a1c09`).** The Phase-7 *code* was already committed
+> in `2a01b15` (pred_starts persistence + `--resume`/per-channel flush + `MAX_CHANNELS` +
+> `evaluate.py` `_per_channel_affinity`); the handoff (`96c1e12`) left only the actual 58-channel
+> run, which this thread completed. **Results (58 channels, macro-avg):** P=0.785, R=0.451,
+> F1=0.552, CEF0.5=0.684, **Affinity-F1=0.649 (now REAL, not N/A)**. The full sweep lands below the
+> cherry-picked 3-channel smoke (F1=0.663) — more honest, and the LSTM is still the top detector on
+> F1 and CEF0.5 of all approaches. `make validate-baseline` + `make validate-eval` pass.
+> **Run note:** the first launch (Bash `run_in_background` → harness child) died after channel 1;
+> the per-channel flush + `--resume` made recovery free. Relaunched fully detached
+> (`( nohup caffeinate -dimsu … & )`, reparented to launchd) and it ran to completion. Only the 3
+> result files were staged (concurrency rule honoured — Phase 8 WIP untouched). **Phase 10 teardown
+> still blocked** (raw data on DUAL DRIVE; Phases 7–9 must all be done first).
 
 **Steps:** (see the FRESH-THREAD block above for the corrected, detailed version)
 1. Add per-window-prediction persistence + Affinity-F1 (code changes 1 & 2 above) and, ideally,
