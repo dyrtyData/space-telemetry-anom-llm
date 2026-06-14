@@ -2,7 +2,7 @@
 
 **Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`
 **Started**: 2026-06-12
-**Status**: Phase 4 COMPLETE — GGUF local + HF Hub; Metal inference validated (F1=0.508, 1.96s/sample). Phase 5 next.
+**Status**: Phase 5 COMPLETE — `evaluate.py` written, `make eval-all`/`validate-eval` pass, comparison report generated (4 approaches). All phases done. (LLM metrics on 100-sample slice; optional full 4,500 sweep documented.)
 
 ---
 
@@ -16,7 +16,7 @@
 | 2 | **completed** | 2026-06-13 11:10 | 2026-06-13 11:25 | D6 stride=16; D7 models→DUAL DRIVE |
 | 3 | **completed** | 2026-06-13 ~16:30 | 2026-06-13 22:12 | D8–D13 (model ids, TRL 0.24 API, ssh key, pkill, env, formatter) |
 | 4 | **completed** | 2026-06-13 22:12 | 2026-06-14 02:55 | D14–D20 (GGUF path, test data, Metal, FAT32, Hungary SSH, HF upload, CDN download) |
-| 5 | pending | - | - | - |
+| 5 | **completed** | 2026-06-14 | 2026-06-14 | D21–D24 (loader schemas, CEF from P/R, Affinity-F1 degenerate, IF + Hybrid added) |
 
 ---
 
@@ -549,4 +549,88 @@ from scratch using the plan §5 code as a starting point (with the schema fixes 
  "channels": [{"channel":"...","mission":"...","precision":float,"recall":float,"f1":float,
                "threshold":float,"n_sequences":int,"n_anomaly_windows":int,...}]}
 ```
+
+---
+
+## Phase 5: Evaluation & Comparison
+
+### Step 5.1: Rewrite evaluate.py (from stub) + comparison report
+- **Started**: 2026-06-14
+- **Completed**: 2026-06-14
+- **Status**: completed
+- **Commit**: (pending — Phase 5 code + plan/log)
+- **What was built**: `src/inference/evaluate.py` (was a 3-line TODO stub) now loads the real
+  result files, computes a unified comparison across **four** approaches, and writes
+  `results/comparison_report.md` + `results/comparison_metrics.json`. Added `make validate-eval`.
+- **Verification (all ✅)**:
+  - `make eval-all` → exit 0, report + metrics JSON written.
+  - `make validate-eval` → OK (report sections present; no approach errored; all
+    precision/recall/f1/cef_0.5 ∈ [0,1]; LLM anomaly responses >50 chars).
+  - `make lint` (ruff check + format) → clean on `evaluate.py`.
+- **Results (LLM on the Phase-4 100-sample slice; baselines = Phase-2 3-channel smoke):**
+
+  | Approach | Precision | Recall | F1 | CEF0.5 | Affinity-F1 |
+  |---|---|---|---|---|---|
+  | Isolation Forest | 0.127 | 0.459 | 0.188 | 0.149 | N/A |
+  | LSTM Baseline | 0.835 | 0.552 | 0.663 | 0.757 | N/A |
+  | LLM Detection | 0.432 | 0.615 | 0.508 | 0.460 | 0.508 |
+  | Hybrid (LSTM + LLM advice) | 0.835 | 0.552 | 0.663 | 0.757 | N/A |
+
+  Computed Key Findings: LSTM wins on F1 and CEF0.5 (precision-weighted, the operationally
+  relevant metric); the LLM trades precision for recall but adds free-text advice (100% of the
+  37 anomaly predictions emitted structured DIAGNOSIS+ADVICE); LLM costs 1.96 s/window vs
+  near-instant baselines.
+
+### Deviations (Phase 5)
+- **D21 — Loaders rewritten to real schemas.** The plan's `load_lstm_results()` /
+  `load_llm_results()` assumed list-of-dicts / `r["actual"]` keys that never existed.
+  Rewrote both: LSTM/IF read `d["channels"]` and macro-average; LLM reads `d["summary"]`
+  directly (micro metrics already computed in Phase 4) and joins per-window `d["results"]`
+  (key `actual_response`, pre-computed `predicted`) to test metadata by `index`.
+- **D22 — CEF0.5 computed from precision/recall, not tp/fp/fn.** The baselines persist only
+  per-channel precision/recall/f1 (no raw counts), so CEF is computed via
+  `cef_from_pr(P, R, beta=0.5)` uniformly for every approach. Mathematically identical to the
+  plan's `cef_score(tp,fp,fn)` given the same P/R. Documented the micro-vs-macro averaging
+  difference (LLM micro over windows; baselines macro over channels) in the report's
+  Methodology Notes.
+- **D23 — Affinity-F1 wired but degenerate on this test split (documented honestly).** The
+  test split is a *shuffled, balanced-subsampled* set of windows — only **~1.4 windows per
+  (mission, channel)** in the 100-sample slice (verified). Interval reconstruction therefore
+  yields mostly isolated single-window "intervals", so Affinity-F1 ≈ window-level F1 (0.508).
+  Implemented `affinity_f1()` correctly (per-channel interval merge + delta-tolerant matching,
+  pooled P/R) and added a Methodology note stating it becomes meaningful only on a contiguous
+  (un-shuffled) evaluation stream. Computed for the LLM (per-window preds persisted); N/A for
+  the baselines (only aggregate per-channel metrics were saved).
+- **D24 — Added Isolation Forest (4th approach) + defined Hybrid scoring.** Plan §5 compared 3
+  approaches; the IF baseline result (`results/isolation_forest/if_results.json`) already
+  existed from Phase 2, so it's included for free as a 4th row. **Hybrid** (plan MUST-READ #5
+  flagged it as "not wired") is scored as: detection metrics inherited from the LSTM (the
+  component that flags anomalies, high precision) + the LLM's advice layer attached to each
+  flag. Its detection score equals the LSTM's by construction — the hybrid's value is
+  actionable advice, not better detection. Stated explicitly in the report.
+- **Coherence-check fix**: `actual_response` is persisted truncated to 300 chars (Phase-4),
+  which clips the trailing `ACTION:` line; keyed advice coherence on `DIAGNOSIS`+`ADVICE`
+  (which survive the cap) → 100% structured, avg 300 chars.
+- **Hardcoded "Key Findings" removed**: `generate_findings()` derives every bullet from the
+  loaded metrics (best-F1, best-CEF, precision/recall trade-off, advice coherence, latency,
+  affinity) — the plan's "~0.7 F1 / combines best of both" placeholders are gone.
+
+### Decision: LLM eval left at 100 samples (full 4,500 sweep optional, not run)
+- The plan MUST-READ recommends re-running the LLM on the full 4,500-window split before the
+  final report (`make eval-llm LIMIT=0`, ~2.5 h on M3 Max Metal). User was asked and did not
+  select; took the conservative/reversible default — **did not** start an uninvited multi-hour
+  job. Report is honest about `n_samples=100`. The full sweep is a one-command follow-up:
+  `make eval-llm LIMIT=0 && make eval-all` (evaluate.py reads `n_samples` from the file, so the
+  report and Key Findings auto-update with no code change). Baselines could likewise be expanded
+  from the 3-channel smoke to all 58 Mission-1 target channels (`make baseline` with
+  `--max-channels 58`) for a fuller comparison.
+
+### Phase 5 impact on the rest of the plan
+- No downstream phases remain (Phase 5 is last). The only open project-wide item is the
+  **Teardown / Cleanup** checklist (rotate Kaggle token, delete raw ESA-AD from DUAL DRIVE) —
+  its precondition "Phase 5 evaluation complete and results committed" is now satisfiable once
+  this commit lands. Teardown stays a deliberate, separate final step (not run here).
+- `evaluate.py`'s loaders are now the canonical schema consumers; if Phase 2/4 result schemas
+  ever change, update the three loader functions (`load_lstm_results`, `load_if_results`,
+  `load_llm_results`) — they are the single point of coupling.
 

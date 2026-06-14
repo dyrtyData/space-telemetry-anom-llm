@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm install-local validate-inference clean lint format validate-etl validate-format validate-advice advice
+.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice
 
 PYTHON := python3
 VENV := .venv
@@ -111,12 +111,34 @@ assert kw_ok > s['n_samples'] * 0.8, 'Model not producing expected keywords'; \
 print('validate-inference OK') \
 "
 
-# Evaluation
+# Evaluation -- Phase 5: unified comparison report across all approaches.
 eval-all:
 	$(PY) src/inference/evaluate.py --all
 
 eval-lstm:
 	$(PY) src/baselines/train_lstm.py
+
+# Phase 5 success criteria: report exists, has required sections, metrics in [0,1],
+# no approach errored, and LLM anomaly responses are substantive (advice coherence).
+validate-eval:
+	$(PY) -c "\
+import json, math, os; \
+rep = 'results/comparison_report.md'; \
+met = 'results/comparison_metrics.json'; \
+assert os.path.exists(rep), f'Missing {rep} -- run make eval-all first'; \
+assert os.path.exists(met), f'Missing {met} -- run make eval-all first'; \
+text = open(rep).read(); \
+[assert_sec for assert_sec in [None] if 'Approach Comparison' in text] or (_ for _ in ()).throw(AssertionError('missing Approach Comparison section')); \
+('Key Findings' in text) or (_ for _ in ()).throw(AssertionError('missing Key Findings section')); \
+results = json.load(open(met)); \
+errs = [r['approach'] for r in results if 'error' in r]; \
+assert not errs, f'Approaches with errors: {errs}'; \
+vals = [r[k] for r in results for k in ('precision','recall','f1','cef_0.5')]; \
+assert all(math.isfinite(v) and 0 <= v <= 1 for v in vals), 'Metric out of [0,1] or non-finite'; \
+llm = next(r for r in results if r['approach'] == 'LLM Detection'); \
+assert llm.get('advice_avg_chars', 0) > 50, f'LLM anomaly responses too short: {llm.get(\"advice_avg_chars\")}'; \
+print('validate-eval OK:', {r['approach']: r['f1'] for r in results}) \
+"
 
 # Utilities
 lint:

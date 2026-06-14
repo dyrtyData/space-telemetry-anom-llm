@@ -1973,12 +1973,35 @@ eval-all:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Evaluation completes: `make eval-all`
-- [ ] Report generated: `test -f results/comparison_report.md`
-- [ ] All approaches have metrics: assert no "error" in results JSON
-- [ ] Metrics in valid range: assert 0 <= precision, recall, f1 <= 1
-- [ ] Report has required sections: grep for "Approach Comparison", "Key Findings"
-- [ ] Advice coherence check: assert avg response length > 50 chars for anomalies
+- [x] Evaluation completes: `make eval-all` ✅ (exit 0)
+- [x] Report generated: `test -f results/comparison_report.md` ✅ (+ `comparison_metrics.json`)
+- [x] All approaches have metrics: `make validate-eval` asserts no `"error"` ✅ (4 approaches)
+- [x] Metrics in valid range: `make validate-eval` asserts `0 <= precision,recall,f1,cef_0.5 <= 1` ✅
+- [x] Report has required sections: `make validate-eval` greps "Approach Comparison" + "Key Findings" ✅
+- [x] Advice coherence check: avg anomaly response = 300 chars (>50) ✅; 100% structured DIAGNOSIS+ADVICE
+
+> **✅ STATUS (2026-06-14): Phase 5 COMPLETE (on the 100-sample LLM slice).**
+> `src/inference/evaluate.py` rewritten from the stub. `make eval-all` → `make validate-eval`
+> both pass. Comparison table (4 approaches):
+>
+> | Approach | Precision | Recall | F1 | CEF0.5 | Affinity-F1 |
+> |---|---|---|---|---|---|
+> | Isolation Forest | 0.127 | 0.459 | 0.188 | 0.149 | N/A |
+> | LSTM Baseline | 0.835 | 0.552 | 0.663 | 0.757 | N/A |
+> | LLM Detection | 0.432 | 0.615 | 0.508 | 0.460 | 0.508 |
+> | Hybrid (LSTM + LLM advice) | 0.835 | 0.552 | 0.663 | 0.757 | N/A |
+>
+> Deviations D21–D24 (see implementation log): loaders rewritten to the real Phase-2/4
+> schemas; CEF computed from precision/recall (baselines don't persist tp/fp/fn); Affinity-F1
+> wired but honestly documented as degenerate on the shuffled ~1.4-window/channel test split;
+> Isolation Forest added as a 4th approach; Hybrid scored as "LSTM detection + LLM advice".
+> Key Findings are computed, not hardcoded.
+>
+> **OPTIONAL next step (not run): full-split LLM eval.** The LLM numbers are from the
+> Phase-4 100-sample smoke slice. To regenerate the report on all 4,500 test windows run
+> `make eval-llm LIMIT=0` (~2.5 h on M3 Max Metal, overwrites `results/inference_test.json`)
+> then `make eval-all`. The evaluation code reads `n_samples` from the file, so the report
+> auto-updates — no code change needed.
 
 ---
 
