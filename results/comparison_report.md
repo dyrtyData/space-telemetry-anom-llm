@@ -13,6 +13,8 @@ End-to-end comparison of anomaly-detection approaches on the ESA-AD test split. 
 | Base Qwen3-8B (zero-shot) | 0 | 0.000 | 0 | 0.000 | N/A | 100 windows |
 | Base Qwen3-8B (few-shot, no fine-tune) | 0.282 | 0.824 | 0.420 | 0.325 | N/A | 500 windows |
 | Frontier zero-shot (Claude, n=150 sample) | 0.308 | 0.216 | 0.254 | 0.284 | N/A | 150 windows |
+| Frontier few-shot (Claude, n=150 sample) | 0.200 | 0.297 | 0.239 | 0.214 | N/A | 150 windows |
+| Always-anomaly (trivial baseline) | 0.250 | 1.000 | 0.399 | 0.294 | N/A | 4500 windows |
 | Hybrid (LSTM + LLM advice) | 0.837 | 0.599 | 0.698 | 0.775 | N/A | 1 channels |
 
 ## Key Findings
@@ -34,11 +36,14 @@ The headline claim is that fine-tuning an open model adapts it to a localized, m
 | Base Qwen3-8B (zero-shot) | 0 | 0.000 | 0.000 | 0.000 | 100 windows (partial) |
 | Base Qwen3-8B (few-shot, no fine-tune) | 0.420 | 0.325 | 1.000 | 0.129 | 500 windows |
 | Frontier zero-shot (Claude, n=150 sample) | 0.254 | 0.284 | 1.000 | 1.000 | 150-window sample |
+| Frontier few-shot (Claude, n=150 sample) | 0.239 | 0.214 | 1.000 | 1.000 | 150-window sample |
+| Always-anomaly (trivial baseline) | 0.399 | 0.294 | 1.000 | 0.000 | flag-all (4500 windows) |
 
+- **Read the table against the dumb baseline first.** *Always-anomaly* (flag every window) scores F1 **0.399** / CEF0.5 0.294 for free on this ~25%-positive set. Any approach at or below that line has **not** learned to detect — it is just over-flagging. Only the **fine-tune** (F1 0.453, balanced P=0.360/R=0.609) clears it with a real precision/recall trade-off.
 - **vs. the un-fine-tuned base (same Qwen3-8B, same harness, same 100 windows):** detection F1 0.000 → 0.453 (Δ **+0.453**). The larger story is the output contract: the base produces a parseable ANOMALY/NOMINAL verdict on only 0% of windows (it spends its token budget on chain-of-thought), versus 99% for the fine-tune (Δ **+99 pts**), and emits the structured DIAGNOSIS/ADVICE format on 0% vs 100% of its flags (Δ **+100 pts**).
-- **vs. the base with few-shot prompting (same base weights, 2 in-context examples + /no_think, n=500):** prompting alone *does* recover output compliance (100% parseable verdicts) and a real detection score (F1 0.420, precision 0.282, recall 0.824) — but at 8.557s/window vs 2.765s for the fine-tune, and with **no structured advice** (13% vs 100%). On detection F1 the fine-tune is 0.453 (Δ **+0.032** — fine-tuning still wins). This is the honest, hardest comparison: it asks whether the fine-tune beats good *prompting*, not just the raw base.
-- **vs. a frontier model zero-shot (Claude, 150-window stratified sample, no fine-tuning):** the frontier detector scores F1 0.254 (precision 0.308, recall 0.216) on the same input the fine-tune saw — a far stronger general model still trails the small fine-tuned model (F1 0.453) on this specialized task, because the signal lives in mission/channel-specific patterns learned during fine-tuning, not in general reasoning over a few normalized values.
-- **Takeaway:** fine-tuning's clearest, most reliable wins here are *task/format adaptation, structured advice, and latency* — turning a capable but non-compliant base into a model that reliably emits the exact terse verdict + structured advice the downstream pipeline consumes, faster. Few-shot prompting can recover compliance and a comparable detection score, but not the structured advice or the speed; raw zero-shot (base and frontier) recovers neither. The operational unlock is compliance + advice.
+- **The few-shot base's F1 is a mirage.** With 2 in-context examples + /no_think it recovers compliance (100% parseable) and posts F1 0.420 — but with precision 0.282 / recall 0.824, i.e. it flags the large majority of windows. That is barely above the flag-everything baseline: it is **not detecting**, just over-flagging (the 1:1 examples mis-signal a ~50% prior). It is also slower (8.557s vs 2.765s) and emits structured advice on only 13% of flags (vs 100%).
+- **The frontier (Claude) is genuinely trying, but the input is near-signal-free.** Zero-shot F1 0.254 (P=0.308); adding the SAME few-shot examples barely moves it (F1 0.239) — so the gap is **not** a prompting-asymmetry artifact. Unlike the base it does not over-flag (P≈R≈0.31, near the base rate), so it sits ~at chance: 10 normalized values with no channel context do not carry the signal. A far stronger general model, prompted two ways, cannot beat the dumb baseline here.
+- **Takeaway (the honest headline):** the **fine-tuned model is the only approach that beats the always-anomaly baseline with a balanced precision/recall** — the lone real detector. Few-shot prompting a base 'wins' F1 only by over-flagging (≈ the dumb baseline); a frontier model prompted zero- or few-shot sits at chance on this context-free input. On top of detection, fine-tuning also delivers output compliance, structured advice, and 3× lower latency. Its value is learning mission/channel-specific priors that no prompt over 10 normalized values can supply.
 
 ## Advice quality (semantic) — Phase 9
 

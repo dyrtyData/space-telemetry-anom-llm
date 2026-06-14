@@ -132,6 +132,38 @@
     "advice_structured_frac": 1.0
   },
   {
+    "approach": "Frontier few-shot (Claude, n=150 sample)",
+    "precision": 0.2,
+    "recall": 0.2973,
+    "f1": 0.2391,
+    "cef_0.5": 0.214,
+    "accuracy": 0.5333,
+    "affinity_f1": null,
+    "n_units": 150,
+    "unit": "windows",
+    "averaging": "micro (pooled over windows)",
+    "avg_time_s": null,
+    "unknown_responses": 0,
+    "format_compliance": 1.0,
+    "partial": false,
+    "n_anomaly_predictions": 55,
+    "advice_avg_chars": 210.7,
+    "advice_structured_frac": 1.0
+  },
+  {
+    "approach": "Always-anomaly (trivial baseline)",
+    "precision": 0.2496,
+    "recall": 1.0,
+    "f1": 0.3994,
+    "cef_0.5": 0.2936,
+    "affinity_f1": null,
+    "format_compliance": 1.0,
+    "advice_structured_frac": 0.0,
+    "n_units": 4500,
+    "unit": "windows",
+    "averaging": "analytic (flag all)"
+  },
+  {
     "approach": "Hybrid (LSTM + LLM advice)",
     "precision": 0.8367,
     "recall": 0.5985,
