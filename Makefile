@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base frontier-select frontier-assemble
+.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base frontier-select frontier-assemble eval-vision
 
 PYTHON := python3
 VENV := .venv
@@ -131,8 +131,16 @@ frontier-select:
 frontier-assemble:
 	$(PY) src/inference/select_frontier_sample.py --assemble results/frontier_classifications.json
 
+# Phase 8: Qwen3-VL vision detector eval. Runs ON the Vast.ai instance (Unsloth + the
+# trained adapter), NOT locally — multimodal GGUF on Metal is patchy, so we score where
+# it trained and scp results/inference_vision.json back. From the repo root on the instance:
+#   python src/inference/eval_vision.py --resume --checkpoint-every 250
+eval-vision:
+	$(PY) src/inference/eval_vision.py --limit $(LIMIT) --resume --checkpoint-every 250
+
 # Evaluation -- Phase 5: unified comparison report across all approaches.
 # Phase 6 adds Base + Frontier rows automatically when their result files are present.
+# Phase 8 adds the vision detector row when results/inference_vision.json is present.
 eval-all:
 	$(PY) src/inference/evaluate.py --all
 

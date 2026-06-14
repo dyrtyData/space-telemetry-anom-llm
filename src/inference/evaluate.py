@@ -30,11 +30,13 @@ IF_FILE = RESULTS_DIR / "isolation_forest" / "if_results.json"
 LLM_FILE = RESULTS_DIR / "inference_test.json"
 BASE_FILE = RESULTS_DIR / "inference_base.json"  # Phase 6: un-fine-tuned base control
 FRONTIER_FILE = RESULTS_DIR / "inference_frontier_sample.json"  # Phase 6: frontier zero-shot
+VISION_FILE = RESULTS_DIR / "inference_vision.json"  # Phase 8: Qwen3-VL detector on PNG plots
 TEST_WITH_ADVICE = Path("data/splits/test_with_advice.jsonl")
 
 LLM_APPROACH = "LLM Detection"
 BASE_APPROACH = "Base Qwen3-8B (zero-shot)"
 FRONTIER_APPROACH = "Frontier zero-shot (Claude, n=150 sample)"
+VISION_APPROACH = "LLM Detection (vision, Qwen3-VL)"
 
 REPORT_FILE = RESULTS_DIR / "comparison_report.md"
 METRICS_FILE = RESULTS_DIR / "comparison_metrics.json"
@@ -235,6 +237,19 @@ def load_base_results() -> dict:
 def load_frontier_results() -> dict:
     """Load Phase-6 frontier zero-shot sample (Claude session model as detector)."""
     return _summarize_detection(FRONTIER_FILE, FRONTIER_APPROACH, with_affinity=False)
+
+
+def load_vision_results() -> dict:
+    """Load Phase-8 Qwen3-VL vision detector results (scored on PNG plots, not text).
+
+    The vision model is a pure detector (ANOMALY/NOMINAL on a rendered telemetry plot);
+    it emits no structured advice, so advice_* fields are naturally 0. The eval unit is
+    PNG-rendered windows, noted distinctly from the text LLM's tokenized windows.
+    """
+    out = _summarize_detection(VISION_FILE, VISION_APPROACH, with_affinity=False)
+    if "error" not in out:
+        out["unit"] = "windows (PNG)"
+    return out
 
 
 def _llm_affinity(results: list[dict]) -> dict | None:
@@ -469,6 +484,16 @@ def generate_report(results: list[dict]) -> str:
         f"- **LLM Detection** is scored per window (micro-averaged) over the "
         f"{n_llm}-window test slice; ANOMALY/NOMINAL is parsed from the generated text."
     )
+    if any(r["approach"] == VISION_APPROACH for r in results):
+        vis = next(r for r in results if r["approach"] == VISION_APPROACH)
+        lines.append(
+            f"- **LLM Detection (vision, Qwen3-VL)** is the AnomSeer-style detector: a "
+            f"Qwen3-VL-8B fine-tuned to read a *rendered PNG plot* of the telemetry window "
+            f"(not the numeric text) and emit ANOMALY/NOMINAL. Scored on {vis.get('n_units', '?')} "
+            f"test-split PNGs (micro-averaged). It is a pure detector — no diagnostic advice, so "
+            f"its advice fields are 0 by design; it adds a second, modality-independent detection "
+            f"signal that completes the original three-way LLM design."
+        )
     lines.append(
         "- **Hybrid (LSTM + LLM advice)** inherits the LSTM's detection metrics by "
         "construction: the LSTM flags anomalies (high precision) and the LLM attaches "
@@ -518,10 +543,11 @@ def main() -> None:
     # the base-model run has finished scoring.
     base = load_base_results()
     frontier = load_frontier_results()
+    vision = load_vision_results()  # Phase 8: Qwen3-VL on PNG plots
 
-    # Report order: baselines, fine-tuned LLM, base + frontier controls, hybrid.
+    # Report order: baselines, fine-tuned text LLM, vision LLM, base + frontier controls, hybrid.
     results = [iso, lstm, llm]
-    results += [r for r in (base, frontier) if "error" not in r]
+    results += [r for r in (vision, base, frontier) if "error" not in r]
     results.append(hybrid)
 
     report = generate_report(results)
