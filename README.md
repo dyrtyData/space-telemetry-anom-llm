@@ -191,10 +191,10 @@ reached is part of the showcase:
   runbook): [`thoughts/shared/implement/2026-06-12-star-pipeline-log.md`](thoughts/shared/implement/2026-06-12-star-pipeline-log.md)
 - **Results analysis:** [`thoughts/shared/research/2026-06-14-results-analysis.md`](thoughts/shared/research/2026-06-14-results-analysis.md)
 
-Notable real-world hurdles solved along the way: FAT32's 4 GB file limit forcing the 5 GB GGUF to
-local SSD; a buffered-stdout + machine-sleep double failure that killed an overnight eval twice
-(fixed with checkpoint/resume + unbuffered output + proper daemonization); and rewriting the
-evaluation loaders to the *actual* persisted result schemas rather than the planned ones.
+One operational note worth a mention: the full LLM evaluation is a multi-hour job, and it was made
+**observable and resumable** (unbuffered progress logging + checkpoint-every-N with `--resume`) so
+that an interrupted run costs at most one checkpoint rather than starting over — a small but real
+production-readiness habit.
 
 ---
 
@@ -202,14 +202,23 @@ evaluation loaders to the *actual* persisted result schemas rather than the plan
 
 This is a showcase, not a deployed system. Known gaps, stated up front:
 
-1. **Baselines are a 3-channel smoke run** with tuned thresholds — the detection head-to-head is
+1. **No "did fine-tuning help?" baseline.** The fine-tuned LLM was never run head-to-head against
+   the *un-fine-tuned* base Qwen3-8B (nor against an off-the-shelf model like Claude/GPT) on the
+   same test set. So the value the fine-tune *added* is demonstrated by the pipeline, not yet
+   isolated by a number — the single most valuable follow-up for an interview.
+2. **The Hybrid's detection score is inherited, not independently measured** — by construction it
+   equals the LSTM's. Its only new contribution (the advice layer) is graded structurally, below.
+3. **Scope cut:** the original design's *vision* detector (Qwen3-VL-8B on PNG telemetry plots,
+   "AnomSeer-style") was written but **not trained/run**. The model evaluated as "LLM detection"
+   is the *text* advice model asked to also classify — not the vision approach.
+4. **Baselines are a 3-channel smoke run** with tuned thresholds — the detection head-to-head is
    an upper bound on the LSTM's advantage, not a like-for-like result.
-2. **Different eval units** (baselines: 3 channels macro-averaged; LLM: 4,500 windows micro).
-3. **Affinity-F1 is degenerate** on the shuffled test split (≈ window-level F1) — reported with
+5. **Different eval units** (baselines: 3 channels macro-averaged; LLM: 4,500 windows micro).
+6. **Affinity-F1 is degenerate** on the shuffled test split (≈ window-level F1) — reported with
    that disclaimer.
-4. **Advice is verified structurally (99.6%), not semantically** — no factuality/expert grading
+7. **Advice is verified structurally (99.6%), not semantically** — no factuality/expert grading
    yet; advice labels were synthetically generated.
-5. **Single fine-tune, no hyperparameter sweep**, and no detection-tuned LLM variant or P-R curve.
+8. **Single fine-tune, no hyperparameter sweep**, and no detection-tuned LLM variant or P-R curve.
 
 Each has a concrete next step in the [analysis doc](thoughts/shared/research/2026-06-14-results-analysis.md#9-recommended-next-steps-in-priority-order).
 

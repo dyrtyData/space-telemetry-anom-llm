@@ -174,38 +174,62 @@ correct finding is the point.
 
 ## 8. Honest limitations (state these before an interviewer does)
 
-1. **Baselines are a 3-channel smoke run.** The LSTM's strong numbers are on an easy, tuned
+1. **No "did the fine-tuning help?" comparison — the biggest gap.** The fine-tuned LLM was never
+   run head-to-head against the **un-fine-tuned base Qwen3-8B**, nor against an off-the-shelf
+   model (Claude/GPT), on the same 4,500 windows. For a project whose headline skill is *"I can
+   fine-tune,"* the single cleanest proof — base-model vs. fine-tuned-model on identical test data
+   — is missing. We can show the *pipeline* works; we have not yet isolated the *delta* the
+   fine-tune contributed. **This is the top recommended follow-up.**
+2. **The Hybrid is a construction, not an independent measurement.** Its detection P/R/F1 equal
+   the LSTM's by definition (see §6); the only thing genuinely new in the Hybrid is the advice
+   layer, which is graded only structurally (#5 below). It was not benchmarked against any
+   alternative advice generator.
+3. **Scope cut — the vision detector was never run.** The original research design
+   (`2026-06-12-star-pipeline-codebase-research.md`) specified "LLM Detection" as a **vision**
+   model: Qwen3-VL-8B fine-tuned on **PNG plots** of telemetry windows ("AnomSeer-style").
+   `train_detection.py` was written but **not trained or run** — this run was advice-(text)-model
+   only (implementation log D-notes + Phase-3 scope). The approach evaluated here as "LLM
+   detection" is therefore the *text* advice model asked to also classify ANOMALY/NOMINAL, **not**
+   the planned vision approach. A reasonable scope decision, but it means the project shipped 2 of
+   the 3 originally-planned LLM approaches.
+4. **Baselines are a 3-channel smoke run.** The LSTM's strong numbers are on an easy, tuned
    subset. Until it's run on all 58 target channels, the head-to-head is an upper bound on its
-   advantage, not a settled result. *(Top follow-up.)*
-2. **Different eval units** (3 channels macro vs. 4,500 windows micro) — see §4.
-3. **Affinity-F1 is degenerate** on the shuffled split — see §4.
-4. **Advice quality is structural, not yet semantic.** We verified 99.6% of advice has the right
+   advantage, not a settled result.
+5. **Different eval units** (3 channels macro vs. 4,500 windows micro) — see §4.
+6. **Affinity-F1 is degenerate** on the shuffled split — see §4.
+7. **Advice quality is structural, not yet semantic.** We verified 99.6% of advice has the right
    *shape* (DIAGNOSIS/ADVICE/ACTION). We did **not** grade whether the advice is *correct* — no
    expert review, no LLM-as-judge factuality scoring, no grounding check against the anomaly's
    true root cause. The advice labels were synthetically generated in-session.
-5. **Advice persistence truncates at 300 chars**, clipping the ACTION line in the saved record
+8. **Advice persistence truncates at 300 chars**, clipping the ACTION line in the saved record
    (the model generates it; we just don't store the tail).
-6. **Single fine-tune, no hyperparameter sweep.** r=16/α=16/3-epoch was taken from the plan's
+9. **Single fine-tune, no hyperparameter sweep.** r=16/α=16/3-epoch was taken from the plan's
    sensible defaults; no ablation over LoRA rank, epoch count, or prompt format was run.
-7. **No detection-tuned LLM variant.** The deployed model was the *advice* SFT; a detection-only
-   SFT or a calibrated decision threshold on the LLM's output could shift its precision/recall
-   operating point and was not explored.
+10. **No detection-tuned LLM variant.** The deployed model was the *advice* SFT; a detection-only
+    SFT or a calibrated decision threshold on the LLM's output could shift its precision/recall
+    operating point and was not explored.
 
 ---
 
 ## 9. Recommended next steps (in priority order)
 
-1. **Level the detection field:** run the LSTM on all 58 Mission-1 target channels and re-score;
+1. **Prove the fine-tune helped (highest value):** run the *un-fine-tuned* base Qwen3-8B over the
+   same 4,500 windows and report the delta in detection + advice. Optionally add an off-the-shelf
+   model (Claude/GPT) as a "could you have just used an API?" reference. This directly answers the
+   project's core skill claim and is currently missing.
+2. **Level the detection field:** run the LSTM on all 58 Mission-1 target channels and re-score;
    ideally evaluate both LSTM and LLM on an identical contiguous per-channel stream so Affinity-F1
    becomes meaningful.
-2. **Grade advice semantically:** add an LLM-as-judge (or expert spot-check) pass scoring advice
+3. **Grade advice semantically:** add an LLM-as-judge (or expert spot-check) pass scoring advice
    factuality and actionability against the known anomaly root cause — turn "99.6% structured"
    into "X% correct."
-3. **Tune the LLM's operating point:** calibrate a decision threshold / prompt to trade some
+4. **Tune the LLM's operating point:** calibrate a decision threshold / prompt to trade some
    recall for precision; report a P-R curve instead of a single point.
-4. **Ship the Hybrid as the reference design:** it's the architecture the numbers support and the
+5. **Ship the Hybrid as the reference design:** it's the architecture the numbers support and the
    one the business actually needs.
-5. **LoRA ablation:** small sweep over rank / epochs / prompt format to confirm the fine-tune is
+6. **(Optional) Complete the vision approach:** train the written-but-unrun `train_detection.py`
+   (Qwen3-VL-8B on PNG plots) to round out the original three-way LLM comparison.
+7. **LoRA ablation:** small sweep over rank / epochs / prompt format to confirm the fine-tune is
    near its achievable ceiling.
 
 ---
