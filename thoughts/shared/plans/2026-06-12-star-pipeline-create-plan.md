@@ -2360,31 +2360,34 @@ fine-tuned 99.6%) is a near-guaranteed clean win even if detection is closer.
 Assets are ready (PNGs + `train_detection.py`); only the training run + eval remain.
 
 **Success criteria:**
-- [~] Qwen3-VL-8B fine-tuned on the PNG plot dataset (cloud). **IN PROGRESS** — code fixed +
-      env ready; training blocked on a smoke test that is fix-applied-but-unconfirmed (D31).
-- [ ] Model pushed to HF (preserve regardless of how local inference goes).
-- [ ] Vision detector scored (locally OR on-instance) → added as a row in the report.
+- [x] Qwen3-VL-8B fine-tuned on the PNG plot dataset (cloud). **DONE** — 2 epochs / 250 steps on
+      a Vast.ai A6000 (~65 min), train_loss 4.48→0.34, eval_loss 0.0089.
+- [x] Model pushed to HF (preserve regardless of how local inference goes). **DONE** —
+      `dyrtyData/star-pipeline-qwen3-vl-8b-detection` (adapter + processor).
+- [x] Vision detector scored on-instance (2,000 test PNGs) → added as a row in the report. **DONE**.
 
-> **🚧 Phase 8 status (2026-06-14): IN PROGRESS — local code DONE & committed
-> (`a6f26a6`, `0daa2ec`); cloud env READY; training run pending. ⚠️ A Vast.ai A6000 instance
-> (id 40936091, $0.401/hr) is LIVE and BILLING — resume promptly or `vastai destroy instance
-> 40936091`.** Full live state, exact resume commands, and deviations D31–D33 are in the
-> implementation log's "Phase 8" section (`thoughts/shared/implement/2026-06-12-star-pipeline-log.md`).
-> Highlights:
-> - **`eval_vision.py`** (on-instance VL eval, same JSON schema as the text LLM) + **evaluate.py
->   vision row** + **Makefile `eval-vision`** are written, linted, committed.
-> - **`train_detection.py` had 3 never-run bugs** (written in Phase 3, never executed): import
->   order (unsloth MUST precede trl, else the unpatched TRL trainer + Qwen3VL processor raise
->   `eos_token '<EOS_TOKEN>' not in vocab` — the root cause), `SFTConfig.max_seq_length`→`max_length`
->   (TRL 0.24), pinned `eos_token="<|im_end|>"`. All fixed (`0daa2ec`), synced to the instance. A
->   faithful unsloth-first repro built the trainer OK.
-> - **Instance**: 1× RTX A6000 46 GB, Delaware US-East, $0.401/hr (cheaper than 4090 + VL VRAM
->   headroom + 8.5 Gbps). SSH key `~/.ssh/vast_star`. Env: unsloth 2026.6.7 / torch 2.10.0+cu128 /
->   **torchvision upgraded 0.19→0.25** (required) / transformers 5.5.0 / trl 0.24.0. Plots (6,000
->   PNGs) + code uploaded to `/workspace/star-pipeline`; HF_TOKEN set on the box. Base model id is
->   `unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit` (the plan's `Qwen3-VL-8B` does not exist).
-> - **Next**: confirm smoke test → detached 2-epoch train (~30–60 min) → push HF → `eval_vision.py`
->   on instance → scp `inference_vision.json` back → `make eval-all` → **destroy instance** → commit.
+> **✅ Phase 8 status (2026-06-14): COMPLETE.** Qwen3-VL-8B fine-tuned, pushed to HF, scored on the
+> 2,000-PNG test split, vision row in the report, instance destroyed. Deviations D31–D34 in the
+> implementation log's "Phase 8" section.
+>
+> **Result (2,000 test PNGs, 0 unknown / 100% format compliance):**
+>
+> | Approach | Precision | Recall | F1 | CEF0.5 | Eval unit |
+> |---|---|---|---|---|---|
+> | LLM Detection (text, Qwen3-8B, n=4500) | 0.360 | 0.609 | 0.453 | 0.392 | windows (text) |
+> | **LLM Detection (vision, Qwen3-VL, n=2000)** | **0.769** | **0.325** | **0.457** | **0.604** | windows (PNG) |
+>
+> The vision detector is **precision-oriented** (0.769 P, 0.325 R) — the mirror image of the
+> recall-oriented text model (0.360 P, 0.609 R) — at nearly identical F1 (0.457 vs 0.453). Because
+> CEF0.5 weights precision, the vision model scores **highest CEF0.5 of any LLM approach (0.604)**.
+> It emits clean ANOMALY/NOMINAL on 100% of windows (0 UNKNOWN), but no diagnostic advice (pure
+> detector). A genuine, modality-independent third signal that completes the original 3-way design.
+>
+> What was built & committed: **`eval_vision.py`** (on-instance VL eval, same JSON schema as the
+> text LLM), **evaluate.py vision row** + methodology note (graceful degradation), **Makefile
+> `eval-vision`** (`a6f26a6`); **`train_detection.py` 3 never-run bug fixes** (`0daa2ec`).
+> Artifacts: HF adapter (above); `results/inference_vision.json` (gitignored, regenerable).
+> Instance teardown done; **project-wide Phase-10 teardown still pending**.
 
 **Steps:**
 1. **Vast.ai, US region** (you're on Pacific time; the prior Hungary box made downloads crawl):

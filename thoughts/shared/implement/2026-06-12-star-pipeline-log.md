@@ -33,7 +33,7 @@ CEF0.5=0.392 / advice=99.6% / 2.77s beats base-zero-shot (all-UNKNOWN, 0/0/0), b
 | 5 | **completed** | 2026-06-14 | 2026-06-14 | D21–D24 (loader schemas, CEF from P/R, Affinity-F1 degenerate, IF + Hybrid added) |
 | 6 (code+frontier) | **completed** | 2026-06-14 | 2026-06-14 | D26–D29 (adopted ext 500 base run, identical-harness, frontier sub-agent, graceful rows) |
 | 6 (base run) | **in flight** | 2026-06-14 | — | external 500-window base run; finalize report + delete base GGUF after |
-| 8 (vision) | **in progress** | 2026-06-14 | — | D31–D33 (3 never-run train_detection bugs, A6000 GPU, torchvision upgrade); ⚠️ instance 40936091 LIVE/billing |
+| 8 (vision) | **completed** | 2026-06-14 | 2026-06-14 | D31–D34 (3 never-run train_detection bugs, A6000 GPU, torchvision upgrade, eval faster than est); F1=0.457, instance destroyed |
 
 ---
 
@@ -965,3 +965,39 @@ that is fix-applied-but-unconfirmed (session interrupted right before re-running
   `eval_vision.py` (already written for that); local Metal VL inference is the patchy fallback the
   plan flagged — we default to on-instance. Capture `inference_vision.json` BEFORE teardown.
 - `train_detection.py` defaults: 2 epochs, batch 1 × grad-accum 16, lr 1e-4, r=α=16, all layers.
+
+### Phase 8 COMPLETE (2026-06-14 ~18:05 UTC)
+- **Smoke test passed** after the D31 import-order fix → training started cleanly.
+- **Training**: `train_detection.py --epochs 2`, detached (setsid, PPID=1) on A6000. 250 steps over
+  2,000 train PNGs, **~65 min** (~10.5 s/step). train_loss **4.48 → 0.34**, eval_loss **0.0089**
+  (epoch 2; the binary task converges hard — expected for VL SFT on a 2-class signal). LoRA adapter
+  (205 MB) → `models/lora/qwen3-vl-detection/`.
+- **HF push** (before teardown, insurance): adapter + processor →
+  `dyrtyData/star-pipeline-qwen3-vl-8b-detection` (public, `ignore_patterns=['checkpoint-*']`).
+- **Eval on-instance** (`eval_vision.py --resume --checkpoint-every 200`, detached): all **2,000
+  test PNGs**, `partial=false`, **~0.86 s/sample** (steady-state — the 3.6 s smoke figure was
+  first-call warmup; full run ≈ 30 min, much faster than the ~72 min estimate). Scp'd back to
+  `results/inference_vision.json` (gitignored; HF + the script reproduce it).
+- **Result**: accuracy 0.806, **P=0.769 R=0.325 F1=0.457**, TP=163 FP=49 FN=338 TN=1450,
+  **Unknown=0** (100% format compliance), CEF0.5=0.604.
+  - **Precision-oriented**, the mirror image of the recall-oriented text LLM (P=0.360 R=0.609
+    F1=0.453). Nearly identical F1, opposite P/R trade-off → because CEF0.5 weights precision, the
+    **vision model has the highest CEF0.5 of any LLM approach (0.604)**. It misses more anomalies
+    (338 FN) but almost never false-alarms (49 FP) — operationally attractive where false alarms are
+    costly. Pure detector (no advice). A real, modality-independent third LLM signal that completes
+    the original AnomSeer-style 3-way design.
+- **Instance 40936091 DESTROYED** (`vastai destroy instance 40936091`; confirmed 0 instances) →
+  billing stopped. **Total Phase-8 cloud cost ≈ $1.0** (~2.3 h A6000 @ $0.417/hr incl. storage).
+- **`make eval-all` + `make validate-eval`** → vision row present, all 8 approaches valid.
+- **Deviation D34 — eval far faster than estimated.** Sized the eval at ~72 min from the 3.58 s/
+  sample smoke; steady-state was ~0.86 s/sample (warmup-dominated smoke). No action needed; the run
+  is checkpointed + resumable so a worst-case estimate was the safe default.
+
+### Phase 8 impact on the rest of the plan
+- Phase 10 (project teardown) precondition "Phases 5–9 complete (Phase 8 optional)" is now closer:
+  Phase 8 is DONE. Remaining optional: Phase 7 (full LSTM — note: someone re-ran it, LSTM F1 now
+  0.6979 vs the old 0.663 3-channel smoke) and Phase 9 (semantic advice grading). Teardown still
+  deferred until the owner decides Phases 7/9 are done-or-skipped.
+- `evaluate.py` + `Makefile` are SHARED with the concurrent Phase-6 thread (base zero-shot/few-shot
+  rows). The committed report now carries 8 approaches: IF, LSTM, text-LLM, **vision-LLM**, base
+  zero-shot, base few-shot, frontier, hybrid. Stage Phase-8 files individually when committing.
