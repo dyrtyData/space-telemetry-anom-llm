@@ -2419,6 +2419,50 @@ Assets are ready (PNGs + `train_detection.py`); only the training run + eval rem
 **Goal:** turn "99.6% structured" into "X% actually correct." Distinct from Phase 6's frontier
 *detection* — here Claude is a *judge* of OUR fine-tuned model's advice.
 
+> **✅ FRESH-THREAD READINESS (added 2026-06-14, after Phase 8) — Phase 9 can start NOW; it does
+> NOT depend on Phase 7.** Phase 9 reads only the fine-tuned TEXT model's already-persisted outputs
+> + the gold advice labels; it never touches the LSTM, the raw ESA-AD data, or the cloud. So it is
+> fully independent of the in-flight Phase 7 (full LSTM) and of Phase 8 (done). Start whenever.
+>
+> **Inputs (both present on local disk now):**
+> - `results/inference_test.json` — fine-tuned text model, **n=4500**. ⚠️ **gitignored**
+>   (`results/**/*.json`), so it lives on the working-tree disk but is NOT in git history. If a
+>   fresh thread finds it missing, regenerate with `make eval-llm LIMIT=0` (~2.5 h, M3 Max; needs
+>   the GGUF at `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/`).
+>   Per-record schema: `{index, mission, channel, is_anomaly, predicted ("ANOMALY"|"NOMINAL"|
+>   "UNKNOWN"), correct, expected_response, actual_response (≤300 chars), elapsed_s}`. The model's
+>   advice IS `actual_response`; **it is truncated at 300 chars, which clips the trailing `ACTION:`
+>   line** — grade on DIAGNOSIS+ADVICE (which survive), as Phase 5/6 did, or re-run a small ungated
+>   inference batch if full ACTION text is needed.
+> - `data/labels/anomaly_advice.json` — 7,457 gold-advice records (tracked in git). Keyed by
+>   `anomaly_id = "{mission}__{channel}__{start_time}"` (double underscore, ISO time) with fields
+>   `advice, severity, recommended_action, pattern, mission, channel`. **Join caveat:**
+>   `inference_test.json` records carry mission/channel/is_anomaly but **no `pattern` and no
+>   start_time**, so a clean 1:1 join to gold advice is NOT guaranteed — treat the gold advice as an
+>   optional *reference* for the judge (per (mission, channel)), not a strict key. Grading the
+>   model's advice against window context + metadata alone is valid and is the primary path.
+>
+> **Recommended mechanics (mirror Phase 6's frontier eval, which worked well):** write a small
+> `src/inference/grade_advice_sample.py` with `--select` (freeze a seed-42 sample of ~100–150
+> anomaly-predicted records → a leak-free judging file) and `--assemble` (join the in-session
+> judgments → `results/advice_grading_sample.json`). The in-session Claude does the scoring (no
+> API). This makes the sample reproducible and the judging step resumable. See
+> `src/inference/select_frontier_sample.py` for the exact pattern to copy.
+>
+> **⚠️ Shared-tree hazard:** `evaluate.py`, `Makefile`, and `results/comparison_report.md` are
+> edited by the concurrent Phase-6/7 thread. If Phase 9 adds an "Advice quality (semantic)"
+> subsection via `evaluate.py`, **stage Phase-9 files individually** (never `git add -A`) and expect
+> to merge with their in-flight edits. The report currently carries 8 approaches (IF, LSTM,
+> text-LLM, vision-LLM, base zero-shot, base few-shot, frontier, hybrid).
+>
+> **Context for the recommendation Phase 9 feeds (the analysis doc):** Phase 6 showed the fine-tuned
+> text model's *detection* F1 (0.453) is only modestly above a 2-shot-prompted base (0.420) and well
+> above frontier zero-shot (0.254) — i.e. fine-tuning's detection gain is small. The fine-tune's
+> decisive, near-certain win is **output compliance + the structured-advice capability the
+> alternatives lack** (base/few-shot emit 0% structured advice). Phase 9 is what converts that
+> "99.6% structured" into a defensible "X% correct/actionable" so the analysis can recommend the
+> fine-tuned model **as the advisor** (not primarily as the detector) on evidence, not just format.
+
 **Steps:**
 1. Sample ~100–150 of the fine-tuned model's anomaly predictions from `results/inference_test.json`
    (the `actual_response` advice). For each, the in-session agent reviews: window context + true
