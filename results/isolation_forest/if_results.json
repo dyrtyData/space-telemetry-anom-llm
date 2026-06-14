@@ -1,0 +1,47 @@
+{
+  "summary": {
+    "n_channels_scored": 3,
+    "avg_precision": 0.12733594089526293,
+    "avg_recall": 0.4591110308929827,
+    "avg_f1": 0.18768600174196406
+  },
+  "config": {
+    "data_dir": "/Volumes/DUAL DRIVE/esa-ad",
+    "missions": "1",
+    "resample": "1h",
+    "window": 32,
+    "seq_stride": 16,
+    "max_channels": 3,
+    "contamination": 0.1,
+    "seed": 42
+  },
+  "channels": [
+    {
+      "channel": "channel_12",
+      "mission": "ESA-Mission1",
+      "precision": 0.09256844850065189,
+      "recall": 0.5182481751824818,
+      "f1": 0.1570796460176991,
+      "n_windows": 7670,
+      "n_anomaly_windows": 137
+    },
+    {
+      "channel": "channel_13",
+      "mission": "ESA-Mission1",
+      "precision": 0.09647979139504563,
+      "recall": 0.5323741007194245,
+      "f1": 0.16335540838852097,
+      "n_windows": 7670,
+      "n_anomaly_windows": 139
+    },
+    {
+      "channel": "channel_14",
+      "mission": "ESA-Mission1",
+      "precision": 0.19295958279009126,
+      "recall": 0.32671081677704195,
+      "f1": 0.24262295081967214,
+      "n_windows": 7670,
+      "n_anomaly_windows": 453
+    }
+  ]
+}

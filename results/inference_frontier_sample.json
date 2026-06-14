@@ -1,0 +1,1521 @@
+{
+  "summary": {
+    "approach": "Frontier zero-shot (Claude, n=150 sample)",
+    "model": "Claude (session model, zero-shot)",
+    "n_samples": 150,
+    "accuracy": 0.6867,
+    "precision": 0.3077,
+    "recall": 0.2162,
+    "f1": 0.254,
+    "tp": 8,
+    "fp": 18,
+    "fn": 29,
+    "tn": 95,
+    "unknown_responses": 0,
+    "seed": 42,
+    "partial": false,
+    "note": "Stratified sample only (frozen indices, seed 42). The frontier detector is the Claude session model reasoning zero-shot over the same normalized telemetry values and analyst system prompt; no fine-tuning, no API."
+  },
+  "results": [
+    {
+      "index": 8,
+      "mission": "ESA-Mission1",
+      "channel": "channel_66",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.010); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 33,
+      "mission": "ESA-Mission2",
+      "channel": "channel_9",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.053, max step 0.016); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 46,
+      "mission": "ESA-Mission3",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.018; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 73,
+      "mission": "ESA-Mission1",
+      "channel": "channel_57",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.076, max step 0.018); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 109,
+      "mission": "ESA-Mission1",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.018); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 122,
+      "mission": "ESA-Mission1",
+      "channel": "channel_48",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 135,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.010); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 138,
+      "mission": "ESA-Mission1",
+      "channel": "channel_24",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.018); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 152,
+      "mission": "ESA-Mission1",
+      "channel": "channel_47",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 175,
+      "mission": "ESA-Mission1",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.012); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 193,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.011; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 231,
+      "mission": "ESA-Mission1",
+      "channel": "channel_30",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.027); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 268,
+      "mission": "ESA-Mission3",
+      "channel": "channel_37",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at 0.000; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 299,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.25) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 345,
+      "mission": "ESA-Mission2",
+      "channel": "channel_9",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (-0.46) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 346,
+      "mission": "ESA-Mission2",
+      "channel": "channel_15",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (-0.22) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 359,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.046); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 360,
+      "mission": "ESA-Mission2",
+      "channel": "channel_24",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.022); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 407,
+      "mission": "ESA-Mission3",
+      "channel": "channel_2",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.007; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 489,
+      "mission": "ESA-Mission3",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.026; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 497,
+      "mission": "ESA-Mission3",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.018; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 507,
+      "mission": "ESA-Mission1",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle monotonic trend (+0.20), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 525,
+      "mission": "ESA-Mission1",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle monotonic trend (+0.19), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 583,
+      "mission": "ESA-Mission1",
+      "channel": "channel_74",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.023); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 589,
+      "mission": "ESA-Mission1",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.013); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 595,
+      "mission": "ESA-Mission1",
+      "channel": "channel_28",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.37) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 610,
+      "mission": "ESA-Mission1",
+      "channel": "channel_23",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.042); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 650,
+      "mission": "ESA-Mission1",
+      "channel": "channel_46",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.120, max step 0.068); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 654,
+      "mission": "ESA-Mission1",
+      "channel": "channel_34",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle monotonic trend (+0.10), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 680,
+      "mission": "ESA-Mission1",
+      "channel": "channel_74",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.042); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 728,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.040); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 730,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (-0.38) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 743,
+      "mission": "ESA-Mission1",
+      "channel": "channel_59",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.058, max step 0.015); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 764,
+      "mission": "ESA-Mission2",
+      "channel": "channel_15",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.032); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 813,
+      "mission": "ESA-Mission1",
+      "channel": "channel_14",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.021); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 832,
+      "mission": "ESA-Mission2",
+      "channel": "channel_83",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 1.42) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 865,
+      "mission": "ESA-Mission2",
+      "channel": "channel_74",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.079, max step 0.076); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 915,
+      "mission": "ESA-Mission3",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.273; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 974,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.046); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1007,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.041); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1020,
+      "mission": "ESA-Mission1",
+      "channel": "channel_17",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle monotonic trend (+0.12), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1047,
+      "mission": "ESA-Mission3",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.312; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1076,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.24) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1095,
+      "mission": "ESA-Mission1",
+      "channel": "channel_45",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.089, max step 0.063); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1099,
+      "mission": "ESA-Mission1",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.016); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1135,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.23) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1136,
+      "mission": "ESA-Mission2",
+      "channel": "channel_80",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 1.11) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1138,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.011; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1239,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.049); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1300,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.014); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1323,
+      "mission": "ESA-Mission1",
+      "channel": "channel_65",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at 0.031; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1351,
+      "mission": "ESA-Mission2",
+      "channel": "channel_11",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 0.85) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1383,
+      "mission": "ESA-Mission1",
+      "channel": "channel_22",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.018); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1420,
+      "mission": "ESA-Mission1",
+      "channel": "channel_15",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.036); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1429,
+      "mission": "ESA-Mission1",
+      "channel": "channel_15",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.059, max step 0.020); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1440,
+      "mission": "ESA-Mission1",
+      "channel": "channel_36",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (-0.52) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1466,
+      "mission": "ESA-Mission3",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.017; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1479,
+      "mission": "ESA-Mission1",
+      "channel": "channel_45",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 2.14) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1495,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Localized spike (step 0.22) against otherwise narrow baseline. ADVICE: Check for single-sample glitch vs real transient; review neighboring samples. ACTION: Mark for review; validate against telemetry checksum / sensor calibration.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1517,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.011; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1533,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle monotonic trend (-0.14), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1583,
+      "mission": "ESA-Mission1",
+      "channel": "channel_43",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.065, max step 0.046); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1592,
+      "mission": "ESA-Mission1",
+      "channel": "channel_75",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.067, max step 0.038); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1609,
+      "mission": "ESA-Mission2",
+      "channel": "channel_20",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 0.54) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1654,
+      "mission": "ESA-Mission1",
+      "channel": "channel_30",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.007); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1701,
+      "mission": "ESA-Mission1",
+      "channel": "channel_43",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.061, max step 0.039); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1733,
+      "mission": "ESA-Mission3",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.037; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1895,
+      "mission": "ESA-Mission1",
+      "channel": "channel_65",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.001); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1910,
+      "mission": "ESA-Mission1",
+      "channel": "channel_57",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.029); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1911,
+      "mission": "ESA-Mission1",
+      "channel": "channel_37",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.35) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1987,
+      "mission": "ESA-Mission1",
+      "channel": "channel_57",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.047); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2054,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.020); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2061,
+      "mission": "ESA-Mission2",
+      "channel": "channel_19",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.004); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2094,
+      "mission": "ESA-Mission2",
+      "channel": "channel_22",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.012); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2096,
+      "mission": "ESA-Mission1",
+      "channel": "channel_16",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.012); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2182,
+      "mission": "ESA-Mission1",
+      "channel": "channel_28",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (-0.41) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2217,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.253, max step 0.104); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2224,
+      "mission": "ESA-Mission3",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.037; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2314,
+      "mission": "ESA-Mission2",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.000; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2347,
+      "mission": "ESA-Mission1",
+      "channel": "channel_41",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.083, max step 0.061); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2424,
+      "mission": "ESA-Mission3",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.273; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2436,
+      "mission": "ESA-Mission3",
+      "channel": "channel_7",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.296; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2470,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.011; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2502,
+      "mission": "ESA-Mission3",
+      "channel": "channel_32",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.004; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2517,
+      "mission": "ESA-Mission2",
+      "channel": "channel_12",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Gentle monotonic trend (+0.12), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2518,
+      "mission": "ESA-Mission1",
+      "channel": "channel_23",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.033); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2552,
+      "mission": "ESA-Mission2",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.000; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2580,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.037); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2591,
+      "mission": "ESA-Mission1",
+      "channel": "channel_51",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.059, max step 0.023); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2602,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.040); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2614,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.041); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2847,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle monotonic trend (+0.21), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2948,
+      "mission": "ESA-Mission1",
+      "channel": "channel_63",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.020); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2955,
+      "mission": "ESA-Mission1",
+      "channel": "channel_48",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3015,
+      "mission": "ESA-Mission3",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.017; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3060,
+      "mission": "ESA-Mission1",
+      "channel": "channel_66",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.008); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3088,
+      "mission": "ESA-Mission3",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.273; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3168,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle monotonic trend (+0.14), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3184,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.011); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3239,
+      "mission": "ESA-Mission1",
+      "channel": "channel_18",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.32) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3242,
+      "mission": "ESA-Mission1",
+      "channel": "channel_63",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at 0.589; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3355,
+      "mission": "ESA-Mission1",
+      "channel": "channel_15",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.034); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3373,
+      "mission": "ESA-Mission1",
+      "channel": "channel_22",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.028); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3404,
+      "mission": "ESA-Mission1",
+      "channel": "channel_40",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.047); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3444,
+      "mission": "ESA-Mission1",
+      "channel": "channel_47",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3504,
+      "mission": "ESA-Mission2",
+      "channel": "channel_75",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 1.36) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3532,
+      "mission": "ESA-Mission1",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.016); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3577,
+      "mission": "ESA-Mission1",
+      "channel": "channel_48",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3596,
+      "mission": "ESA-Mission1",
+      "channel": "channel_47",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3615,
+      "mission": "ESA-Mission2",
+      "channel": "channel_89",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.055, max step 0.047); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3620,
+      "mission": "ESA-Mission1",
+      "channel": "channel_49",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3630,
+      "mission": "ESA-Mission1",
+      "channel": "channel_41",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.086, max step 0.060); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3648,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Gentle monotonic trend (-0.13), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3676,
+      "mission": "ESA-Mission1",
+      "channel": "channel_16",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.016); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3680,
+      "mission": "ESA-Mission3",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.026; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3713,
+      "mission": "ESA-Mission1",
+      "channel": "channel_13",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.067, max step 0.067); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3716,
+      "mission": "ESA-Mission1",
+      "channel": "channel_26",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.056, max step 0.056); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3739,
+      "mission": "ESA-Mission2",
+      "channel": "channel_18",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3792,
+      "mission": "ESA-Mission1",
+      "channel": "channel_31",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.012); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3854,
+      "mission": "ESA-Mission3",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.312; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3867,
+      "mission": "ESA-Mission1",
+      "channel": "channel_17",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle monotonic trend (-0.21), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3883,
+      "mission": "ESA-Mission1",
+      "channel": "channel_32",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.013); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3886,
+      "mission": "ESA-Mission1",
+      "channel": "channel_58",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.074, max step 0.018); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3902,
+      "mission": "ESA-Mission1",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle monotonic trend (+0.16), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3962,
+      "mission": "ESA-Mission1",
+      "channel": "channel_52",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.039); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3973,
+      "mission": "ESA-Mission3",
+      "channel": "channel_44",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.057; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3982,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.36) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3988,
+      "mission": "ESA-Mission3",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 1.82) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3994,
+      "mission": "ESA-Mission3",
+      "channel": "channel_19",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.311; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4009,
+      "mission": "ESA-Mission2",
+      "channel": "channel_79",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 4.33) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4025,
+      "mission": "ESA-Mission1",
+      "channel": "channel_45",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.108, max step 0.064); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4050,
+      "mission": "ESA-Mission3",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.037; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4067,
+      "mission": "ESA-Mission2",
+      "channel": "channel_80",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 3.16) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4080,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.013); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4093,
+      "mission": "ESA-Mission3",
+      "channel": "channel_39",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 1.45) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4109,
+      "mission": "ESA-Mission2",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.000; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4115,
+      "mission": "ESA-Mission1",
+      "channel": "channel_19",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Pronounced bowl-shaped excursion (~0.31 swing) off the -1.3 baseline, rising then returning. ADVICE: Check for transient disturbance vs control-loop overshoot. ACTION: Correlate with attitude/thermal events; flag for trend review.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4136,
+      "mission": "ESA-Mission1",
+      "channel": "channel_61",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.494; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4171,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.047); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4226,
+      "mission": "ESA-Mission1",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle monotonic trend (+0.14), smooth and gradual \u2014 consistent with normal slow dynamics.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4230,
+      "mission": "ESA-Mission1",
+      "channel": "channel_63",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -1.310; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4243,
+      "mission": "ESA-Mission2",
+      "channel": "channel_91",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.053, max step 0.053); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4244,
+      "mission": "ESA-Mission2",
+      "channel": "channel_17",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Localized spike (step 0.29) against otherwise narrow baseline. ADVICE: Check for single-sample glitch vs real transient; review neighboring samples. ACTION: Mark for review; validate against telemetry checksum / sensor calibration.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4289,
+      "mission": "ESA-Mission3",
+      "channel": "channel_43",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Flat, constant trace at 4.090; stable, no variation.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4315,
+      "mission": "ESA-Mission1",
+      "channel": "channel_19",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.70) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit...",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4343,
+      "mission": "ESA-Mission2",
+      "channel": "channel_17",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.025); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4384,
+      "mission": "ESA-Mission2",
+      "channel": "channel_90",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.076, max step 0.076); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4389,
+      "mission": "ESA-Mission1",
+      "channel": "channel_40",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth, stable trace (range 0.028); slow variation within normal baseline.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4397,
+      "mission": "ESA-Mission2",
+      "channel": "channel_58",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Bounded fluctuation (range 0.062, max step 0.042); within plausible normal jitter.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4410,
+      "mission": "ESA-Mission3",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Flat, constant trace at -0.018; stable, no variation.",
+      "elapsed_s": 0.0
+    }
+  ]
+}

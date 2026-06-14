@@ -19,21 +19,20 @@ data/splits/*.jsonl
 data/formatted/
 data/labels/*.json
 
-# Models & results
+# Models (large binaries -- stay on DUAL DRIVE / HF, never in git)
 models/lora/
 models/merged/
 models/gguf/
 models/lstm/
-results/**/*.json
-results/*.md
+
+# Results ARE tracked: eval JSONs + the comparison report are the product (≈3.5 MB total,
+# and several cost hours of model inference to regenerate). Only transient run logs are
+# ignored. (Previously results/**/*.json + results/*.md were ignored as "regenerable" —
+# reverted 2026-06-14: re-running inference to recover them is not acceptable.)
 
 # Transient run logs
 *.log
-
-# Phase 6: preserve the frontier zero-shot classifications -- in-session model judgments
-# that cannot be deterministically regenerated (unlike the GGUF/base/eval runs). The
-# assembled sample + comparison report stay ignored (regenerable via `make`).
-!results/frontier_classifications.json
+results/.*.log
 
 # Kaggle credentials (never commit)
 kaggle.json
