@@ -2261,6 +2261,82 @@ fine-tuned 99.6%) is a near-guaranteed clean win even if detection is closer.
 
 ## Phase 7 — Level the detection field (full LSTM)
 
+> **▶▶ FRESH-THREAD START HERE (self-contained as of 2026-06-14, after Phase 6 closed) ◀◀**
+>
+> **State:** Phases 1–6 DONE & committed (HEAD `4d27cdd`). Phase 8 (vision) is being worked by a
+> **concurrent thread in the SAME working tree** — see the concurrency rules below. Phase 7 is
+> free, local, ~70–90 min of compute, no cloud/API.
+>
+> **Why Phase 7:** the LSTM's only numbers are a **3-channel smoke run** (`results/lstm/baseline_results.json`
+> currently has `n_channels_scored=3`, avg_f1=0.663). The LLM faced all 4,500 windows. To make the
+> comparison fair, score the LSTM on all **58 Mission-1 target channels** and persist per-window
+> predictions so its **Affinity-F1** is real (currently N/A in the report).
+>
+> **Preconditions (verified 2026-06-14 — re-check the drive is mounted):**
+> - Raw ESA-AD on `DUAL DRIVE`: `/Volumes/DUAL DRIVE/esa-ad/ESA-Mission1/` (76 channels; 58 are
+>   Target=YES → the ones with anomalies). **If `/Volumes/DUAL DRIVE` is not mounted, STOP** —
+>   Phase 7 needs it (Phase 10 teardown has NOT run, so raw data is still there).
+> - `src/etl/io.py` shared loader works; `src/baselines/train_lstm.py` runs (keras 3 on torch backend).
+> - Models output dir convention: `STAR_OUTPUT_DIR` (default `/Volumes/DUAL DRIVE/star-pipeline`);
+>   `models/lstm/ESA-Mission1/` already exists from the smoke run.
+>
+> **The exact run command** (the Makefile `baseline` target does NOT pass `--max-channels`, and the
+> default is **5**, NOT 3 as an earlier note said — so call the script directly OR add a
+> `MAX_CHANNELS` var to the Makefile):
+> ```bash
+> KERAS_BACKEND=torch ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" \
+>   STAR_OUTPUT_DIR="/Volumes/DUAL DRIVE/star-pipeline" \
+>   .venv/bin/python src/baselines/train_lstm.py --missions 1 --max-channels 58
+> ```
+> ~75 s/channel × 58 ≈ **70–75 min**. ⚠️ **`train_lstm.py` has NO checkpoint/resume** — it writes
+> `baseline_results.json` only at the very end. Two options: (a) **add incremental flushing** (write
+> the results JSON after each channel + a `--resume` that skips channels already in the file) BEFORE
+> the long run — recommended, cheap, and matches the project's durability rule; or (b) run it
+> **detached + `caffeinate -dimsu`** and just re-run if it dies (≤70 min lost). Keep the laptop
+> **plugged in + lid open** either way.
+>
+> **The two code changes (do these BEFORE the long run):**
+> 1. **Persist per-window predictions** in `train_lstm.py::train_channel_model` (around lines
+>    137–168, which already compute `predicted` (bool) and `actual` = `window_is_anomaly`). The
+>    sliding windows are at stride `--seq-stride` (default 16) on the resampled (1h) grid. Add to the
+>    per-channel result dict a **sparse** record — the *window start indices* (in grid units) of
+>    predicted-anomalous and truly-anomalous windows, plus the window length and stride, e.g.
+>    `"pred_starts": [int,...], "gt_starts": [int,...], "window": 32, "stride": 16`. Sparse (not the
+>    full ~16k-window arrays) keeps the JSON small. `baseline_results.json` is gitignored
+>    (`results/**/*.json`) so size isn't a commit concern, but stay lean anyway.
+> 2. **Add an LSTM Affinity-F1 path in `evaluate.py`.** Today `_load_per_channel()` (the LSTM/IF
+>    loader) sets `affinity_f1: None`. Add a helper that, when the per-channel `pred_starts`/`gt_starts`
+>    exist, builds `grouped[(mission, channel)] = {"pred": [(s, s+window), ...], "gt": [...]}` and
+>    calls the EXISTING `affinity_f1(grouped)` (already in evaluate.py, with `_merge_intervals`).
+>    Set the LSTM row's `affinity_f1`. **Key point:** unlike the LLM's *shuffled* test split (where
+>    Affinity-F1 ≈ window-F1 and is near-degenerate), the LSTM scores **contiguous per-channel
+>    timelines**, so its Affinity-F1 is genuinely meaningful — call that out in the report/log.
+>
+> **⚠️ CONCURRENCY (Phase 8 thread shares this working tree — one checkout, no worktrees):**
+> - `evaluate.py` and `Makefile` are **shared** with Phase 8 (it added a vision row + `eval-vision`).
+>   Edit **only your Phase-7 sections** (the LSTM loader / Makefile baseline target) and **stage
+>   ONLY your files** (`git add src/baselines/train_lstm.py src/inference/evaluate.py Makefile …`) —
+>   NEVER `git add -A`/`-am` (you'd commit the Phase-8 thread's uncommitted WIP, e.g.
+>   `src/training/train_detection.py`). Run `git status --short` before every commit and confirm
+>   you're staging only what you changed.
+> - If `evaluate.py` has uncommitted Phase-8 changes when you need to edit it, either wait for that
+>   thread to commit, or edit your section and stage only `evaluate.py`'s hunks you own (no
+>   interactive `git add -p` in this env — so prefer waiting, or coordinate via the user).
+> - **Recommendation for the user:** run parallel agents in separate `git worktrees` next time to
+>   remove this hazard entirely.
+>
+> **Validation & wrap-up:**
+> - `make eval-all && make validate-eval` (the latter checks no approach errored, metrics ∈ [0,1],
+>   and report sections present). The full-58 avg_f1 may differ from the 3-channel 0.663 — the
+>   `validate-baseline` sanity range is `0.05 < avg_f1 < 0.98`; if it lands outside, recalibrate the
+>   range and **note it in the log** (it's a sanity check, not a hard gate).
+> - **Keep the old 3-channel numbers in the log** for before/after honesty (they're already recorded
+>   in the Phase-2 section).
+> - Commit (your files only): `[Phase 7] LSTM on all 58 Mission-1 channels + per-window Affinity-F1`.
+> - Then update this plan's checkboxes + the implementation log, and you're done with Phase 7.
+>   (Phase 10 teardown still must NOT run until Phases 7–9 are complete — it deletes the raw data
+>   Phase 7 depends on.)
+
 **Goal:** make the LSTM-vs-LLM comparison apples-to-apples. The LSTM's Phase-2 numbers are a
 3-channel smoke run with per-channel tuned thresholds; the LLM faced all 4,500 windows untuned.
 
@@ -2269,15 +2345,12 @@ fine-tuned 99.6%) is a near-guaranteed clean win even if detection is closer.
 - [ ] LSTM persists per-window predictions so Affinity-F1 is computable (no longer N/A).
 - [ ] Report regenerated; old 3-channel numbers kept in the log for before/after honesty.
 
-**Steps:**
-1. Run the LSTM on all target channels (raw ESA-AD still on DUAL DRIVE):
-   `make baseline ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" MISSION=1` with `--max-channels 58`
-   (train_lstm.py defaults to 3; bump it). Models → DUAL DRIVE via `STAR_OUTPUT_DIR`. ≈1–1.5 h.
-2. **Modify `train_lstm.py` to persist per-window `(prediction, label)`** alongside the per-channel
-   aggregates (currently only precision/recall/f1 per channel are saved). This lets `evaluate.py`
-   compute a real Affinity-F1 for the LSTM and makes the eval unit comparable to the LLM's.
+**Steps:** (see the FRESH-THREAD block above for the corrected, detailed version)
+1. Add per-window-prediction persistence + Affinity-F1 (code changes 1 & 2 above) and, ideally,
+   incremental result flushing/`--resume` to `train_lstm.py`.
+2. Run the LSTM on all 58 Mission-1 target channels (exact command above). ≈70–90 min.
 3. `make eval-all && make validate-eval`; regenerate the report.
-4. Commit: `[Phase 7] LSTM on all 58 Mission-1 channels + per-window preds`.
+4. Commit (your files only): `[Phase 7] LSTM on all 58 Mission-1 channels + per-window Affinity-F1`.
 
 ---
 

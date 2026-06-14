@@ -2,12 +2,21 @@
 
 **Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`
 **Started**: 2026-06-12
-**Status**: ✅ **Phases 1–5 COMPLETE.** Full 4,500-sample LLM eval finished (2026-06-14);
-`make eval-all` + `make validate-eval` pass on n=4500. Final comparison report committed.
-**Phases 6–10 PLANNED** (added 2026-06-14) to close the results-analysis gaps — see the
-"PHASES 6–10: PROJECT COMPLETION" section of the plan (self-contained for a fresh thread).
-Recommended next: **Phase 6** (base + frontier comparison — proves fine-tuning added value;
-free, no cloud/API). Teardown is now Phase 10 (precondition: Phases 1–9 done).
+**Status**: ✅ **Phases 1–6 COMPLETE & committed (HEAD `4d27cdd`).** Phase 8 (vision) is IN
+PROGRESS in a **concurrent thread sharing this working tree** (commits `a6f26a6`/`0daa2ec`/`81c0bb6`).
+
+> **▶▶ NEXT = PHASE 7 (full LSTM). FRESH THREAD: read the plan's "Phase 7" section — it has a
+> self-contained FRESH-THREAD START HERE block with the exact command, the two code changes
+> (persist per-window preds + LSTM Affinity-F1 in evaluate.py), durability notes, and the
+> concurrency rules. ◀◀** Phase 7 is free/local (~70–90 min). Then Phase 9 (advice grading, free),
+> Phase 8 (vision, concurrent), Phase 10 (teardown — must be LAST; it deletes the raw data Phase 7
+> needs). **CONCURRENCY RULE: `evaluate.py`/`Makefile` are shared with the Phase-8 thread — edit
+> only your sections and `git add` ONLY your own files (never `-A`/`-am`); run `git status --short`
+> before each commit.**
+
+**Phase 6 result (closed 2026-06-14):** four-way "Did fine-tuning help?" — fine-tune F1=0.453 /
+CEF0.5=0.392 / advice=99.6% / 2.77s beats base-zero-shot (all-UNKNOWN, 0/0/0), base-few-shot
+(F1=0.420 but CEF0.5=0.325, advice=12.9%, 8.56s), frontier-zero-shot (F1=0.254). Base GGUF deleted.
 
 ---
 
