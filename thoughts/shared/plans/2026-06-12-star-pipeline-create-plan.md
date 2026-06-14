@@ -4,6 +4,12 @@
 
 Build an end-to-end Space Telemetry Anomaly Detection & Resolution Pipeline (STAR-Pipeline) that demonstrates fine-tuning open-source LLMs for mission-critical infrastructure. The pipeline compares three approaches: LSTM baseline, LLM detection (AnomSeer-style), and Hybrid (LSTM + LLM advice generation).
 
+> **⏩ FRESH-THREAD START HERE:** Phases 1–5 are COMPLETE & committed (final report:
+> `results/comparison_report.md`). Remaining work is **Phases 6–10**, fully specified in the
+> "PHASES 6–10: PROJECT COMPLETION" section near the end of this document — that block is
+> self-contained (current state, paths, commands, risks, fallbacks). Start there. Recommended
+> first: **Phase 6** (prove fine-tuning helped — free, no cloud).
+
 **Target**: FDL AI Engineering interview showcase demonstrating ability to fine-tune models for localized business use cases.
 
 ## Current State Analysis
@@ -2074,14 +2080,190 @@ git add thoughts/shared/implement/2026-06-12-star-pipeline-log.md
 git commit -m "[Setup] Initialize implementation log"
 ```
 
-## Project Teardown / Cleanup (run ONLY after Phases 1–5 are all complete & validated)
+# ═══════════════════════════════════════════════════════════════════════════
+# PHASES 6–10: PROJECT COMPLETION (added 2026-06-14, after Phase 5)
+# ═══════════════════════════════════════════════════════════════════════════
+
+> **Read this whole block before starting — it is self-contained for a fresh thread.**
+> Phases 1–5 are DONE and committed (latest commit at authoring: `23c6cce`). The final n=4,500
+> comparison report is in `results/comparison_report.md`. These phases close the gaps surfaced in
+> the results analysis (`thoughts/shared/research/2026-06-14-results-analysis.md`).
+>
+> **Recommended order & cost:** Phase 6 (free, ~½ day, highest value) → Phase 7 (free, ~1–1.5 h)
+> → Phase 9 (free, ~1 h) → Phase 8 (cloud ~$3–6, ~½ day, medium risk) → Phase 10 (teardown).
+> Phases 6/7/9 need no cloud and no API. Phase 8 is optional and the only one that costs money.
+
+## Current state & key facts (as of 2026-06-14)
+
+**What exists:**
+- **Fine-tuned TEXT model** (advice SFT, the one evaluated in Phase 5):
+  - GGUF (4.7 GB, WORKING): `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
+  - LoRA adapter (167 MB): `/Volumes/DUAL DRIVE/star-pipeline/models/lora/qwen3-8b-advice/`
+  - HF: `dyrtyData/star-pipeline-qwen3-8b-advice-gguf` (public)
+- **Baselines:** `results/lstm/baseline_results.json` (3 channels), `results/isolation_forest/if_results.json` (3 channels)
+- **LLM eval:** `results/inference_test.json` (n=4,500; schema below)
+- **Test data:** `data/splits/test_with_advice.jsonl` (4,500 windows, 25% anomalous). Each record:
+  `{"instruction": <telemetry-window-as-text>, "response": <gold DIAGNOSIS/ADVICE/ACTION>, "metadata": {"mission","channel","is_anomaly"}}`
+- **Advice labels:** `data/labels/anomaly_advice.json` (7,457 records, severity+pattern) — gold advice for Phase 9.
+- **Vision assets (READY, not yet used):** ~6,000 PNG telemetry plots in `data/processed/plots/`
+  + per-split `*_metadata.jsonl`; `src/training/train_detection.py` (Qwen3-VL SFT) is WRITTEN but NEVER RUN.
+
+**Storage facts (critical):**
+- `DUAL DRIVE` is **`msdos`/FAT32** → hard **4 GB single-file limit**; ~732 GB free. Raw ESA-AD
+  (~29 GB) still lives at `/Volumes/DUAL DRIVE/esa-ad/` (needed for Phase 7; do NOT delete until Phase 10).
+- **Internal SSD: ~222 GB free** — the old "nearly full" warning is STALE. A temporary 4.7 GB base
+  model on local SSD is fine; delete it after Phase 6.
+- **DELETE THIS partial junk file** (corrupt 1.1 GB duplicate of the fine-tuned GGUF, NOT the base):
+  `rm "/Volumes/DUAL DRIVE/star-pipeline/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf"`
+  (the complete 4.7 GB copy is safe on local SSD). The **base** Qwen3-8B is on NO local disk — pull from HF.
+
+**`results/inference_test.json` summary schema** (per-record): `{index, mission, channel,
+is_anomaly, predicted ("ANOMALY"|"NOMINAL"|"UNKNOWN"), correct, expected_response, actual_response
+(≤300 chars), elapsed_s}`. `summary` has `{n_samples, accuracy, precision, recall, f1, tp, fp, fn,
+tn, unknown_responses, avg_time_s, partial}`.
+
+**Durability (reuse for every multi-hour run):** `src/inference/test_local_gguf.py` already supports
+`--checkpoint-every N --resume`. Launch detached + sleep-proof:
+`( nohup caffeinate -dimsu env STAR_MODEL_DIR=… PYTHONUNBUFFERED=1 .venv/bin/python … > run.log 2>&1 < /dev/null & )`.
+Keep the laptop plugged in + lid open (caffeinate can't beat lid-close sleep on battery).
+
+---
+
+## Phase 6 — Did fine-tuning actually help? (base + frontier comparison) ⭐ HIGHEST VALUE
+
+**Goal:** isolate the value the fine-tune added by comparing the fine-tuned model against (a) the
+**un-fine-tuned base** Qwen3-8B and (b) a **frontier model zero-shot**, on the same test data.
+No cloud, no API.
+
+**Success criteria:**
+- [ ] Base Qwen3-8B scored on the same 4,500 windows → `results/inference_base.json`.
+- [ ] Frontier zero-shot scored on a fixed stratified sample → `results/inference_frontier_sample.json`.
+- [ ] `evaluate.py` emits a "Did fine-tuning help?" table: fine-tuned vs base vs frontier, with
+      both detection metrics AND advice-structured-fraction (expect base ≪ 99.6%).
+- [ ] Base GGUF deleted from local SSD after scoring.
+
+**Steps:**
+1. **Cleanup:** delete the partial junk GGUF on DUAL DRIVE (command above).
+2. **Get the base model** (same quant as our export, for a clean control): download the
+   **un-fine-tuned** Qwen3-8B `Q4_K_M` GGUF from HF — verify exact repo/file at download time, e.g.
+   `unsloth/Qwen3-8B-GGUF` → `Qwen3-8B-Q4_K_M.gguf` (~4.7 GB) into `models/gguf/base-qwen3-8b/`
+   (local SSD, temporary). `hf download unsloth/Qwen3-8B-GGUF Qwen3-8B-Q4_K_M.gguf --local-dir …`.
+3. **Add an output-path arg to `test_local_gguf.py`** (it currently hardcodes
+   `RESULTS_FILE = results/inference_test.json` at line 33): add `--results-file PATH` so the base
+   run writes to `results/inference_base.json` without clobbering the fine-tuned results. Use the
+   SAME `SYSTEM_PROMPT` and prompt format (fair comparison). Run with `--limit 0 --resume
+   --checkpoint-every 250` detached (≈3.5 h). The base model will likely (a) detect worse and
+   (b) NOT emit our structured `DIAGNOSIS/ADVICE/ACTION` format — both are exactly the fine-tuning
+   deltas we want to show.
+4. **Frontier zero-shot (in-session Claude, NO API):** in a fresh thread, the agent itself acts as
+   the detector. Take a FIXED stratified sample of ~150 windows from `test_with_advice.jsonl`
+   (deterministic: e.g. first 150 after a seed-42 stratified shuffle keeping ~25% anomalous —
+   record the exact indices). For each, apply the same analyst `SYSTEM_PROMPT`, output
+   ANOMALY/NOMINAL (+ advice), and write `results/inference_frontier_sample.json` in the SAME
+   per-record schema. Document: model = Claude (whatever runs the session), **sample only**, indices
+   + prompt frozen for reproducibility. (Doing all 4,500 in-session is impractical/inconsistent —
+   a stratified sample is the honest scope.)
+5. **Extend `evaluate.py`:** load `inference_base.json` + `inference_frontier_sample.json`; add rows
+   "Base Qwen3-8B (zero-shot)" and "Frontier zero-shot (Claude, n=150 sample)"; compute the same
+   metrics + `advice_structured_frac` for each. Add a **"Did fine-tuning help?"** subsection to the
+   report quantifying the fine-tuned−base delta (detection F1 AND advice-format adherence).
+6. **Reclaim space:** delete `models/gguf/base-qwen3-8b/` after the report regenerates.
+7. Commit: `[Phase 6] Base + frontier comparison — quantify fine-tuning value`.
+
+**Why it matters:** the project's headline claim is "I can fine-tune for a localized use case."
+This is the only phase that proves it with a number. The advice-format delta (base's low % vs.
+fine-tuned 99.6%) is a near-guaranteed clean win even if detection is closer.
+
+---
+
+## Phase 7 — Level the detection field (full LSTM)
+
+**Goal:** make the LSTM-vs-LLM comparison apples-to-apples. The LSTM's Phase-2 numbers are a
+3-channel smoke run with per-channel tuned thresholds; the LLM faced all 4,500 windows untuned.
+
+**Success criteria:**
+- [ ] LSTM re-run on all 58 Mission-1 target channels → updated `results/lstm/baseline_results.json`.
+- [ ] LSTM persists per-window predictions so Affinity-F1 is computable (no longer N/A).
+- [ ] Report regenerated; old 3-channel numbers kept in the log for before/after honesty.
+
+**Steps:**
+1. Run the LSTM on all target channels (raw ESA-AD still on DUAL DRIVE):
+   `make baseline ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" MISSION=1` with `--max-channels 58`
+   (train_lstm.py defaults to 3; bump it). Models → DUAL DRIVE via `STAR_OUTPUT_DIR`. ≈1–1.5 h.
+2. **Modify `train_lstm.py` to persist per-window `(prediction, label)`** alongside the per-channel
+   aggregates (currently only precision/recall/f1 per channel are saved). This lets `evaluate.py`
+   compute a real Affinity-F1 for the LSTM and makes the eval unit comparable to the LLM's.
+3. `make eval-all && make validate-eval`; regenerate the report.
+4. Commit: `[Phase 7] LSTM on all 58 Mission-1 channels + per-window preds`.
+
+---
+
+## Phase 8 — Vision detector (AnomSeer-style) — completes the original 3-way LLM design [OPTIONAL, CLOUD]
+
+**Goal:** recover the scoped-out vision approach: Qwen3-VL-8B fine-tuned on PNG telemetry plots.
+Assets are ready (PNGs + `train_detection.py`); only the training run + eval remain.
+
+**Success criteria:**
+- [ ] Qwen3-VL-8B fine-tuned on the PNG plot dataset (cloud).
+- [ ] Model pushed to HF (preserve regardless of how local inference goes).
+- [ ] Vision detector scored (locally OR on-instance) → added as a row in the report.
+
+**Steps:**
+1. **Vast.ai, US region** (you're on Pacific time; the prior Hungary box made downloads crawl):
+   `vastai search offers 'gpu_name=RTX_4090 reliability>0.95' --order 'dph_total asc'` and pick a
+   **US `geolocation`**; consider an **A6000 (48 GB)** for VL VRAM headroom. **Verify region + run a
+   quick download speed test BEFORE `--create`.** Image: `vastai/unsloth-studio`. (See
+   `scripts/cloud/launch_vast.sh`; SSH uses the passphraseless `vast_star` key per D11.)
+2. **Upload** `data/processed/plots/` (~6,000 PNGs) + `*_metadata.jsonl`. Use **tar + scp** —
+   the pytorch image lacks `rsync` (D12/D15). See `scripts/cloud/upload_data.sh`.
+3. **Train:** run `src/training/train_detection.py` (already written: Qwen3-VL-8B-Instruct-unsloth-bnb-4bit,
+   `UnslothVisionDataCollator`, QLoRA r=16/α=16). ≈2–4 h.
+4. **Push to HF** (preserve regardless of region): adapter + merged + GGUF (+ `mmproj` projector),
+   e.g. `dyrtyData/star-pipeline-qwen3-vl-8b-detection`. Do this BEFORE teardown.
+5. **Inference — try local, fall back to cloud:**
+   - **Try local Metal first** (llama-cpp-python). ⚠️ **RISK:** multimodal GGUF needs the `mmproj`
+     file and VL support in llama-cpp-python/Metal is patchier than text — this may not work.
+   - **FALLBACK (do not skip): if local fails, run the vision EVAL on the Vast.ai instance**
+     (transformers + the trained adapter) **before destroying it**, write a results JSON in the
+     same schema, and `scp` it back. **Capture eval results before teardown** — losing the instance
+     means retraining.
+6. **Extend `evaluate.py`:** add row "LLM Detection (vision, Qwen3-VL)"; note its eval unit (PNG windows).
+7. **Destroy the Vast.ai instance** once eval JSON + HF push are confirmed. Commit results.
+8. Commit: `[Phase 8] Vision detector trained + evaluated`.
+
+---
+
+## Phase 9 — Grade advice quality semantically (in-session Claude as judge) [OPTIONAL, FREE]
+
+**Goal:** turn "99.6% structured" into "X% actually correct." Distinct from Phase 6's frontier
+*detection* — here Claude is a *judge* of OUR fine-tuned model's advice.
+
+**Steps:**
+1. Sample ~100–150 of the fine-tuned model's anomaly predictions from `results/inference_test.json`
+   (the `actual_response` advice). For each, the in-session agent reviews: window context + true
+   `metadata` + matching gold advice from `data/labels/anomaly_advice.json` (if joinable by
+   mission/channel/pattern) + the model's DIAGNOSIS/ADVICE/ACTION. Score on a small rubric
+   (e.g. correctness, actionability, grounding — 0–2 each).
+2. Write `results/advice_grading_sample.json` + a summary (% correct/actionable). Add an
+   "Advice quality (semantic)" subsection to the report.
+3. Caveats to state: sample only; judge = Claude (session model); advice labels are synthetic.
+4. Commit: `[Phase 9] Semantic advice grading (sampled)`.
+
+---
+
+## Phase 10 — Teardown (was the existing cleanup; precondition now Phases 1–9)
+
+# ═══════════════════════════════════════════════════════════════════════════
+
+## Project Teardown / Cleanup (run ONLY after Phases 1–9 are all complete & validated)
 
 Do **not** delete raw data or rotate the Kaggle key mid-project. Raw ESA-AD (~29 GB on
 `DUAL DRIVE`) is kept as re-ETL insurance through the entire project; the Kaggle key is needed
 for any re-download. Both are torn down together as the final step.
+**Note:** Phase 7 needs the raw data on `DUAL DRIVE` — do not delete it until Phase 7 is done.
 
 **Preconditions (all must be true before teardown):**
-- [ ] Phase 5 evaluation complete and results committed.
+- [ ] Phases 5–9 complete and results committed (Phase 8 vision is optional — note if skipped).
 - [ ] Final models exported (GGUF) and stored on `DUAL DRIVE` and/or pushed to their cloud home.
 - [ ] No open question that could require re-running the ETL from raw.
 

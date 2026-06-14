@@ -2,10 +2,12 @@
 
 **Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`
 **Started**: 2026-06-12
-**Status**: ✅ **ALL PHASES COMPLETE.** Full 4,500-sample LLM eval finished (2026-06-14).
-`make eval-all` + `make validate-eval` both pass on n=4500 results. Final comparison report
-committed. Project teardown (rotate Kaggle token, clear raw ESA-AD from DUAL DRIVE) is the
-only remaining item (optional, see plan Teardown checklist).
+**Status**: ✅ **Phases 1–5 COMPLETE.** Full 4,500-sample LLM eval finished (2026-06-14);
+`make eval-all` + `make validate-eval` pass on n=4500. Final comparison report committed.
+**Phases 6–10 PLANNED** (added 2026-06-14) to close the results-analysis gaps — see the
+"PHASES 6–10: PROJECT COMPLETION" section of the plan (self-contained for a fresh thread).
+Recommended next: **Phase 6** (base + frontier comparison — proves fine-tuning added value;
+free, no cloud/API). Teardown is now Phase 10 (precondition: Phases 1–9 done).
 
 ---
 
