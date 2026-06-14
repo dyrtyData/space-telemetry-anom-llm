@@ -1997,11 +1997,20 @@ eval-all:
 > Isolation Forest added as a 4th approach; Hybrid scored as "LSTM detection + LLM advice".
 > Key Findings are computed, not hardcoded.
 >
-> **OPTIONAL next step (not run): full-split LLM eval.** The LLM numbers are from the
-> Phase-4 100-sample smoke slice. To regenerate the report on all 4,500 test windows run
-> `make eval-llm LIMIT=0` (~2.5 h on M3 Max Metal, overwrites `results/inference_test.json`)
-> then `make eval-all`. The evaluation code reads `n_samples` from the file, so the report
-> auto-updates — no code change needed.
+> **⏳ IN FLIGHT (2026-06-14): full-split LLM eval.** The table above shows the **n=100** smoke
+> numbers. The full 4,500-window sweep is now running detached (checkpointed/resumable — see the
+> implementation log's "Step 5.2 re-run saga" + "FRESH-THREAD RESTART RUNBOOK"). It died twice
+> first (buffered output hid no-progress; overnight machine sleep), which prompted hardening
+> `test_local_gguf.py` with `--checkpoint-every` + `--resume` + unbuffered output (commit
+> `1bfd715`) and running under `caffeinate -dimsu` detached via `( nohup … & )`.
+> **When it reaches 4,500 samples:** `make eval-all` + `make validate-eval`, then update this
+> table's LLM row + Key Findings with the n=4500 numbers and commit. `evaluate.py` reads
+> `n_samples` from the result file, so the report regenerates automatically.
+>
+> **⚠️ `caffeinate` cannot prevent lid-close sleep on battery** — the machine must stay plugged
+> in + lid open for an unattended finish; otherwise resume from the last 250-checkpoint.
+> The baselines could likewise be expanded from the 3-channel smoke to all 58 Mission-1 target
+> channels (`make baseline` + `--max-channels 58`) for a fuller comparison.
 
 ---
 

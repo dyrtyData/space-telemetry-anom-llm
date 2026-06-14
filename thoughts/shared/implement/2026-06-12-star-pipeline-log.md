@@ -2,7 +2,10 @@
 
 **Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`
 **Started**: 2026-06-12
-**Status**: Phase 5 COMPLETE — `evaluate.py` written, `make eval-all`/`validate-eval` pass, comparison report generated (4 approaches). All phases done. (LLM metrics on 100-sample slice; optional full 4,500 sweep documented.)
+**Status**: Phase 5 COMPLETE (code). All phases (1–5) implemented & committed. Comparison report
+generated (4 approaches) on the **n=100** LLM slice. **IN FLIGHT:** full 4,500-sample LLM eval
+running detached (Attempt 3, checkpointed/resumable) — on completion, regenerate report + update
+the n=4500 tables in plan/log. See the **FRESH-THREAD RESTART RUNBOOK** at the bottom of this file.
 
 ---
 
@@ -633,4 +636,95 @@ from scratch using the plan §5 code as a starting point (with the schema fixes 
 - `evaluate.py`'s loaders are now the canonical schema consumers; if Phase 2/4 result schemas
   ever change, update the three loader functions (`load_lstm_results`, `load_if_results`,
   `load_llm_results`) — they are the single point of coupling.
+
+### Step 5.2: Full 4,500-sample LLM eval — re-run saga (2026-06-13 → 2026-06-14)
+User approved the full sweep ("kick it off"). It died TWICE before succeeding; root causes and
+the durability fixes are below (also distilled into `~/.claude/CLAUDE.md` → "Long-Running
+Background Processes", committed `eed8d41` + a follow-up).
+
+- **Attempt 1** (`make eval-llm LIMIT=0 | tee …`, run_in_background): produced NO output and
+  never updated `inference_test.json`. Cause: Python stdout was **block-buffered through the
+  `tee` pipe**, so progress never flushed — a dead job looked identical to a running one. The
+  process was gone with only the model-load line (llama.cpp's C-level stderr) in the log.
+- **Attempt 2** (`caffeinate -i` + run_in_background, hardened script): reached sample ~20 then
+  died. Cause: **machine slept overnight** (~8 h gap). `caffeinate -i` blocks only *idle* sleep,
+  not lid-close/system sleep; and `caffeinate`/the job were children of the harness session, so
+  they died when the session was suspended.
+- **Hardening applied to `src/inference/test_local_gguf.py`** (commit `1bfd715`):
+  - `--checkpoint-every N` (default 250): atomic temp-file + rename write of `{summary, results}`
+    every N samples. A death now costs ≤N samples.
+  - `--resume`: deterministic sample order → resumes from `len(existing results)`. Reuses any
+    prior genuine results (e.g. the 5-sample smoke).
+  - `compute_summary()`/`write_results()` extracted; metrics reconstruct from each record's
+    persisted `elapsed_s` (resume-safe). Summary gains a `partial` flag (True mid-run).
+  - `flush=True` on all progress prints; run with `PYTHONUNBUFFERED=1`.
+  - **Schema unchanged** → `evaluate.py` and `make validate-inference`/`validate-eval` still work.
+- **Attempt 3 (CURRENT, running)**: detached daemon, survives session + blocks system sleep:
+  ```
+  cd <repo> && ( nohup caffeinate -dimsu env \
+    STAR_MODEL_DIR="/Users/laptop/Developer/fdl_technicalInterview/models" PYTHONUNBUFFERED=1 \
+    .venv/bin/python src/inference/test_local_gguf.py --limit 0 --resume --checkpoint-every 250 \
+    > results/.eval_llm_full.log 2>&1 < /dev/null & )
+  ```
+  `( … & )` subshell reparents to launchd (PID 1) so it outlives the harness turn/session.
+  Confirmed advancing (sample ~220 @ ~2–3 s/sample; ETA ~2–2.5 h from ~06:15 local 2026-06-14).
+- **⚠️ HARDWARE CAVEAT (only the user can fix):** `caffeinate` CANNOT beat **lid-close sleep on
+  battery** — that is what killed Attempt 2 overnight. Machine must stay **plugged in + lid open**
+  (or clamshell w/ external display) for an unattended finish. If it sleeps again, just resume
+  (≤250 samples lost).
+
+### Deviations (Phase 5, continued)
+- **D25 — Eval durability hardening.** Plan §4.3/§5 assumed a single-shot inference run; reality
+  needed checkpoint+resume+unbuffered+detached+caffeinate (above). No metric/schema impact.
+
+---
+
+## ▶▶ FRESH-THREAD RESTART RUNBOOK (read this first if resuming with no context) ◀◀
+
+**Project state as of 2026-06-14 ~06:20 local:** ALL phases (1–5) implemented. Phase 5 code is
+COMPLETE and committed; the only thing in flight is the optional **full 4,500-sample LLM eval**
+(Attempt 3 running detached). Everything else is done.
+
+**Repo:** `/Users/laptop/Developer/fdl_technicalInterview/space-telemetry-anom-llm` (branch `main`).
+**Plan:** `thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`.
+**Key git commits:** `6c9220a` (Phase 5 report + evaluate.py), `1bfd715` (eval hardening),
+`eed8d41` in `~/.claude` (CLAUDE.md durability guidance).
+
+**Storage (CRITICAL — internal disk nearly full):**
+- Raw ESA-AD: `/Volumes/DUAL DRIVE/esa-ad/` (FAT32; KEEP until project teardown).
+- LoRA: `/Volumes/DUAL DRIVE/star-pipeline/models/lora/qwen3-8b-advice/`.
+- GGUF (5 GB, exceeds FAT32 4 GB limit → on local APFS):
+  `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
+  (also on HF: `dyrtyData/star-pipeline-qwen3-8b-advice-gguf`).
+- `STAR_MODEL_DIR=/Users/laptop/Developer/fdl_technicalInterview/models` (Makefile default).
+
+**To check the in-flight eval:**
+```
+pgrep -fl test_local_gguf                       # is it alive?
+tail -5 results/.eval_llm_full.log              # progress (unbuffered)
+python3 -c "import json;d=json.load(open('results/inference_test.json'));print(d['summary']['n_samples'],d['summary'].get('partial'))"
+```
+- If `n_samples == 4500` and `partial == false` → eval DONE. Run the wrap-up below.
+- If the process is GONE and `n_samples < 4500` → resume (relaunch Attempt-3 command above; it
+  picks up from the last checkpoint). Make sure the machine is plugged in + lid open first.
+
+**Wrap-up once the eval shows 4500 samples (THIS IS THE REMAINING WORK):**
+1. `make eval-all` then `make validate-eval` (both must pass).
+2. Update the n=4500 LLM row + Key Findings in BOTH the plan's Phase-5 status block and this log's
+   comparison table (currently they show the **n=100** numbers: P=0.432 R=0.615 F1=0.508).
+   `evaluate.py` reads `n_samples` from the file, so the report regenerates automatically — only
+   the hand-written tables in the plan/log need the new numbers.
+3. Commit: `[Phase 5] Full 4,500-sample LLM eval — report + tables updated`.
+4. (Optional) Stop the completion monitor; `pkill -f "caffeinate -dimsu"` is auto-released when
+   python exits, but verify no stray `caffeinate` lingers: `pgrep -fl "caffeinate -dimsu"`.
+
+**Manual ops cheat-sheet:**
+- Stop the eval: `pkill -f test_local_gguf` (caffeinate dies with it). Resume later with `--resume`.
+- Kill a stuck caffeinate: `pkill -f "caffeinate -dimsu"`.
+- The 100-sample report artifacts (`results/comparison_report.md`, `comparison_metrics.json`) are
+  **gitignored** (`results/**`) — regenerate via `make eval-all`, don't expect them in git.
+
+**Project teardown (final step, ONLY after the 4500 eval + commit are done):** see the plan's
+"Project Teardown / Cleanup" checklist — rotate the Kaggle token (pasted plaintext 2026-06-12)
+and delete raw ESA-AD from DUAL DRIVE. Not yet done; deliberately deferred.
 
