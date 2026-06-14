@@ -1,0 +1,752 @@
+[
+  {
+    "index": 8,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.010); slow variation within normal baseline."
+  },
+  {
+    "index": 33,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.053, max step 0.016); within plausible normal jitter."
+  },
+  {
+    "index": 46,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.018; stable, no variation."
+  },
+  {
+    "index": 73,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.076, max step 0.018); within plausible normal jitter."
+  },
+  {
+    "index": 109,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.018); slow variation within normal baseline."
+  },
+  {
+    "index": 122,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline."
+  },
+  {
+    "index": 135,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.010); slow variation within normal baseline."
+  },
+  {
+    "index": 138,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.018); slow variation within normal baseline."
+  },
+  {
+    "index": 152,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline."
+  },
+  {
+    "index": 175,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.012); slow variation within normal baseline."
+  },
+  {
+    "index": 193,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.011; stable, no variation."
+  },
+  {
+    "index": 231,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.027); slow variation within normal baseline."
+  },
+  {
+    "index": 268,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at 0.000; stable, no variation."
+  },
+  {
+    "index": 299,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.25) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 345,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (-0.46) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 346,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (-0.22) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 359,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.046); slow variation within normal baseline."
+  },
+  {
+    "index": 360,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.022); slow variation within normal baseline."
+  },
+  {
+    "index": 407,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.007; stable, no variation."
+  },
+  {
+    "index": 489,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.026; stable, no variation."
+  },
+  {
+    "index": 497,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.018; stable, no variation."
+  },
+  {
+    "index": 507,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (+0.20), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 525,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (+0.19), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 583,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.023); slow variation within normal baseline."
+  },
+  {
+    "index": 589,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.013); slow variation within normal baseline."
+  },
+  {
+    "index": 595,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.37) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 610,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.042); slow variation within normal baseline."
+  },
+  {
+    "index": 650,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.120, max step 0.068); within plausible normal jitter."
+  },
+  {
+    "index": 654,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (+0.10), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 680,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.042); slow variation within normal baseline."
+  },
+  {
+    "index": 728,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.040); slow variation within normal baseline."
+  },
+  {
+    "index": 730,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (-0.38) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 743,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.058, max step 0.015); within plausible normal jitter."
+  },
+  {
+    "index": 764,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.032); slow variation within normal baseline."
+  },
+  {
+    "index": 813,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.021); slow variation within normal baseline."
+  },
+  {
+    "index": 832,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 1.42) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in..."
+  },
+  {
+    "index": 865,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.079, max step 0.076); within plausible normal jitter."
+  },
+  {
+    "index": 915,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.273; stable, no variation."
+  },
+  {
+    "index": 974,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.046); slow variation within normal baseline."
+  },
+  {
+    "index": 1007,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.041); slow variation within normal baseline."
+  },
+  {
+    "index": 1020,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (+0.12), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 1047,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.312; stable, no variation."
+  },
+  {
+    "index": 1076,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.24) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 1095,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.089, max step 0.063); within plausible normal jitter."
+  },
+  {
+    "index": 1099,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.016); slow variation within normal baseline."
+  },
+  {
+    "index": 1135,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.23) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 1136,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 1.11) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in..."
+  },
+  {
+    "index": 1138,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.011; stable, no variation."
+  },
+  {
+    "index": 1239,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.049); slow variation within normal baseline."
+  },
+  {
+    "index": 1300,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.014); slow variation within normal baseline."
+  },
+  {
+    "index": 1323,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at 0.031; stable, no variation."
+  },
+  {
+    "index": 1351,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 0.85) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in..."
+  },
+  {
+    "index": 1383,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.018); slow variation within normal baseline."
+  },
+  {
+    "index": 1420,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.036); slow variation within normal baseline."
+  },
+  {
+    "index": 1429,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.059, max step 0.020); within plausible normal jitter."
+  },
+  {
+    "index": 1440,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (-0.52) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 1466,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.017; stable, no variation."
+  },
+  {
+    "index": 1479,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 2.14) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in..."
+  },
+  {
+    "index": 1495,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Localized spike (step 0.22) against otherwise narrow baseline. ADVICE: Check for single-sample glitch vs real transient; review neighboring samples. ACTION: Mark for review; validate against telemetry checksum / sensor calibration."
+  },
+  {
+    "index": 1517,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.011; stable, no variation."
+  },
+  {
+    "index": 1533,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (-0.14), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 1583,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.065, max step 0.046); within plausible normal jitter."
+  },
+  {
+    "index": 1592,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.067, max step 0.038); within plausible normal jitter."
+  },
+  {
+    "index": 1609,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 0.54) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in..."
+  },
+  {
+    "index": 1654,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.007); slow variation within normal baseline."
+  },
+  {
+    "index": 1701,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.061, max step 0.039); within plausible normal jitter."
+  },
+  {
+    "index": 1733,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.037; stable, no variation."
+  },
+  {
+    "index": 1895,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.001); slow variation within normal baseline."
+  },
+  {
+    "index": 1910,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.029); slow variation within normal baseline."
+  },
+  {
+    "index": 1911,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.35) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 1987,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.047); slow variation within normal baseline."
+  },
+  {
+    "index": 2054,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.020); slow variation within normal baseline."
+  },
+  {
+    "index": 2061,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.004); slow variation within normal baseline."
+  },
+  {
+    "index": 2094,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.012); slow variation within normal baseline."
+  },
+  {
+    "index": 2096,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.012); slow variation within normal baseline."
+  },
+  {
+    "index": 2182,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (-0.41) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 2217,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.253, max step 0.104); within plausible normal jitter."
+  },
+  {
+    "index": 2224,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.037; stable, no variation."
+  },
+  {
+    "index": 2314,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.000; stable, no variation."
+  },
+  {
+    "index": 2347,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.083, max step 0.061); within plausible normal jitter."
+  },
+  {
+    "index": 2424,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.273; stable, no variation."
+  },
+  {
+    "index": 2436,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.296; stable, no variation."
+  },
+  {
+    "index": 2470,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.011; stable, no variation."
+  },
+  {
+    "index": 2502,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.004; stable, no variation."
+  },
+  {
+    "index": 2517,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (+0.12), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 2518,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.033); slow variation within normal baseline."
+  },
+  {
+    "index": 2552,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.000; stable, no variation."
+  },
+  {
+    "index": 2580,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.037); slow variation within normal baseline."
+  },
+  {
+    "index": 2591,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.059, max step 0.023); within plausible normal jitter."
+  },
+  {
+    "index": 2602,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.040); slow variation within normal baseline."
+  },
+  {
+    "index": 2614,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.041); slow variation within normal baseline."
+  },
+  {
+    "index": 2847,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (+0.21), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 2948,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.020); slow variation within normal baseline."
+  },
+  {
+    "index": 2955,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline."
+  },
+  {
+    "index": 3015,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.017; stable, no variation."
+  },
+  {
+    "index": 3060,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.008); slow variation within normal baseline."
+  },
+  {
+    "index": 3088,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.273; stable, no variation."
+  },
+  {
+    "index": 3168,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (+0.14), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 3184,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.011); slow variation within normal baseline."
+  },
+  {
+    "index": 3239,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.32) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 3242,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at 0.589; stable, no variation."
+  },
+  {
+    "index": 3355,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.034); slow variation within normal baseline."
+  },
+  {
+    "index": 3373,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.028); slow variation within normal baseline."
+  },
+  {
+    "index": 3404,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.047); slow variation within normal baseline."
+  },
+  {
+    "index": 3444,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline."
+  },
+  {
+    "index": 3504,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 1.36) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in..."
+  },
+  {
+    "index": 3532,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.016); slow variation within normal baseline."
+  },
+  {
+    "index": 3577,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline."
+  },
+  {
+    "index": 3596,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline."
+  },
+  {
+    "index": 3615,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.055, max step 0.047); within plausible normal jitter."
+  },
+  {
+    "index": 3620,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline."
+  },
+  {
+    "index": 3630,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.086, max step 0.060); within plausible normal jitter."
+  },
+  {
+    "index": 3648,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (-0.13), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 3676,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.016); slow variation within normal baseline."
+  },
+  {
+    "index": 3680,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.026; stable, no variation."
+  },
+  {
+    "index": 3713,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.067, max step 0.067); within plausible normal jitter."
+  },
+  {
+    "index": 3716,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.056, max step 0.056); within plausible normal jitter."
+  },
+  {
+    "index": 3739,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.000); slow variation within normal baseline."
+  },
+  {
+    "index": 3792,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.012); slow variation within normal baseline."
+  },
+  {
+    "index": 3854,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.312; stable, no variation."
+  },
+  {
+    "index": 3867,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (-0.21), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 3883,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.013); slow variation within normal baseline."
+  },
+  {
+    "index": 3886,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.074, max step 0.018); within plausible normal jitter."
+  },
+  {
+    "index": 3902,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (+0.16), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 3962,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.039); slow variation within normal baseline."
+  },
+  {
+    "index": 3973,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.057; stable, no variation."
+  },
+  {
+    "index": 3982,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.36) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 3988,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 1.82) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in..."
+  },
+  {
+    "index": 3994,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.311; stable, no variation."
+  },
+  {
+    "index": 4009,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 4.33) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in..."
+  },
+  {
+    "index": 4025,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.108, max step 0.064); within plausible normal jitter."
+  },
+  {
+    "index": 4050,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.037; stable, no variation."
+  },
+  {
+    "index": 4067,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 3.16) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in..."
+  },
+  {
+    "index": 4080,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.013); slow variation within normal baseline."
+  },
+  {
+    "index": 4093,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sharp discontinuity (max single-step delta 1.45) inconsistent with smooth physical dynamics. ADVICE: Cross-check timestamp against command log and adjacent channels for correlated transient. ACTION: Flag window for engineer review; verify sensor in..."
+  },
+  {
+    "index": 4109,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.000; stable, no variation."
+  },
+  {
+    "index": 4115,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Pronounced bowl-shaped excursion (~0.31 swing) off the -1.3 baseline, rising then returning. ADVICE: Check for transient disturbance vs control-loop overshoot. ACTION: Correlate with attitude/thermal events; flag for trend review."
+  },
+  {
+    "index": 4136,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.494; stable, no variation."
+  },
+  {
+    "index": 4171,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.047); slow variation within normal baseline."
+  },
+  {
+    "index": 4226,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Gentle monotonic trend (+0.14), smooth and gradual \u2014 consistent with normal slow dynamics."
+  },
+  {
+    "index": 4230,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -1.310; stable, no variation."
+  },
+  {
+    "index": 4243,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.053, max step 0.053); within plausible normal jitter."
+  },
+  {
+    "index": 4244,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Localized spike (step 0.29) against otherwise narrow baseline. ADVICE: Check for single-sample glitch vs real transient; review neighboring samples. ACTION: Mark for review; validate against telemetry checksum / sensor calibration."
+  },
+  {
+    "index": 4289,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at 4.090; stable, no variation."
+  },
+  {
+    "index": 4315,
+    "predicted": "ANOMALY",
+    "response": "ANOMALY DETECTED. DIAGNOSIS: Sustained level shift / strong drift (+0.70) over window suggests regime change. ADVICE: Determine if drift is commanded (maneuver/mode change) or unexpected degradation. ACTION: Correlate with ops timeline; if uncommanded, escalate for trend monit..."
+  },
+  {
+    "index": 4343,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.025); slow variation within normal baseline."
+  },
+  {
+    "index": 4384,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.076, max step 0.076); within plausible normal jitter."
+  },
+  {
+    "index": 4389,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Smooth, stable trace (range 0.028); slow variation within normal baseline."
+  },
+  {
+    "index": 4397,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Bounded fluctuation (range 0.062, max step 0.042); within plausible normal jitter."
+  },
+  {
+    "index": 4410,
+    "predicted": "NOMINAL",
+    "response": "NOMINAL. Flat, constant trace at -0.018; stable, no variation."
+  }
+]

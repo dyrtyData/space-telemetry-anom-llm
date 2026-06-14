@@ -2136,11 +2136,68 @@ Keep the laptop plugged in + lid open (caffeinate can't beat lid-close sleep on 
 No cloud, no API.
 
 **Success criteria:**
-- [ ] Base Qwen3-8B scored on the same 4,500 windows → `results/inference_base.json`.
-- [ ] Frontier zero-shot scored on a fixed stratified sample → `results/inference_frontier_sample.json`.
-- [ ] `evaluate.py` emits a "Did fine-tuning help?" table: fine-tuned vs base vs frontier, with
-      both detection metrics AND advice-structured-fraction (expect base ≪ 99.6%).
-- [ ] Base GGUF deleted from local SSD after scoring.
+- [~] Base Qwen3-8B scored → `results/inference_base.json`. **IN PROGRESS** (adopted an
+      externally-started run scoring **500** windows, not 4,500 — see D26). Same harness as the
+      fine-tuned LLM. Row appears in the report automatically once the file finalizes.
+- [x] Frontier zero-shot scored on a fixed stratified sample → `results/inference_frontier_sample.json`
+      (n=150, seed-42 stratified, frozen indices). **F1=0.254 (P=0.308, R=0.216)**.
+- [x] `evaluate.py` emits a "Did fine-tuning help?" table: fine-tuned vs base vs frontier, with
+      detection metrics AND `format_compliance` + `advice_structured_frac` (base expected ≈ 0%).
+- [ ] Base GGUF deleted from local SSD after scoring (deferred until the base run finalizes).
+
+> **✅ Phase 6 status (2026-06-14):** Code + frontier eval COMPLETE & committed; base run in
+> flight (500-window external run adopted). Files added: `src/inference/select_frontier_sample.py`
+> (frozen sample selector + results assembler), `--results-file`/`--approach-label` args on
+> `test_local_gguf.py`, base/frontier loaders + "Did fine-tuning help?" section in `evaluate.py`,
+> Makefile targets `eval-base`/`frontier-select`/`frontier-assemble`. `make eval-all` +
+> `make validate-eval` pass with the frontier row present. **Deviations D26–D29** below.
+>
+> | Approach | F1 | format-compliance | structured-advice |
+> |---|---|---|---|
+> | LLM Detection (fine-tuned, n=4500) | 0.453 | 0.994 | 0.996 |
+> | Frontier zero-shot (Claude, n=150) | 0.254 | 1.000 | 1.000 |
+> | Base Qwen3-8B (n=500) | _pending_ | _pending (smoke: ~0)_ | _pending (≈0)_ |
+>
+> **D26 — Adopted an external 500-window base run (not the planned 4,500).** When this session
+> began, a base run started concurrently (PID 45306, `--limit 500`, label "Qwen3-8B BASE",
+> logging to `run_base.log`) — not launched by this thread. To avoid a double-writer clobber on
+> `results/inference_base.json` I killed my own freshly-launched duplicate and adopted the
+> external run. The user was asked (kill+full-4500 vs adopt-500 vs another-session-owns-it) and
+> did not answer; took the low-regret default (don't destroy a running job). 500 of the 4,500
+> (effectively random — the test split is a shuffled permutation) is an adequate base control;
+> the base's deficiency is qualitative (output non-compliance) and shows at any n. Re-running the
+> full 4,500 is one command: `make eval-base LIMIT=0` (resumable).
+>
+> **D27 — Base scored under the IDENTICAL harness (no `/no_think` confound); format-compliance is
+> the headline metric.** Smoke-testing the base revealed Qwen3-8B defaults to *thinking mode* and
+> burns the 300-token budget on `<think>` before answering → it almost never emits the required
+> terse `ANOMALY DETECTED`/`NOMINAL` verdict → classified UNKNOWN. With `/no_think` it instead
+> rambles in verbose markdown and still doesn't emit the contract. Decision: run the base through
+> the EXACT same `test_local_gguf.py` harness as the fine-tune (same prompt, decoding, parser) —
+> the only variable is the weights. The honest, computable fine-tuning delta is therefore
+> **output-contract compliance** (`format_compliance` = fraction of parseable verdicts; fine-tune
+> 99.4% vs base ≈0%) and structured-advice fraction, added to `evaluate.py`. An all-UNKNOWN base
+> yields P=R=F1≈0; that is a faithful finding ("fine-tuning was required for the model to even
+> produce usable output"), not a bug.
+>
+> **D28 — Frontier eval: instruction-only input + fresh-thread sub-agent detector.** The frontier
+> detector sees ONLY the `instruction` field (mission/channel + first ~10 normalized values) —
+> exactly what the fine-tune saw; ground-truth `is_anomaly`/`pattern` are stripped into a separate
+> leak-free `data/frontier/frontier_prompts.jsonl`. The "session model as detector" was realized
+> as a fresh-thread Claude sub-agent (faithful to the plan's "the agent itself acts as the
+> detector"), which classified all 150 → `results/frontier_classifications.json`; an assembler
+> joins to ground truth. Result is honest and modest (F1 0.254): zero-shot frontier on a few
+> normalized values can't recover mission/channel-specific patterns the fine-tune learned;
+> 23/37 sampled anomalies are `subtle_deviation`, near-invisible from 10 values.
+>
+> **D29 — `evaluate.py` adds base/frontier rows only when their files load cleanly.**
+> `make validate-eval` forbids any row carrying an `error` key, so a missing base file must not
+> emit an error row — the loaders return an error dict that `main()` filters out. The report
+> degrades gracefully (frontier-only) until the base run finalizes.
+>
+> **.gitignore:** `results/frontier_classifications.json` is force-tracked (in-session judgments,
+> not deterministically regenerable). `results/inference_base.json`, `inference_frontier_sample.json`,
+> the comparison report, the base GGUF, and `*.log` stay ignored (regenerable / large).
 
 **Steps:**
 1. **Cleanup:** delete the partial junk GGUF on DUAL DRIVE (command above).

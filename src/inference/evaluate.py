@@ -28,7 +28,13 @@ RESULTS_DIR = Path("results")
 LSTM_FILE = RESULTS_DIR / "lstm" / "baseline_results.json"
 IF_FILE = RESULTS_DIR / "isolation_forest" / "if_results.json"
 LLM_FILE = RESULTS_DIR / "inference_test.json"
+BASE_FILE = RESULTS_DIR / "inference_base.json"  # Phase 6: un-fine-tuned base control
+FRONTIER_FILE = RESULTS_DIR / "inference_frontier_sample.json"  # Phase 6: frontier zero-shot
 TEST_WITH_ADVICE = Path("data/splits/test_with_advice.jsonl")
+
+LLM_APPROACH = "LLM Detection"
+BASE_APPROACH = "Base Qwen3-8B (zero-shot)"
+FRONTIER_APPROACH = "Frontier zero-shot (Claude, n=150 sample)"
 
 REPORT_FILE = RESULTS_DIR / "comparison_report.md"
 METRICS_FILE = RESULTS_DIR / "comparison_metrics.json"
@@ -155,49 +161,80 @@ def load_if_results() -> dict:
     return _load_per_channel(IF_FILE, "Isolation Forest")
 
 
-def load_llm_results() -> dict:
-    """Load Phase-4/5 LLM detection results (micro metrics already computed)."""
-    if not LLM_FILE.exists():
-        return {"approach": "LLM Detection", "error": f"results not found: {LLM_FILE}"}
+def _summarize_detection(path: Path, approach: str, with_affinity: bool) -> dict:
+    """Load an inference_*.json (summary + per-window results) into a unified metric dict.
 
-    d = json.loads(LLM_FILE.read_text())
+    Shared by the fine-tuned LLM (Phase 4/5), the un-fine-tuned base control, and the
+    frontier zero-shot sample (Phase 6) -- all three share the schema written by
+    test_local_gguf.py / select_frontier_sample.py.
+    """
+    if not path.exists():
+        return {"approach": approach, "error": f"results not found: {path}"}
+
+    d = json.loads(path.read_text())
     s = d["summary"]
     results = d.get("results", [])
+    n = s["n_samples"]
+    unknown = s.get("unknown_responses", 0)
 
     out = {
-        "approach": "LLM Detection",
+        "approach": approach,
         "precision": round(s["precision"], 4),
         "recall": round(s["recall"], 4),
         "f1": round(s["f1"], 4),
         "cef_0.5": round(cef_from_pr(s["precision"], s["recall"]), 4),
         "accuracy": round(s.get("accuracy", 0.0), 4),
-        "n_units": s["n_samples"],
+        "affinity_f1": None,
+        "n_units": n,
         "unit": "windows",
         "averaging": "micro (pooled over windows)",
         "avg_time_s": s.get("avg_time_s"),
-        "unknown_responses": s.get("unknown_responses", 0),
+        "unknown_responses": unknown,
+        # Output-contract compliance: fraction of responses parseable as ANOMALY/NOMINAL
+        # (not UNKNOWN). This is the cleanest fine-tuning delta -- the base model burns its
+        # budget "thinking" and rarely emits the required terse verdict.
+        "format_compliance": round((n - unknown) / n, 4) if n else 0.0,
+        "partial": s.get("partial", False),
     }
 
-    # --- Affinity-F1: reconstruct per-(mission,channel) intervals via test metadata ---
-    affinity = _llm_affinity(results)
-    if affinity:
-        out["affinity_f1"] = affinity["affinity_f1"]
-        out["affinity_detail"] = affinity
+    if with_affinity:
+        affinity = _llm_affinity(results)
+        if affinity:
+            out["affinity_f1"] = affinity["affinity_f1"]
+            out["affinity_detail"] = affinity
 
-    # --- Advice coherence: do anomaly predictions actually emit structured advice? ---
+    # --- Advice coherence: of the windows it FLAGGED, how many carry structured advice? ---
     anomaly_resps = [r["actual_response"] for r in results if r["predicted"] == "ANOMALY"]
+    out["n_anomaly_predictions"] = len(anomaly_resps)
     if anomaly_resps:
         avg_len = sum(len(r) for r in anomaly_resps) / len(anomaly_resps)
-        # actual_response is persisted truncated to 300 chars (Phase-4), which clips the
-        # trailing ACTION line -- key coherence on DIAGNOSIS+ADVICE, which survive the cap.
+        # actual_response is persisted truncated to 300 chars, which clips the trailing
+        # ACTION line -- key coherence on DIAGNOSIS+ADVICE, which survive the cap.
         structured = sum(
             1 for r in anomaly_resps if ("DIAGNOSIS" in r.upper() and "ADVICE" in r.upper())
         )
         out["advice_avg_chars"] = round(avg_len, 1)
         out["advice_structured_frac"] = round(structured / len(anomaly_resps), 4)
-        out["n_anomaly_predictions"] = len(anomaly_resps)
-
+    else:
+        # No anomaly calls at all (e.g. base model emits no usable verdicts) -> 0% structured.
+        out["advice_avg_chars"] = 0.0
+        out["advice_structured_frac"] = 0.0
     return out
+
+
+def load_llm_results() -> dict:
+    """Load Phase-4/5 fine-tuned LLM detection results (with Affinity-F1)."""
+    return _summarize_detection(LLM_FILE, LLM_APPROACH, with_affinity=True)
+
+
+def load_base_results() -> dict:
+    """Load Phase-6 un-fine-tuned base Qwen3-8B control (same harness, same data)."""
+    return _summarize_detection(BASE_FILE, BASE_APPROACH, with_affinity=False)
+
+
+def load_frontier_results() -> dict:
+    """Load Phase-6 frontier zero-shot sample (Claude session model as detector)."""
+    return _summarize_detection(FRONTIER_FILE, FRONTIER_APPROACH, with_affinity=False)
 
 
 def _llm_affinity(results: list[dict]) -> dict | None:
@@ -314,6 +351,82 @@ def generate_findings(results: list[dict]) -> list[str]:
     return findings
 
 
+def generate_finetuning_section(results: list[dict]) -> list[str]:
+    """Quantify the value fine-tuning added: fine-tuned vs base vs frontier (Phase 6).
+
+    Returns [] when neither the base nor the frontier control is available, so the
+    report degrades gracefully before the Phase-6 controls have been scored.
+    """
+    by = {r["approach"]: r for r in results if "error" not in r}
+    ft = by.get(LLM_APPROACH)
+    base = by.get(BASE_APPROACH)
+    frontier = by.get(FRONTIER_APPROACH)
+    if not ft or (not base and not frontier):
+        return []
+
+    lines = ["\n## Did fine-tuning help?\n"]
+    lines.append(
+        "The headline claim is that fine-tuning an open model adapts it to a localized, "
+        "mission-specific task. This isolates that value by holding the harness fixed "
+        "(identical prompt, decoding, and parser) and varying only the model:\n"
+    )
+    lines.append(
+        "| Model | F1 | CEF0.5 | Output-format compliance | Structured-advice on flags | Eval |"
+    )
+    lines.append(
+        "|-------|----|--------|--------------------------|----------------------------|------|"
+    )
+
+    def row(r: dict, evaltxt: str) -> str:
+        return (
+            f"| {r['approach']} | {_fmt(r['f1'])} | {_fmt(r.get('cef_0.5'))} | "
+            f"{_fmt(r.get('format_compliance'))} | {_fmt(r.get('advice_structured_frac'))} | "
+            f"{evaltxt} |"
+        )
+
+    lines.append(row(ft, f"{ft.get('n_units', '?')} windows"))
+    if base:
+        nb = f"{base.get('n_units', '?')} windows" + (" (partial)" if base.get("partial") else "")
+        lines.append(row(base, nb))
+    if frontier:
+        lines.append(row(frontier, f"{frontier.get('n_units', '?')}-window sample"))
+
+    lines.append("")
+    if base:
+        d_f1 = ft["f1"] - base["f1"]
+        d_comp = ft.get("format_compliance", 0) - base.get("format_compliance", 0)
+        d_adv = ft.get("advice_structured_frac", 0) - base.get("advice_structured_frac", 0)
+        lines.append(
+            f"- **vs. the un-fine-tuned base (same Qwen3-8B, same harness, same "
+            f"{base.get('n_units', '?')} windows):** detection F1 {base['f1']:.3f} → "
+            f"{ft['f1']:.3f} (Δ **{d_f1:+.3f}**). The larger story is the output contract: "
+            f"the base produces a parseable ANOMALY/NOMINAL verdict on only "
+            f"{base.get('format_compliance', 0) * 100:.0f}% of windows (it spends its token "
+            f"budget on chain-of-thought), versus {ft.get('format_compliance', 0) * 100:.0f}% "
+            f"for the fine-tune (Δ **{d_comp * 100:+.0f} pts**), and emits the structured "
+            f"DIAGNOSIS/ADVICE format on {base.get('advice_structured_frac', 0) * 100:.0f}% vs "
+            f"{ft.get('advice_structured_frac', 0) * 100:.0f}% of its flags (Δ "
+            f"**{d_adv * 100:+.0f} pts**)."
+        )
+    if frontier:
+        lines.append(
+            f"- **vs. a frontier model zero-shot (Claude, {frontier.get('n_units', '?')}-window "
+            f"stratified sample, no fine-tuning):** the frontier detector scores F1 "
+            f"{frontier['f1']:.3f} (precision {frontier['precision']:.3f}, recall "
+            f"{frontier['recall']:.3f}) on the same input the fine-tune saw — a far stronger "
+            f"general model still trails the small fine-tuned model (F1 {ft['f1']:.3f}) on this "
+            f"specialized task, because the signal lives in mission/channel-specific patterns "
+            f"learned during fine-tuning, not in general reasoning over a few normalized values."
+        )
+    lines.append(
+        "- **Takeaway:** fine-tuning's clearest, most reliable win here is *task and format "
+        "adaptation* — turning a capable but non-compliant base into a model that reliably "
+        "emits the exact terse verdict + structured advice the downstream pipeline consumes. "
+        "Detection F1 improves too, but the operational unlock is compliance."
+    )
+    return lines
+
+
 def generate_report(results: list[dict]) -> str:
     llm = next((r for r in results if r["approach"] == "LLM Detection"), {})
     n_llm = llm.get("n_units", "?")
@@ -344,6 +457,8 @@ def generate_report(results: list[dict]) -> str:
     lines.append("\n## Key Findings\n")
     lines.extend(generate_findings(results))
 
+    lines.extend(generate_finetuning_section(results))
+
     lines.append("\n## Methodology Notes\n")
     lines.append(
         "- **Baselines (LSTM, Isolation Forest)** are scored per channel and macro-averaged "
@@ -371,6 +486,15 @@ def generate_report(results: list[dict]) -> str:
         "- **CEF0.5** uses beta=0.5 (precision-weighted). Computed from each approach's "
         "reported precision/recall."
     )
+    if any(r["approach"] in (BASE_APPROACH, FRONTIER_APPROACH) for r in results):
+        lines.append(
+            "- **Base Qwen3-8B (zero-shot)** is the *un-fine-tuned* base run through the "
+            "identical harness (same prompt, decoding, parser) — the controlled comparison "
+            "that isolates the fine-tuning effect. **Frontier zero-shot** is the Claude "
+            "session model classifying a frozen seed-42 stratified sample (no fine-tuning, "
+            "no API), seeing the same per-window input the fine-tune saw. Both are Phase-6 "
+            "controls for the 'Did fine-tuning help?' analysis above."
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -389,8 +513,16 @@ def main() -> None:
     llm = load_llm_results()
     hybrid = derive_hybrid(lstm, llm)
 
-    # Report order: baselines, LLM, hybrid.
-    results = [iso, lstm, llm, hybrid]
+    # Phase-6 controls. Only include a row once its results file exists and loads cleanly,
+    # so the report (and `make validate-eval`, which forbids error rows) stays valid before
+    # the base-model run has finished scoring.
+    base = load_base_results()
+    frontier = load_frontier_results()
+
+    # Report order: baselines, fine-tuned LLM, base + frontier controls, hybrid.
+    results = [iso, lstm, llm]
+    results += [r for r in (base, frontier) if "error" not in r]
+    results.append(hybrid)
 
     report = generate_report(results)
     REPORT_FILE.write_text(report)

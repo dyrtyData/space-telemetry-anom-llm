@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice
+.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base frontier-select frontier-assemble
 
 PYTHON := python3
 VENV := .venv
@@ -111,7 +111,28 @@ assert kw_ok > s['n_samples'] * 0.8, 'Model not producing expected keywords'; \
 print('validate-inference OK') \
 "
 
+# Phase 6: un-fine-tuned base Qwen3-8B control, IDENTICAL harness (same prompt/decoding/
+# parser as eval-llm) -- isolates the fine-tuning effect. Point --gguf at the base GGUF.
+# Long run (~10s/sample, base spends its budget "thinking"); detach + resume for durability:
+#   ( nohup caffeinate -dimsu env PYTHONUNBUFFERED=1 make eval-base > run_base.log 2>&1 < /dev/null & )
+BASE_GGUF ?= models/gguf/base-qwen3-8b/Qwen3-8B-Q4_K_M.gguf
+eval-base:
+	$(PY) src/inference/test_local_gguf.py --gguf "$(BASE_GGUF)" \
+		--results-file results/inference_base.json \
+		--approach-label "Base Qwen3-8B (zero-shot)" \
+		--limit $(LIMIT) --resume --checkpoint-every 250
+
+# Phase 6: frozen stratified frontier-eval sample (seed 42). frontier-select writes the
+# leak-free prompts; the frontier model (Claude session) classifies into
+# results/frontier_classifications.json; frontier-assemble joins to ground truth.
+frontier-select:
+	$(PY) src/inference/select_frontier_sample.py --select --n 150
+
+frontier-assemble:
+	$(PY) src/inference/select_frontier_sample.py --assemble results/frontier_classifications.json
+
 # Evaluation -- Phase 5: unified comparison report across all approaches.
+# Phase 6 adds Base + Frontier rows automatically when their result files are present.
 eval-all:
 	$(PY) src/inference/evaluate.py --all
 

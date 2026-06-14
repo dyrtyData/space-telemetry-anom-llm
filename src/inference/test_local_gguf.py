@@ -78,7 +78,12 @@ def classify_response(response: str) -> str:
     return "UNKNOWN"
 
 
-def compute_summary(results: list[dict], gguf_path: Path, partial: bool = False) -> dict:
+def compute_summary(
+    results: list[dict],
+    gguf_path: Path,
+    partial: bool = False,
+    approach: str = "LLM Detection (Qwen3-8B advice SFT Q4_K_M)",
+) -> dict:
     """Compute the metrics summary from a (possibly partial) results list.
 
     Uses each record's persisted ``elapsed_s`` so the summary is reconstructable on
@@ -97,7 +102,7 @@ def compute_summary(results: list[dict], gguf_path: Path, partial: bool = False)
     unknown = sum(1 for r in results if r["predicted"] == "UNKNOWN")
 
     return {
-        "approach": "LLM Detection (Qwen3-8B advice SFT Q4_K_M)",
+        "approach": approach,
         "n_samples": n,
         "accuracy": round(accuracy, 4),
         "precision": round(precision, 4),
@@ -114,14 +119,20 @@ def compute_summary(results: list[dict], gguf_path: Path, partial: bool = False)
     }
 
 
-def write_results(results: list[dict], gguf_path: Path, partial: bool) -> None:
-    """Atomically write {summary, results} to RESULTS_FILE (temp + rename)."""
-    RESULTS_FILE.parent.mkdir(exist_ok=True)
-    summary = compute_summary(results, gguf_path, partial=partial)
-    tmp = RESULTS_FILE.with_suffix(".json.tmp")
+def write_results(
+    results: list[dict],
+    gguf_path: Path,
+    partial: bool,
+    results_file: Path = RESULTS_FILE,
+    approach: str = "LLM Detection (Qwen3-8B advice SFT Q4_K_M)",
+) -> None:
+    """Atomically write {summary, results} to ``results_file`` (temp + rename)."""
+    results_file.parent.mkdir(exist_ok=True)
+    summary = compute_summary(results, gguf_path, partial=partial, approach=approach)
+    tmp = results_file.with_suffix(".json.tmp")
     with open(tmp, "w") as f:
         json.dump({"summary": summary, "results": results}, f, indent=2)
-    tmp.replace(RESULTS_FILE)
+    tmp.replace(results_file)
 
 
 def main() -> None:
@@ -147,11 +158,26 @@ def main() -> None:
     parser.add_argument(
         "--resume",
         action="store_true",
-        help="Resume from an existing partial RESULTS_FILE (skip already-scored samples).",
+        help="Resume from an existing partial results file (skip already-scored samples).",
+    )
+    parser.add_argument(
+        "--results-file",
+        default=None,
+        help=(
+            "Override output path (default: results/inference_test.json). Use "
+            "results/inference_base.json for the un-fine-tuned base-model control (Phase 6)."
+        ),
+    )
+    parser.add_argument(
+        "--approach-label",
+        default="LLM Detection (Qwen3-8B advice SFT Q4_K_M)",
+        help="Label stored in the summary's 'approach' field (cosmetic; evaluate.py relabels).",
     )
     args = parser.parse_args()
 
     gguf_path = Path(args.gguf) if args.gguf else GGUF_PATH
+    results_file = Path(args.results_file) if args.results_file else RESULTS_FILE
+    approach_label = args.approach_label
 
     if not TEST_FILE.exists():
         raise FileNotFoundError(f"Test file not found: {TEST_FILE}")
@@ -166,15 +192,21 @@ def main() -> None:
     # next index to run is len(prior results).
     results: list[dict] = []
     start = 0
-    if args.resume and RESULTS_FILE.exists():
-        prior = json.loads(RESULTS_FILE.read_text())
+    if args.resume and results_file.exists():
+        prior = json.loads(results_file.read_text())
         results = prior.get("results", [])
         start = len(results)
         if start >= len(samples):
-            print(f"Already complete: {start} samples in {RESULTS_FILE}. Nothing to do.")
-            write_results(results, gguf_path, partial=False)
+            print(f"Already complete: {start} samples in {results_file}. Nothing to do.")
+            write_results(
+                results,
+                gguf_path,
+                partial=False,
+                results_file=results_file,
+                approach=approach_label,
+            )
             return
-        print(f"Resuming from sample {start}/{len(samples)} ({RESULTS_FILE}).", flush=True)
+        print(f"Resuming from sample {start}/{len(samples)} ({results_file}).", flush=True)
 
     model = load_model(gguf_path, verbose=args.verbose)
     print(f"Model loaded. n_gpu_layers={model.model_params.n_gpu_layers}", flush=True)
@@ -218,11 +250,15 @@ def main() -> None:
             avg10 = sum(recent[-10:]) / 10
             print(f"  [{i + 1}/{len(samples)}] avg {avg10:.2f}s/sample", flush=True)
         if args.checkpoint_every and (i + 1) % args.checkpoint_every == 0:
-            write_results(results, gguf_path, partial=True)
-            print(f"  checkpoint: {len(results)} samples saved to {RESULTS_FILE}", flush=True)
+            write_results(
+                results, gguf_path, partial=True, results_file=results_file, approach=approach_label
+            )
+            print(f"  checkpoint: {len(results)} samples saved to {results_file}", flush=True)
 
-    write_results(results, gguf_path, partial=False)
-    s = compute_summary(results, gguf_path, partial=False)
+    write_results(
+        results, gguf_path, partial=False, results_file=results_file, approach=approach_label
+    )
+    s = compute_summary(results, gguf_path, partial=False, approach=approach_label)
     print(f"\n=== Inference Results ({s['n_samples']} samples) ===")
     print(f"  Accuracy:  {s['accuracy']:.3f}")
     print(f"  Precision: {s['precision']:.3f}  Recall: {s['recall']:.3f}  F1: {s['f1']:.3f}")
@@ -231,7 +267,7 @@ def main() -> None:
         f"Unknown={s['unknown_responses']}"
     )
     print(f"  Avg time:  {s['avg_time_s']:.2f}s/sample")
-    print(f"\nResults saved to {RESULTS_FILE}", flush=True)
+    print(f"\nResults saved to {results_file}", flush=True)
 
 
 if __name__ == "__main__":

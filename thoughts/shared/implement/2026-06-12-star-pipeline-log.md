@@ -22,6 +22,8 @@ free, no cloud/API). Teardown is now Phase 10 (precondition: Phases 1–9 done).
 | 3 | **completed** | 2026-06-13 ~16:30 | 2026-06-13 22:12 | D8–D13 (model ids, TRL 0.24 API, ssh key, pkill, env, formatter) |
 | 4 | **completed** | 2026-06-13 22:12 | 2026-06-14 02:55 | D14–D20 (GGUF path, test data, Metal, FAT32, Hungary SSH, HF upload, CDN download) |
 | 5 | **completed** | 2026-06-14 | 2026-06-14 | D21–D24 (loader schemas, CEF from P/R, Affinity-F1 degenerate, IF + Hybrid added) |
+| 6 (code+frontier) | **completed** | 2026-06-14 | 2026-06-14 | D26–D29 (adopted ext 500 base run, identical-harness, frontier sub-agent, graceful rows) |
+| 6 (base run) | **in flight** | 2026-06-14 | — | external 500-window base run; finalize report + delete base GGUF after |
 
 ---
 
@@ -751,3 +753,74 @@ python3 -c "import json;d=json.load(open('results/inference_test.json'));print(d
 "Project Teardown / Cleanup" checklist — rotate the Kaggle token (pasted plaintext 2026-06-12)
 and delete raw ESA-AD from DUAL DRIVE. Not yet done; deliberately deferred.
 
+---
+
+## Phase 6: Did fine-tuning help? (base + frontier comparison) — 2026-06-14
+
+**Status: code + frontier eval COMPLETE & committed; base run IN FLIGHT (adopted external 500-window run).**
+
+### What was built
+- **`test_local_gguf.py`**: added `--results-file PATH` (so the base run writes
+  `results/inference_base.json` without clobbering the fine-tuned `inference_test.json`) and
+  `--approach-label` (cosmetic summary label). Threaded through `write_results`/`compute_summary`/
+  resume logic. Same `SYSTEM_PROMPT` + `format_prompt` + parser preserved → identical harness.
+- **`src/inference/select_frontier_sample.py`** (NEW): `--select` freezes a seed-42 stratified
+  sample (n=150, ~25% anomalous) → `data/frontier/frontier_sample.jsonl`; a leak-free
+  `frontier_prompts.jsonl` (index + instruction only) is the detector's input. `--assemble`
+  joins classifications to ground truth → `results/inference_frontier_sample.json` (same schema
+  as `inference_test.json`).
+- **`evaluate.py`**: extracted `_summarize_detection(path, approach, with_affinity)` shared by
+  the fine-tuned LLM, base, and frontier; added `load_base_results`/`load_frontier_results`,
+  a new `format_compliance` metric (= parseable-verdict fraction), and a computed
+  **"Did fine-tuning help?"** report section (F1 / CEF0.5 / format-compliance / structured-advice
+  deltas). Rows are added only when their files load cleanly (validate-eval forbids error rows).
+- **Makefile**: `eval-base`, `frontier-select`, `frontier-assemble` targets.
+- **Cleanup**: deleted the corrupt 1.13 GB partial GGUF on `DUAL DRIVE`
+  (`star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf` + its `._` fork).
+- **Base model**: downloaded `unsloth/Qwen3-8B-GGUF` → `Qwen3-8B-Q4_K_M.gguf` (5,027,784,512 B)
+  to `models/gguf/base-qwen3-8b/` (local SSD, 208 GB free — the "nearly full" warning was stale).
+
+### Results so far
+| Approach | F1 | format-compliance | structured-advice |
+|---|---|---|---|
+| LLM Detection (fine-tuned, n=4500) | **0.453** | 0.994 | 0.996 |
+| Frontier zero-shot (Claude, n=150) | 0.254 | 1.000 | 1.000 |
+| Base Qwen3-8B (n=500) | _pending_ | _pending (smoke ≈0)_ | _pending (≈0)_ |
+
+`make eval-all` + `make validate-eval` pass with the frontier row present.
+
+### Deviations
+- **D26 — Adopted an external 500-window base run.** A base run (PID 45306, `--limit 500`, label
+  "Qwen3-8B BASE", → `run_base.log`) started concurrently with this session, NOT launched by this
+  thread. To avoid a double-writer clobber on `results/inference_base.json`, killed my own
+  just-launched duplicate (`--limit 0`) and adopted the external one. My launch command's
+  `rm -f results/inference_base.json` ran <1 min after the external job started (<10 samples, no
+  checkpoint yet) → destroyed nothing. User was asked how to proceed and did not answer → took the
+  low-regret default (don't kill a running job). 500 windows (random, since the split is shuffled)
+  is an adequate base control. Full 4,500: `make eval-base LIMIT=0` (resumable).
+- **D27 — Base scored under the identical harness; format-compliance is the headline.** Base
+  Qwen3-8B defaults to *thinking mode*, burns the 300-token budget on `<think>` and rarely emits
+  the terse verdict → UNKNOWN. `/no_think` makes it ramble in markdown, still non-compliant.
+  Chose the strict controlled comparison (same prompt/decoding/parser; only the weights differ).
+  The clean, computable fine-tuning delta is **output-contract compliance** (fine-tune 99.4% vs
+  base ≈0%) + structured-advice fraction. All-UNKNOWN base → F1≈0 is a faithful finding, not a bug.
+- **D28 — Frontier: instruction-only input + fresh-thread sub-agent detector.** Detector sees only
+  the `instruction` (mission/channel + ~10 normalized values) — exactly the fine-tune's input;
+  labels stripped into `frontier_prompts.jsonl`. Realized the "session model as detector" as a
+  fresh-thread Claude sub-agent (general-purpose, opus) classifying all 150 →
+  `results/frontier_classifications.json`. Honest modest result (F1 0.254): zero-shot can't recover
+  the mission/channel-specific patterns the fine-tune memorized; 23/37 sampled anomalies are
+  `subtle_deviation`, near-invisible from 10 values.
+- **D29 — Graceful degradation.** `evaluate.py` adds base/frontier rows only when their files load
+  cleanly (validate-eval forbids `error` rows); the report is frontier-only until base finalizes.
+- **.gitignore:** force-track `results/frontier_classifications.json` (in-session judgments, not
+  deterministically regenerable); ignore `*.log`, `inference_base.json`, `inference_frontier_sample.json`,
+  the report, and the base GGUF.
+
+### Remaining to close Phase 6 (when the base run finalizes — monitor armed)
+1. Confirm `results/inference_base.json` shows `partial=false` (n=500): the base run process gone +
+   file finalized. (`pgrep -fl '[t]est_local_gguf'`; check `summary.partial`.)
+2. `make eval-all && make validate-eval` → base row + full "Did fine-tuning help?" deltas populate.
+3. Update the n=500 base numbers in the plan's Phase-6 table + this log.
+4. Delete the base GGUF: `rm -rf models/gguf/base-qwen3-8b/` (reclaim 5 GB).
+5. Commit: `[Phase 6] Base-model control scored — fine-tuning deltas finalized`.

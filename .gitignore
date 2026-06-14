@@ -27,6 +27,14 @@ models/lstm/
 results/**/*.json
 results/*.md
 
+# Transient run logs
+*.log
+
+# Phase 6: preserve the frontier zero-shot classifications -- in-session model judgments
+# that cannot be deterministically regenerated (unlike the GGUF/base/eval runs). The
+# assembled sample + comparison report stay ignored (regenerable via `make`).
+!results/frontier_classifications.json
+
 # Kaggle credentials (never commit)
 kaggle.json
 access_token
