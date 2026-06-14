@@ -1,0 +1,1522 @@
+{
+  "summary": {
+    "approach": "Frontier few-shot (Claude, n=150 sample)",
+    "model": "Claude (session model, 2-shot)",
+    "n_samples": 150,
+    "accuracy": 0.5333,
+    "precision": 0.2,
+    "recall": 0.2973,
+    "f1": 0.2391,
+    "cef_0.5": 0.214,
+    "tp": 11,
+    "fp": 44,
+    "fn": 26,
+    "tn": 69,
+    "unknown_responses": 0,
+    "seed": 42,
+    "partial": false,
+    "note": "Same 2 worked examples + frozen 150-window sample as the few-shot base; isolates model under identical few-shot prompting."
+  },
+  "results": [
+    {
+      "index": 8,
+      "mission": "ESA-Mission1",
+      "channel": "channel_66",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth gentle downward drift within expected operational envelope; no spikes or instability.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 33,
+      "mission": "ESA-Mission2",
+      "channel": "channel_9",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. Sustained monotonic downward ramp.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 9 shows continuous decline across the window, consistent with drift or degradation.\nACTION: Flag for trend monitoring; review against subsystem limits.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 46,
+      "mission": "ESA-Mission3",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal at expected level; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 73,
+      "mission": "ESA-Mission1",
+      "channel": "channel_57",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Steady monotonic decline.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 57 ramps downward persistently, indicating drift away from nominal.\nACTION: Trend-monitor; correlate with related housekeeping channels.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 109,
+      "mission": "ESA-Mission1",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Stable values with minor noise around 0.30; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 122,
+      "mission": "ESA-Mission1",
+      "channel": "channel_48",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Essentially constant signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 135,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Low-amplitude noise around a stable mean; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 138,
+      "mission": "ESA-Mission1",
+      "channel": "channel_24",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Small fluctuations near a steady level; within expected parameters.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 152,
+      "mission": "ESA-Mission1",
+      "channel": "channel_47",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 175,
+      "mission": "ESA-Mission1",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Stable values with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 193,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal at expected level; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 231,
+      "mission": "ESA-Mission1",
+      "channel": "channel_30",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable high-value signal with gentle slow decline; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 268,
+      "mission": "ESA-Mission3",
+      "channel": "channel_37",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant zero signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 299,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Dip then sharp sustained rise.\nDIAGNOSIS: LEVEL SHIFT (severity: medium)\nADVICE: Channel 27 climbs steeply after an early dip, indicating a transient/level shift.\nACTION: Inspect actuator/sensor; trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 345,
+      "mission": "ESA-Mission2",
+      "channel": "channel_9",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. Large initial spike then abrupt drop.\nDIAGNOSIS: TRANSIENT SPIKE (severity: high)\nADVICE: Channel 9 opens with an outlier far above the subsequent settled level.\nACTION: Verify sensor; check for glitch/SEU.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 346,
+      "mission": "ESA-Mission2",
+      "channel": "channel_15",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. Oscillation then steep negative excursion.\nDIAGNOSIS: INSTABILITY (severity: medium)\nADVICE: Channel 15 swings and drops sharply, deviating from nominal.\nACTION: Investigate subsystem stability; trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 359,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Mild fluctuation with slow decay; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 360,
+      "mission": "ESA-Mission2",
+      "channel": "channel_24",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth gradual decline; nominal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 407,
+      "mission": "ESA-Mission3",
+      "channel": "channel_2",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 489,
+      "mission": "ESA-Mission3",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal at expected level; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 497,
+      "mission": "ESA-Mission3",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 507,
+      "mission": "ESA-Mission1",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Strong sustained upward ramp.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 12 rises steadily across the window, consistent with drift.\nACTION: Trend-monitor against subsystem limits.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 525,
+      "mission": "ESA-Mission1",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sustained upward ramp from depressed level.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 12 climbs persistently, indicating recovery/drift transient.\nACTION: Trend-monitor; correlate with related channels.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 583,
+      "mission": "ESA-Mission1",
+      "channel": "channel_74",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Minor fluctuation with slight rise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 589,
+      "mission": "ESA-Mission1",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with low noise; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 595,
+      "mission": "ESA-Mission1",
+      "channel": "channel_28",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sharp rise then reversal.\nDIAGNOSIS: TRANSIENT EXCURSION (severity: medium)\nADVICE: Channel 28 swings strongly upward then turns, deviating from nominal.\nACTION: Inspect subsystem; trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 610,
+      "mission": "ESA-Mission1",
+      "channel": "channel_23",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Gentle gradual decline; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 650,
+      "mission": "ESA-Mission1",
+      "channel": "channel_46",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Erratic high-amplitude oscillation.\nDIAGNOSIS: INSTABILITY (severity: medium)\nADVICE: Channel 46 fluctuates irregularly, deviating from stable behavior.\nACTION: Investigate sensor/subsystem stability.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 654,
+      "mission": "ESA-Mission1",
+      "channel": "channel_34",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sustained upward ramp.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 34 rises steadily across the window, consistent with drift.\nACTION: Trend-monitor against limits.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 680,
+      "mission": "ESA-Mission1",
+      "channel": "channel_74",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Irregular spiky fluctuation.\nDIAGNOSIS: INSTABILITY (severity: low)\nADVICE: Channel 74 shows erratic swings above its baseline.\nACTION: Log and monitor; verify sensor noise floor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 728,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Erratic oscillation with rising tail.\nDIAGNOSIS: INSTABILITY (severity: low)\nADVICE: Channel 76 fluctuates irregularly, deviating from nominal.\nACTION: Log and trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 730,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sustained monotonic decline.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 25 ramps steadily downward, indicating drift.\nACTION: Trend-monitor; correlate with subsystem.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 743,
+      "mission": "ESA-Mission1",
+      "channel": "channel_59",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Steady downward ramp then plateau.\nDIAGNOSIS: LEVEL DRIFT (severity: low)\nADVICE: Channel 59 declines persistently before leveling, indicating drift.\nACTION: Log and trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 764,
+      "mission": "ESA-Mission2",
+      "channel": "channel_15",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Low-amplitude noise around zero; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 813,
+      "mission": "ESA-Mission1",
+      "channel": "channel_14",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with minor noise; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 832,
+      "mission": "ESA-Mission2",
+      "channel": "channel_83",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Large random swings across full range.\nDIAGNOSIS: INSTABILITY (severity: high)\nADVICE: Channel 83 shows high-amplitude erratic behavior far from a stable mean.\nACTION: Inspect subsystem urgently; verify sensor integrity.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 865,
+      "mission": "ESA-Mission2",
+      "channel": "channel_74",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Noisy but bounded around a stable mean; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 915,
+      "mission": "ESA-Mission3",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 974,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Gentle gradual rise with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1007,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Spiky irregular fluctuation.\nDIAGNOSIS: INSTABILITY (severity: low)\nADVICE: Channel 76 shows erratic swings above baseline.\nACTION: Log and trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1020,
+      "mission": "ESA-Mission1",
+      "channel": "channel_17",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sustained upward ramp then rollover.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 17 climbs steadily then turns, deviating from nominal.\nACTION: Trend-monitor; inspect subsystem.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1047,
+      "mission": "ESA-Mission3",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1076,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Strong sustained upward ramp.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 20 rises steadily across the window, consistent with drift.\nACTION: Trend-monitor against limits.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1095,
+      "mission": "ESA-Mission1",
+      "channel": "channel_45",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Irregular spiky oscillation.\nDIAGNOSIS: INSTABILITY (severity: low)\nADVICE: Channel 45 fluctuates erratically, deviating from nominal.\nACTION: Log and trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1099,
+      "mission": "ESA-Mission1",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Low-amplitude noise around a stable mean; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1135,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Dip then steep sustained rise.\nDIAGNOSIS: LEVEL SHIFT (severity: medium)\nADVICE: Channel 27 climbs sharply after an early dip, indicating a transient shift.\nACTION: Inspect subsystem; trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1136,
+      "mission": "ESA-Mission2",
+      "channel": "channel_80",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Large random swings across full range.\nDIAGNOSIS: INSTABILITY (severity: high)\nADVICE: Channel 80 shows high-amplitude erratic behavior far from a stable mean.\nACTION: Inspect subsystem urgently; verify sensor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1138,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1239,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Irregular decline with spikes.\nDIAGNOSIS: INSTABILITY (severity: low)\nADVICE: Channel 76 fluctuates erratically while trending down.\nACTION: Log and trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1300,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with low noise around 0.69; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1323,
+      "mission": "ESA-Mission1",
+      "channel": "channel_65",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1351,
+      "mission": "ESA-Mission2",
+      "channel": "channel_11",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. Sharp negative excursions and swings.\nDIAGNOSIS: INSTABILITY (severity: high)\nADVICE: Channel 11 plunges sharply and oscillates, deviating strongly from nominal.\nACTION: Inspect subsystem urgently; verify sensor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1383,
+      "mission": "ESA-Mission1",
+      "channel": "channel_22",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with minor noise; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1420,
+      "mission": "ESA-Mission1",
+      "channel": "channel_15",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable high-value signal with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1429,
+      "mission": "ESA-Mission1",
+      "channel": "channel_15",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle gradual rise with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1440,
+      "mission": "ESA-Mission1",
+      "channel": "channel_36",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Steep sustained decline then reversal.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 36 falls sharply across the window, indicating drift/transient.\nACTION: Trend-monitor; inspect subsystem.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1466,
+      "mission": "ESA-Mission3",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1479,
+      "mission": "ESA-Mission1",
+      "channel": "channel_45",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. Large-amplitude erratic oscillation at extreme level.\nDIAGNOSIS: INSTABILITY (severity: high)\nADVICE: Channel 45 swings widely around an out-of-range value.\nACTION: Inspect sensor/subsystem urgently.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1495,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Noisy but bounded around a stable mean; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1517,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1533,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sharp dip then partial recovery.\nDIAGNOSIS: TRANSIENT EXCURSION (severity: medium)\nADVICE: Channel 20 drops sharply then rebounds, deviating from nominal.\nACTION: Inspect subsystem; trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1583,
+      "mission": "ESA-Mission1",
+      "channel": "channel_43",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Low-amplitude noise around a stable mean; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1592,
+      "mission": "ESA-Mission1",
+      "channel": "channel_75",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Spiky transient excursion.\nDIAGNOSIS: TRANSIENT SPIKE (severity: low)\nADVICE: Channel 75 shows a brief spike above its baseline.\nACTION: Log and monitor; verify sensor glitch.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1609,
+      "mission": "ESA-Mission2",
+      "channel": "channel_20",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. Sudden dip then spike from stable level.\nDIAGNOSIS: TRANSIENT EXCURSION (severity: medium)\nADVICE: Channel 20 jumps abruptly after a steady run, deviating from nominal.\nACTION: Inspect subsystem; trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1654,
+      "mission": "ESA-Mission1",
+      "channel": "channel_30",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Low-amplitude noise around a stable mean; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1701,
+      "mission": "ESA-Mission1",
+      "channel": "channel_43",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Erratic oscillation around baseline.\nDIAGNOSIS: INSTABILITY (severity: low)\nADVICE: Channel 43 fluctuates irregularly, deviating from nominal.\nACTION: Log and trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1733,
+      "mission": "ESA-Mission3",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1895,
+      "mission": "ESA-Mission1",
+      "channel": "channel_65",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Near-constant signal with negligible noise; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1910,
+      "mission": "ESA-Mission1",
+      "channel": "channel_57",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle gradual rise with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1911,
+      "mission": "ESA-Mission1",
+      "channel": "channel_37",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Strong sustained upward ramp.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 37 rises steadily across the window, consistent with drift.\nACTION: Trend-monitor against limits.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1987,
+      "mission": "ESA-Mission1",
+      "channel": "channel_57",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle rise then plateau; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2054,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Low-amplitude noise around a stable mean; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2061,
+      "mission": "ESA-Mission2",
+      "channel": "channel_19",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Near-zero stable signal with negligible noise; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2094,
+      "mission": "ESA-Mission2",
+      "channel": "channel_22",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Smooth gradual decline; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2096,
+      "mission": "ESA-Mission1",
+      "channel": "channel_16",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Low-amplitude noise around a stable mean; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2182,
+      "mission": "ESA-Mission1",
+      "channel": "channel_28",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Steep sustained decline then reversal.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 28 falls sharply across the window, indicating drift/transient.\nACTION: Trend-monitor; inspect subsystem.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2217,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sustained decline then partial reversal.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 27 ramps downward then rebounds, deviating from nominal.\nACTION: Trend-monitor; inspect subsystem.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2224,
+      "mission": "ESA-Mission3",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2314,
+      "mission": "ESA-Mission2",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant zero signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2347,
+      "mission": "ESA-Mission1",
+      "channel": "channel_41",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. Irregular spiky oscillation.\nDIAGNOSIS: INSTABILITY (severity: low)\nADVICE: Channel 41 fluctuates erratically, deviating from nominal.\nACTION: Log and trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2424,
+      "mission": "ESA-Mission3",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2436,
+      "mission": "ESA-Mission3",
+      "channel": "channel_7",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2470,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2502,
+      "mission": "ESA-Mission3",
+      "channel": "channel_32",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2517,
+      "mission": "ESA-Mission2",
+      "channel": "channel_12",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. Erratic high-amplitude oscillation.\nDIAGNOSIS: INSTABILITY (severity: medium)\nADVICE: Channel 12 swings irregularly and widely, deviating from a stable mean.\nACTION: Investigate subsystem stability; trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2518,
+      "mission": "ESA-Mission1",
+      "channel": "channel_23",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable high-value signal with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2552,
+      "mission": "ESA-Mission2",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant zero signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2580,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Spiky irregular fluctuation.\nDIAGNOSIS: INSTABILITY (severity: low)\nADVICE: Channel 76 shows erratic swings above baseline.\nACTION: Log and trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2591,
+      "mission": "ESA-Mission1",
+      "channel": "channel_51",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sustained upward ramp.\nDIAGNOSIS: LEVEL DRIFT (severity: low)\nADVICE: Channel 51 rises steadily across the window, consistent with drift.\nACTION: Trend-monitor against limits.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2602,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Low-amplitude noise around a stable mean; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2614,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Erratic spiky oscillation.\nDIAGNOSIS: INSTABILITY (severity: low)\nADVICE: Channel 76 fluctuates irregularly, deviating from nominal.\nACTION: Log and trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2847,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Dip then sustained upward ramp at elevated level.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 27 climbs steadily after a dip, deviating from nominal.\nACTION: Trend-monitor; inspect subsystem.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2948,
+      "mission": "ESA-Mission1",
+      "channel": "channel_63",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable signal with a small step down; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2955,
+      "mission": "ESA-Mission1",
+      "channel": "channel_48",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3015,
+      "mission": "ESA-Mission3",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3060,
+      "mission": "ESA-Mission1",
+      "channel": "channel_66",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Gentle gradual decline with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3088,
+      "mission": "ESA-Mission3",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3168,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sustained upward ramp then rollover.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 20 climbs steadily then turns, deviating from nominal.\nACTION: Trend-monitor against limits.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3184,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with low noise around 0.30; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3239,
+      "mission": "ESA-Mission1",
+      "channel": "channel_18",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sharp recovery then erratic swings.\nDIAGNOSIS: INSTABILITY (severity: medium)\nADVICE: Channel 18 jumps up then oscillates, deviating from nominal.\nACTION: Investigate subsystem stability; trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3242,
+      "mission": "ESA-Mission1",
+      "channel": "channel_63",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3355,
+      "mission": "ESA-Mission1",
+      "channel": "channel_15",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Stable signal with gentle slow drift; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3373,
+      "mission": "ESA-Mission1",
+      "channel": "channel_22",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Stable values with low noise; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3404,
+      "mission": "ESA-Mission1",
+      "channel": "channel_40",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with low noise around a steady level; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3444,
+      "mission": "ESA-Mission1",
+      "channel": "channel_47",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3504,
+      "mission": "ESA-Mission2",
+      "channel": "channel_75",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Large random swings across full range.\nDIAGNOSIS: INSTABILITY (severity: high)\nADVICE: Channel 75 shows high-amplitude erratic behavior far from a stable mean.\nACTION: Inspect subsystem urgently; verify sensor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3532,
+      "mission": "ESA-Mission1",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Low-amplitude noise around a stable mean; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3577,
+      "mission": "ESA-Mission1",
+      "channel": "channel_48",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Near-constant signal with negligible drift; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3596,
+      "mission": "ESA-Mission1",
+      "channel": "channel_47",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Near-constant signal with negligible drift; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3615,
+      "mission": "ESA-Mission2",
+      "channel": "channel_89",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with low noise around a steady level; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3620,
+      "mission": "ESA-Mission1",
+      "channel": "channel_49",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3630,
+      "mission": "ESA-Mission1",
+      "channel": "channel_41",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. Irregular spiky oscillation.\nDIAGNOSIS: INSTABILITY (severity: low)\nADVICE: Channel 41 fluctuates erratically, deviating from nominal.\nACTION: Log and trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3648,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Stable high-value signal with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3676,
+      "mission": "ESA-Mission1",
+      "channel": "channel_16",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with minor noise; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3680,
+      "mission": "ESA-Mission3",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3713,
+      "mission": "ESA-Mission1",
+      "channel": "channel_13",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Stable high-value signal with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3716,
+      "mission": "ESA-Mission1",
+      "channel": "channel_26",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Stable high-value signal with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3739,
+      "mission": "ESA-Mission2",
+      "channel": "channel_18",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Near-constant signal with negligible noise; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3792,
+      "mission": "ESA-Mission1",
+      "channel": "channel_31",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with low noise and slight rise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3854,
+      "mission": "ESA-Mission3",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3867,
+      "mission": "ESA-Mission1",
+      "channel": "channel_17",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Rise then steep sustained decline.\nDIAGNOSIS: TRANSIENT EXCURSION (severity: medium)\nADVICE: Channel 17 peaks then falls sharply, deviating from nominal.\nACTION: Inspect subsystem; trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3883,
+      "mission": "ESA-Mission1",
+      "channel": "channel_32",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with low noise around 0.47; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3886,
+      "mission": "ESA-Mission1",
+      "channel": "channel_58",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sustained upward ramp.\nDIAGNOSIS: LEVEL DRIFT (severity: low)\nADVICE: Channel 58 climbs steadily across the window, consistent with drift.\nACTION: Trend-monitor against limits.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3902,
+      "mission": "ESA-Mission1",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Strong sustained upward ramp.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 13 rises steadily across the window, consistent with drift.\nACTION: Trend-monitor against limits.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3962,
+      "mission": "ESA-Mission1",
+      "channel": "channel_52",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Low-amplitude noise around zero; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3973,
+      "mission": "ESA-Mission3",
+      "channel": "channel_44",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3982,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Dip then steep sustained rise.\nDIAGNOSIS: LEVEL SHIFT (severity: medium)\nADVICE: Channel 25 climbs sharply after an early dip, indicating a transient shift.\nACTION: Inspect subsystem; trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3988,
+      "mission": "ESA-Mission3",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Abrupt step jump to a new plateau.\nDIAGNOSIS: LEVEL SHIFT (severity: high)\nADVICE: Channel 27 jumps sharply from baseline to a sustained elevated level.\nACTION: Inspect subsystem; verify mode change vs fault.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3994,
+      "mission": "ESA-Mission3",
+      "channel": "channel_19",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4009,
+      "mission": "ESA-Mission2",
+      "channel": "channel_79",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. Large random swings across full range.\nDIAGNOSIS: INSTABILITY (severity: high)\nADVICE: Channel 79 shows high-amplitude erratic behavior far from a stable mean.\nACTION: Inspect subsystem urgently; verify sensor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4025,
+      "mission": "ESA-Mission1",
+      "channel": "channel_45",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Erratic oscillation around baseline.\nDIAGNOSIS: INSTABILITY (severity: low)\nADVICE: Channel 45 fluctuates irregularly, deviating from nominal.\nACTION: Log and trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4050,
+      "mission": "ESA-Mission3",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4067,
+      "mission": "ESA-Mission2",
+      "channel": "channel_80",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Large random swings across full range.\nDIAGNOSIS: INSTABILITY (severity: high)\nADVICE: Channel 80 shows high-amplitude erratic behavior far from a stable mean.\nACTION: Inspect subsystem urgently; verify sensor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4080,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Stable high-value signal with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4093,
+      "mission": "ESA-Mission3",
+      "channel": "channel_39",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Constant level then abrupt large jump.\nDIAGNOSIS: LEVEL SHIFT (severity: high)\nADVICE: Channel 39 holds flat then spikes sharply upward, indicating a step/fault.\nACTION: Inspect subsystem; verify mode change vs fault.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4109,
+      "mission": "ESA-Mission2",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant zero signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4115,
+      "mission": "ESA-Mission1",
+      "channel": "channel_19",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Deep dip then recovery.\nDIAGNOSIS: TRANSIENT EXCURSION (severity: medium)\nADVICE: Channel 19 drops sharply then rebounds, deviating from nominal.\nACTION: Inspect subsystem; trend-monitor.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4136,
+      "mission": "ESA-Mission1",
+      "channel": "channel_61",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4171,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Stable high-value signal with minor noise; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4226,
+      "mission": "ESA-Mission1",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sustained upward ramp.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 12 climbs steadily across the window, consistent with drift.\nACTION: Trend-monitor against limits.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4230,
+      "mission": "ESA-Mission1",
+      "channel": "channel_63",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4243,
+      "mission": "ESA-Mission2",
+      "channel": "channel_91",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with low noise; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4244,
+      "mission": "ESA-Mission2",
+      "channel": "channel_17",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "ANOMALY DETECTED. Transient bump from baseline.\nDIAGNOSIS: TRANSIENT EXCURSION (severity: low)\nADVICE: Channel 17 spikes briefly above near-zero baseline then settles.\nACTION: Log and monitor; verify sensor glitch.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4289,
+      "mission": "ESA-Mission3",
+      "channel": "channel_43",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4315,
+      "mission": "ESA-Mission1",
+      "channel": "channel_19",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "ANOMALY DETECTED. Sustained upward ramp from depressed level.\nDIAGNOSIS: LEVEL DRIFT (severity: medium)\nADVICE: Channel 19 rises steadily across the window, consistent with drift.\nACTION: Trend-monitor against limits.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4343,
+      "mission": "ESA-Mission2",
+      "channel": "channel_17",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "NOMINAL. Low-amplitude noise around zero; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4384,
+      "mission": "ESA-Mission2",
+      "channel": "channel_90",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with low noise; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4389,
+      "mission": "ESA-Mission1",
+      "channel": "channel_40",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable signal with gentle slow decline; within expected envelope.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4397,
+      "mission": "ESA-Mission2",
+      "channel": "channel_58",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Stable values with low noise around 2.14; nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4410,
+      "mission": "ESA-Mission3",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "NOMINAL. Constant flat signal; normal operational behavior.",
+      "elapsed_s": 0.0
+    }
+  ]
+}
