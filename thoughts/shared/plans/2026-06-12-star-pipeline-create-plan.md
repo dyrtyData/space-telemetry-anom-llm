@@ -1980,35 +1980,29 @@ eval-all:
 - [x] Report has required sections: `make validate-eval` greps "Approach Comparison" + "Key Findings" ✅
 - [x] Advice coherence check: avg anomaly response = 300 chars (>50) ✅; 100% structured DIAGNOSIS+ADVICE
 
-> **✅ STATUS (2026-06-14): Phase 5 COMPLETE (on the 100-sample LLM slice).**
+> **✅ STATUS (2026-06-14): Phase 5 FULLY COMPLETE — n=4,500 LLM eval finished.**
 > `src/inference/evaluate.py` rewritten from the stub. `make eval-all` → `make validate-eval`
-> both pass. Comparison table (4 approaches):
+> both pass on the final n=4500 LLM results. Final comparison table (4 approaches):
 >
 > | Approach | Precision | Recall | F1 | CEF0.5 | Affinity-F1 |
 > |---|---|---|---|---|---|
 > | Isolation Forest | 0.127 | 0.459 | 0.188 | 0.149 | N/A |
 > | LSTM Baseline | 0.835 | 0.552 | 0.663 | 0.757 | N/A |
-> | LLM Detection | 0.432 | 0.615 | 0.508 | 0.460 | 0.508 |
+> | **LLM Detection** | **0.360** | **0.609** | **0.453** | **0.392** | **0.456** |
 > | Hybrid (LSTM + LLM advice) | 0.835 | 0.552 | 0.663 | 0.757 | N/A |
 >
-> Deviations D21–D24 (see implementation log): loaders rewritten to the real Phase-2/4
+> LLM (n=4500): accuracy=0.632, avg_time=2.77s/sample, advice_structured=99.6%, n_anomaly_preds=1898.
+>
+> Deviations D21–D25 (see implementation log): loaders rewritten to the real Phase-2/4
 > schemas; CEF computed from precision/recall (baselines don't persist tp/fp/fn); Affinity-F1
 > wired but honestly documented as degenerate on the shuffled ~1.4-window/channel test split;
 > Isolation Forest added as a 4th approach; Hybrid scored as "LSTM detection + LLM advice".
-> Key Findings are computed, not hardcoded.
+> Key Findings are computed, not hardcoded. D25: at n=4500 the LLM is somewhat more
+> trigger-happy (precision 0.432→0.360), recall nearly unchanged (0.615→0.609).
 >
-> **⏳ IN FLIGHT (2026-06-14): full-split LLM eval.** The table above shows the **n=100** smoke
-> numbers. The full 4,500-window sweep is now running detached (checkpointed/resumable — see the
-> implementation log's "Step 5.2 re-run saga" + "FRESH-THREAD RESTART RUNBOOK"). It died twice
-> first (buffered output hid no-progress; overnight machine sleep), which prompted hardening
-> `test_local_gguf.py` with `--checkpoint-every` + `--resume` + unbuffered output (commit
-> `1bfd715`) and running under `caffeinate -dimsu` detached via `( nohup … & )`.
-> **When it reaches 4,500 samples:** `make eval-all` + `make validate-eval`, then update this
-> table's LLM row + Key Findings with the n=4500 numbers and commit. `evaluate.py` reads
-> `n_samples` from the result file, so the report regenerates automatically.
->
-> **⚠️ `caffeinate` cannot prevent lid-close sleep on battery** — the machine must stay plugged
-> in + lid open for an unattended finish; otherwise resume from the last 250-checkpoint.
+> Full eval ran as a detached daemon (`caffeinate -dimsu` + `nohup` subshell, checkpointed
+> every 250 samples with `--resume`). Died twice first (buffered stdout, machine sleep) before
+> hardening — see implementation log Step 5.2 re-run saga for the full story.
 > The baselines could likewise be expanded from the 3-channel smoke to all 58 Mission-1 target
 > channels (`make baseline` + `--max-channels 58`) for a fuller comparison.
 

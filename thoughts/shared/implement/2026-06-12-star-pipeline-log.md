@@ -2,10 +2,10 @@
 
 **Plan**: `thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`
 **Started**: 2026-06-12
-**Status**: Phase 5 COMPLETE (code). All phases (1–5) implemented & committed. Comparison report
-generated (4 approaches) on the **n=100** LLM slice. **IN FLIGHT:** full 4,500-sample LLM eval
-running detached (Attempt 3, checkpointed/resumable) — on completion, regenerate report + update
-the n=4500 tables in plan/log. See the **FRESH-THREAD RESTART RUNBOOK** at the bottom of this file.
+**Status**: ✅ **ALL PHASES COMPLETE.** Full 4,500-sample LLM eval finished (2026-06-14).
+`make eval-all` + `make validate-eval` both pass on n=4500 results. Final comparison report
+committed. Project teardown (rotate Kaggle token, clear raw ESA-AD from DUAL DRIVE) is the
+only remaining item (optional, see plan Teardown checklist).
 
 ---
 
@@ -583,6 +583,27 @@ from scratch using the plan §5 code as a starting point (with the schema fixes 
   relevant metric); the LLM trades precision for recall but adds free-text advice (100% of the
   37 anomaly predictions emitted structured DIAGNOSIS+ADVICE); LLM costs 1.96 s/window vs
   near-instant baselines.
+
+### Step 5.2 wrap-up: Full 4,500-sample LLM eval — COMPLETE (2026-06-14)
+- **Status**: completed ✅
+- **n_samples**: 4,500 (`partial=false`) — Attempt 3 (detached daemon) ran to completion.
+- **Final results (n=4500)**:
+
+  | Approach | Precision | Recall | F1 | CEF0.5 | Affinity-F1 |
+  |---|---|---|---|---|---|
+  | Isolation Forest | 0.127 | 0.459 | 0.188 | 0.149 | N/A |
+  | LSTM Baseline | 0.835 | 0.552 | 0.663 | 0.757 | N/A |
+  | **LLM Detection** | **0.360** | **0.609** | **0.453** | **0.392** | **0.456** |
+  | Hybrid (LSTM + LLM advice) | 0.835 | 0.552 | 0.663 | 0.757 | N/A |
+
+  LLM additional metrics: accuracy=0.632, avg_time=2.77s/sample, unknown_responses=27/4500,
+  advice_structured_frac=0.9963, n_anomaly_predictions=1898.
+  Affinity-F1 detail: precision=0.357, recall=0.631, n_pred_intervals=1852, n_gt_intervals=1052.
+- `make eval-all` + `make validate-eval` → **validate-eval OK** ✅
+- **Deviation D25** (relative to 100-sample numbers): Precision dropped (0.432→0.360), F1 dropped
+  (0.508→0.453), Recall nearly unchanged (0.615→0.609). At scale the model is somewhat more
+  trigger-happy (more FP). The LSTM still leads on precision-weighted CEF0.5 (0.757 vs 0.392);
+  LLM wins recall.
 
 ### Deviations (Phase 5)
 - **D21 — Loaders rewritten to real schemas.** The plan's `load_lstm_results()` /
