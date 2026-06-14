@@ -873,6 +873,26 @@ and delete raw ESA-AD from DUAL DRIVE. Not yet done; deliberately deferred.
   detection. This is the skeptic-proof version of the headline claim.
 - **Base GGUF deleted** (`rm -rf models/gguf/base-qwen3-8b/`, ~5 GB reclaimed) — same weights served
   both base runs, so it's no longer needed.
+
+### D31 — Frontier reframe + trivial baseline (2026-06-14, commits `16a33b4`, `f6278de`)
+User asked why the frontier (F1=0.254) was below the few-shot base (0.420), and whether it was a
+fair comparison. Investigation:
+- **Frontier model = Claude Opus 4.8** (`claude-opus-4-8`, the session model, run via a
+  general-purpose sub-agent). Original frontier eval was ZERO-shot vs the base's FEW-shot — a real
+  asymmetry the user caught.
+- **Ran the fair control — frontier FEW-shot** (same 2 train examples, same frozen 150 windows):
+  F1=**0.239** (P=0.200 R=0.297). Few-shot did NOT help → the gap was never a prompting artifact.
+- **The decisive anchor — always-anomaly trivial baseline** (flag every window) = F1 **0.399** /
+  CEF0.5 0.294 on the ~25%-positive set. The few-shot base's F1=0.420 (it flags **79%** of windows)
+  is *barely above*, and on its own n=500 set (27% pos) the flag-all F1 is 0.428 — so the base is
+  **at/below the dumb baseline**: it is over-flagging, not detecting. The frontier (zero/few-shot)
+  is ~at chance (P≈R≈base-rate) because 10 context-free normalized values carry almost no signal.
+- **The fine-tune (F1=0.453, balanced P=0.36/R=0.61) is the ONLY approach that beats always-anomaly
+  with a real P/R trade-off** — the lone genuine detector. This *strengthens* the headline.
+- Wired both new rows (frontier-few-shot, trivial baseline) + the reframed narrative into
+  `evaluate.py`/report; dovetails with Phase 9 (advice quality gated by precision → deploy LLM as
+  advisor on a high-precision detector = the Hybrid). Artifacts: `results/inference_frontier_fewshot.json`,
+  `results/frontier_fewshot_classifications.json` (committed; results are tracked now).
 - `make eval-all` + `make validate-eval` → OK with all four contrasts present.
 - **Phase 6 = COMPLETE.** Remaining project work: Phases 7 (full LSTM), 8 (vision — concurrent
   thread), 9 (semantic advice grading), 10 (teardown).
