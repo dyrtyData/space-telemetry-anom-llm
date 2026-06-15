@@ -33,6 +33,7 @@ BASE_FS_FILE = RESULTS_DIR / "inference_base_fewshot.json"  # Phase 6: base + fe
 FRONTIER_FILE = RESULTS_DIR / "inference_frontier_sample.json"  # Phase 6: frontier zero-shot
 FRONTIER_FS_FILE = RESULTS_DIR / "inference_frontier_fewshot.json"  # Phase 6: frontier few-shot
 VISION_FILE = RESULTS_DIR / "inference_vision.json"  # Phase 8: Qwen3-VL detector on PNG plots
+VISION_BASE_FILE = RESULTS_DIR / "inference_vision_base.json"  # Phase 12: un-fine-tuned VL control
 ADVICE_GRADE_FILE = RESULTS_DIR / "advice_grading_sample.json"  # Phase 9: semantic advice grading
 TEST_WITH_ADVICE = Path("data/splits/test_with_advice.jsonl")
 
@@ -43,6 +44,7 @@ FRONTIER_APPROACH = "Frontier zero-shot (Claude, n=150 sample)"
 FRONTIER_FS_APPROACH = "Frontier few-shot (Claude, n=150 sample)"
 TRIVIAL_APPROACH = "Always-anomaly (trivial baseline)"
 VISION_APPROACH = "LLM Detection (vision, Qwen3-VL)"
+VISION_BASE_APPROACH = "LLM detection (vision, base zero-shot)"
 
 REPORT_FILE = RESULTS_DIR / "comparison_report.md"
 METRICS_FILE = RESULTS_DIR / "comparison_metrics.json"
@@ -335,6 +337,21 @@ def load_vision_results() -> dict:
     return out
 
 
+def load_vision_base_results() -> dict:
+    """Load Phase-12 un-fine-tuned base Qwen3-VL zero-shot control (no LoRA adapter).
+
+    The vision-modality mirror of the Phase-6 text base/frontier controls: the SAME PNGs
+    through the SAME prompt/decoding/parser as the Phase-8 fine-tune, but with the base
+    weights only. It closes the §5 skeptic table for vision -- isolating what the vision
+    fine-tune added (precision/discrimination) the way the text controls did for text
+    (output compliance).
+    """
+    out = _summarize_detection(VISION_BASE_FILE, VISION_BASE_APPROACH, with_affinity=False)
+    if "error" not in out:
+        out["unit"] = "windows (PNG)"
+    return out
+
+
 def _llm_affinity(results: list[dict]) -> dict | None:
     """Join LLM per-window results to test metadata (by index) and compute Affinity-F1."""
     if not results or not TEST_WITH_ADVICE.exists():
@@ -462,6 +479,8 @@ def generate_finetuning_section(results: list[dict]) -> list[str]:
     frontier = by.get(FRONTIER_APPROACH)
     frontier_fs = by.get(FRONTIER_FS_APPROACH)
     trivial = by.get(TRIVIAL_APPROACH)
+    vision = by.get(VISION_APPROACH)  # Phase 8 fine-tuned VL detector
+    vision_base = by.get(VISION_BASE_APPROACH)  # Phase 12 un-fine-tuned VL control
     if not ft or not (base or base_fs or frontier):
         return []
 
@@ -495,6 +514,11 @@ def generate_finetuning_section(results: list[dict]) -> list[str]:
         lines.append(row(frontier, f"{frontier.get('n_units', '?')}-window sample"))
     if frontier_fs:
         lines.append(row(frontier_fs, f"{frontier_fs.get('n_units', '?')}-window sample"))
+    # Phase-12 vision pair: the fine-tuned VL detector vs the same base weights zero-shot,
+    # both on the rendered PNGs. Completes the symmetry of this table across modalities.
+    if vision and vision_base:
+        lines.append(row(vision, f"{vision.get('n_units', '?')} PNG windows"))
+        lines.append(row(vision_base, f"{vision_base.get('n_units', '?')} PNG windows"))
     if trivial:
         lines.append(row(trivial, f"flag-all ({trivial.get('n_units', '?')} windows)"))
 
@@ -559,6 +583,29 @@ def generate_finetuning_section(results: list[dict]) -> list[str]:
             f"- **vs. a frontier model zero-shot (Claude, n={frontier.get('n_units', '?')}):** F1 "
             f"{frontier['f1']:.3f} — it discriminates (does not over-flag) but the input is "
             f"near-signal-free, so it lands around chance, below the dumb baseline."
+        )
+    if vision and vision_base:
+        d_f1 = vision["f1"] - vision_base["f1"]
+        d_prec = vision["precision"] - vision_base["precision"]
+        trivial_f1 = trivial["f1"] if trivial else None
+        below = (
+            f" — *below* the flag-everything line ({trivial_f1:.3f})"
+            if trivial_f1 is not None and vision_base["f1"] <= trivial_f1
+            else ""
+        )
+        lines.append(
+            f"- **The vision modality tells the mirror story (Phase 12 closes this control).** "
+            f"Run the *un-fine-tuned* Qwen3-VL through the identical PNG harness and it is fully "
+            f"format-compliant ({vision_base.get('format_compliance', 0) * 100:.0f}% parseable — a "
+            f"chat-VL answers the question), unlike the text base which emitted 0% — but it does "
+            f"**not discriminate**: F1 {vision_base['f1']:.3f} (P={vision_base['precision']:.3f}, "
+            f"R={vision_base['recall']:.3f}){below}. Fine-tuning lifts it to F1 {vision['f1']:.3f} "
+            f"(Δ **{d_f1:+.3f}**) and, decisively, **precision "
+            f"{vision_base['precision']:.3f} → {vision['precision']:.3f}** (Δ **{d_prec:+.3f}**). "
+            f"So where the text fine-tune's headline win was *output compliance*, the vision "
+            f"fine-tune's is *learned discrimination* — the channel-specific priors that turn a "
+            f"compliant guesser into a precise detector. Both come from the same lever: localizing "
+            f"the model to this mission's data."
         )
     lines.append(
         "- **Takeaway (the honest headline):** the **fine-tuned model is the only approach "
@@ -696,6 +743,16 @@ def generate_report(results: list[dict]) -> str:
             f"its advice fields are 0 by design; it adds a second, modality-independent detection "
             f"signal that completes the original three-way LLM design."
         )
+    if any(r["approach"] == VISION_BASE_APPROACH for r in results):
+        vb = next(r for r in results if r["approach"] == VISION_BASE_APPROACH)
+        lines.append(
+            f"- **LLM detection (vision, base zero-shot)** is the Phase-12 control for the vision "
+            f"fine-tune: the *un-fine-tuned* Qwen3-VL-8B base run over the SAME "
+            f"{vb.get('n_units', '?')} test PNGs through the identical prompt/decoding/parser "
+            f"(base weights only, no LoRA "
+            f"adapter). It is the vision-modality analogue of the text base/frontier controls and "
+            f"closes the §5 'Did fine-tuning help?' table across both modalities."
+        )
     lines.append(
         "- **Hybrid (LSTM + LLM advice)** inherits the LSTM's detection metrics by "
         "construction: the LSTM flags anomalies (high precision) and the LLM attaches "
@@ -749,11 +806,15 @@ def main() -> None:
     frontier_fs = load_frontier_fewshot_results()  # Phase 6: frontier + few-shot (fair control)
     trivial = trivial_always_anomaly()  # the dumb reference line
     vision = load_vision_results()  # Phase 8: Qwen3-VL on PNG plots
+    vision_base = load_vision_base_results()  # Phase 12: un-fine-tuned VL zero-shot control
 
-    # Report order: baselines, fine-tuned text LLM, vision LLM, base controls, frontier, hybrid.
+    # Report order: baselines, fine-tuned text LLM, vision LLM (+ its base control), text base
+    # controls, frontier, hybrid.
     results = [iso, lstm, llm]
     results += [
-        r for r in (vision, base, base_fs, frontier, frontier_fs, trivial) if "error" not in r
+        r
+        for r in (vision, vision_base, base, base_fs, frontier, frontier_fs, trivial)
+        if "error" not in r
     ]
     results.append(hybrid)
 
