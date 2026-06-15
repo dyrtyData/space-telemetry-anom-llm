@@ -278,7 +278,7 @@ grading → Phase 9). Residual gaps, stated up front:
 
 Each has a concrete next step in the
 [analysis doc](thoughts/shared/research/2026-06-14-results-analysis.md#10-recommended-next-steps),
-and the three highest-priority detection/eval items are specced as ready-to-run **Phases 11–13** in
+and the highest-priority detection/eval items are specced as ready-to-run **Phases 11–14** in
 the [implementation plan](thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md).
 
 ---

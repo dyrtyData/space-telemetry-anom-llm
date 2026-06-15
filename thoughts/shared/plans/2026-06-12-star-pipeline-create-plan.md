@@ -2091,8 +2091,8 @@ git commit -m "[Setup] Initialize implementation log"
 >
 > **Recommended order & cost:** Phase 6 (free, ~½ day, highest value) → Phase 7 (free, ~1–1.5 h)
 > → Phase 9 (free, ~1 h) → Phase 8 (cloud ~$3–6, ~½ day, medium risk) → **optional post-report
-> hardening Phases 11–13** (see below) → Phase 10 (teardown, LAST). Phases 6/7/9/11/13 need no cloud
-> and no API; Phases 8 and 12 are the only ones that cost money (~$1–6 each).
+> hardening Phases 11–14** (see below) → Phase 10 (teardown, LAST). Phases 6/7/9/11/13/14 need no
+> cloud and no API; Phases 8 and 12 are the only ones that cost money (~$1–6 each).
 
 ## Current state & key facts (as of 2026-06-14)
 
@@ -2501,16 +2501,25 @@ Assets are ready (PNGs + `train_detection.py`); only the training run + eval rem
 ---
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PHASES 11–13 — Post-report hardening (added 2026-06-15; run BEFORE Phase 10 teardown)
+# PHASES 11–14 — Post-report hardening (added 2026-06-15; run BEFORE Phase 10 teardown)
 # ═══════════════════════════════════════════════════════════════════════════
 
 > **Why these exist / numbering.** Phases 1–9 are complete and the final report is written
-> (`thoughts/shared/research/2026-06-14-results-analysis.md`, §10). These three are the
+> (`thoughts/shared/research/2026-06-14-results-analysis.md`, §10). These four are the
 > highest-priority *next* steps, specced to be runnable in a **fresh thread with only this section as
-> context**. They are numbered 11–13 because they were added after the original 1–10 plan; **they
-> must run before Phase 10 (teardown)** — Phases 11 and 12 need the raw data / PNGs that teardown
-> deletes (Phase 13 does not, but keep teardown last regardless). Each is independent; do any subset.
-> Recommended order: **13 (free, local, ~½–1 day) → 11 (free, local, ~1 day) → 12 (~$1 cloud, ~½ day).**
+> context**. They are numbered 11–14 because they were added after the original 1–10 plan; **they
+> must run before Phase 10 (teardown)** — Phases 11, 12, and 14's vision-score run need the raw data /
+> PNGs that teardown deletes (Phase 13 does not, but keep teardown last regardless). Phases 11–13 are
+> independent (do any subset); **Phase 14 depends on Phase 13** (it needs the continuous scores).
+> Recommended order: **13 (free, local, ~½–1 day) → 11 (free, local, ~1 day) → 12 (~$1 cloud, ~½ day)
+> → 14 (~2–3 days, local, needs 13).**
+>
+> **Parallelism note.** The *compute* can overlap — Phase 12 is cloud (independent of the laptop);
+> Phases 11 and 13 both want the local GPU, so run 11 on CPU alongside 13's Metal run, or stagger.
+> But all phases end by editing `evaluate.py` and running `make eval-all`, which writes the shared
+> `results/comparison_report.md`/`comparison_metrics.json` — **serialize that merge step** (or run
+> each phase in its own git worktree and regenerate the report once after merging). Phase 14's
+> alignment needs the other phases' per-window score JSONs to exist first.
 > After running any of them, regenerate `results/comparison_report.md` with `make eval-all` and update
 > the numbers in the analysis doc + README if they move materially.
 
@@ -2644,9 +2653,69 @@ capacity one).
 > stripping it to train detection-only is unlikely to raise precision and would cost a capability.
 > Threshold calibration (this phase) and training-label balance are the right levers.
 
+---
+
+## Phase 14 — Ensemble the detectors via score-level fusion [FREE, LOCAL] (depends on Phase 13)
+
+**Goal.** Combine the detectors so the result improves on *both* precision and recall instead of
+sitting at one corner. Today the modalities are mirror images — text LLM **P 0.360 / R 0.609**
+(recall-oriented), vision LLM **P 0.769 / R 0.325** (precision-oriented), LSTM **P 0.785 / R 0.451**
+(best single). "Both must fire" (AND → high precision) and "either fires" (OR → high recall) are only
+the two *endpoints*; **score-level fusion** traces the whole frontier between/beyond them and — because
+the modalities make *independent* errors — can **Pareto-dominate** any single model on F1/CEF0.5.
+
+**Why it depends on Phase 13.** Fusion needs *continuous scores*, not hard ANOMALY/NOMINAL verdicts.
+Phase 13 produces the text-LLM score (logprob of ANOMALY); this phase adds the analogous vision score
+and reuses the LSTM's per-window error score.
+
+**Inputs / preconditions:**
+- **Phase 13 done** → text-LLM per-window score in `results/inference_test_scored.json`.
+- Fine-tuned vision adapter (`dyrtyData/star-pipeline-qwen3-vl-8b-detection`) + `eval_vision.py`
+  extended to emit the ANOMALY-token logprob (mirror of Phase 13's change; needs a GPU run — local
+  MPS or a short A6000 session as in Phase 8/12).
+- LSTM per-window scores: already persisted in `results/lstm/baseline_results.json` (the
+  `pred_starts` + reconstruction errors from Phase 7/11).
+
+**The key work item — align all models on ONE shared window set.** Each model currently scores a
+different set (text: 4,500 numeric windows; vision: 2,000 PNGs; LSTM: contiguous per-channel). Build a
+shared set where every window has all three signals:
+1. Pick the shared windows (simplest: the 2,000 windows that already have PNGs, since those are the
+   binding constraint). For each, assemble: the numeric prompt (text), the PNG (vision), and the LSTM
+   error score for that `(mission, channel, window-start)` — `inference_test.json` carries
+   mission/channel/index to map back to the LSTM predictions.
+2. Run text-LLM and vision-LLM with score capture over that shared set; gather the LSTM score.
+3. Min-max/z-normalize each model's score to a common range.
+
+**Fusion methods to try (cheap, in order):**
+1. **Learned stacker (recommended):** fit a logistic regression on the **validation** split over the
+   feature vector `[text_score, vision_score, lstm_score]` → a single fused score. Principled, picks
+   the weights automatically.
+2. **Weighted sum** of normalized scores (a quick baseline / sanity check).
+3. **2-of-3 majority vote** (a real majority is meaningful with 3 models, unlike 2).
+4. **Disagreement → review tier** (deployable framing): agree-ANOMALY = high-confidence alarm,
+   agree-NOMINAL = clear, disagree = route to operator. Report the size of the "review" bucket.
+
+**Steps:**
+1. Write `src/inference/ensemble.py`: load the three per-window scores, build the aligned matrix,
+   fit the stacker on val, apply to test, sweep the fused-score threshold → P/R/F1/CEF0.5 at each →
+   `results/ensemble_pr_curve.json`; report AUC-PR and the CEF0.5-optimal operating point.
+2. Add ensemble rows to `evaluate.py` (e.g. "Ensemble (text+vision+LSTM, stacked)") and `make eval-all`.
+3. Compare the fused frontier against each single model's point; document whether it Pareto-improves.
+
+**Success criteria:**
+- [ ] A fused per-window score over the shared set, from ≥2 models (3 incl. LSTM ideal).
+- [ ] `results/ensemble_pr_curve.json` + an ensemble row in `comparison_metrics.json`/report.
+- [ ] Either a fused operating point that beats the best single model on F1 **and** CEF0.5 (Pareto
+  win), or a documented explanation of why fusion didn't help on this data.
+- [ ] Analysis doc §6.3/§10 updated with the ensemble result.
+
+**Effort:** ~2–3 days (the alignment is the fiddly part); local, no/low cloud (one short vision-score
+run). **Risk:** low–medium. **Independent of teardown** *if* the vision-score run is done while PNGs
+still exist — so run it before Phase 10, or keep the PNGs.
+
 # ═══════════════════════════════════════════════════════════════════════════
 
-## Phase 10 — Teardown (run LAST — after any Phases 11–13 you choose to do; precondition Phases 1–9)
+## Phase 10 — Teardown (run LAST — after any Phases 11–14 you choose to do; precondition Phases 1–9)
 
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -2659,8 +2728,9 @@ for any re-download. Both are torn down together as the final step.
 
 **Preconditions (all must be true before teardown):**
 - [ ] Phases 5–9 complete and results committed (Phase 8 vision is optional — note if skipped).
-- [ ] **Any of the optional Phases 11–13 you intend to run are done** — Phases 11 (LSTM) and 12
-  (vision base control) need the raw data / PNGs that this teardown deletes. Phase 13 is independent.
+- [ ] **Any of the optional Phases 11–14 you intend to run are done** — Phases 11 (LSTM), 12 (vision
+  base control), and 14's vision-score run need the raw data / PNGs that this teardown deletes.
+  Phase 13 is independent; Phase 14 depends on Phase 13.
 - [ ] Final models exported (GGUF) and stored on `DUAL DRIVE` and/or pushed to their cloud home.
 - [ ] No open question that could require re-running the ETL from raw.
 

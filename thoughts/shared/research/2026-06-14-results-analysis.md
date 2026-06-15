@@ -314,8 +314,11 @@ test PNGs:
 - It is a **pure detector** — no diagnostic advice by design (its advice fields are 0).
 
 The practical implication: the two LLM modalities **fail differently** (one trigger-happy, one
-conservative), which makes them attractive for an ensemble — e.g. require *both* to fire before
-escalating, or use vision as a low-false-alarm cross-check on the text model's flags.
+conservative), which makes them attractive for an ensemble. Hard rules — require *both* to fire (high
+precision) or *either* (high recall) — are just the two extremes; **fusing their continuous scores**
+(ideally with the LSTM's score as a third input) via a small learned combiner can trace a whole
+precision–recall frontier that improves on *both* corners at once, because the modalities' errors are
+independent. This is specced as Plan Phase 14 (it builds on the calibrated scores from §10 #6).
 
 Two further consequences worth stating. **(a) The advisor can sit on the vision detector too.**
 Because the vision model is high-precision (0.769), `vision detector → text advisor` is a legitimate
@@ -497,10 +500,10 @@ phases — each with *why it stands* and what it would take to close:
 
 ## 10. Recommended next steps
 
-Prioritized, each with a rough **effort** and **expected impact**. The three detection-and-evaluation
-items most worth doing next — **improve the LSTM** (#4), **complete the vision skeptic table** (#5),
-and **calibrate the LLM operating point** (#6) — are written up as concrete, self-contained next
-phases (Phases 11–13) in the implementation plan.
+Prioritized, each with a rough **effort** and **expected impact**. The detection-and-evaluation items
+most worth doing next — **improve the LSTM** (#4), **complete the vision skeptic table** (#5),
+**calibrate the LLM operating point** (#6), and **ensemble via score fusion** (#7) — are written up as
+concrete, self-contained next phases (Phases 11–14) in the implementation plan.
 
 1. **Ship the Hybrid as the reference design.** *Effort: low* (packaging, not new modeling).
    *Impact: high.* It is the architecture the numbers support. **Who needs it:** operators of
@@ -538,11 +541,15 @@ phases (Phases 11–13) in the implementation plan.
    the advice head — is **not** recommended: the over-flagging is a calibration/decision-boundary
    issue, not a capacity one, and the auxiliary advice task likely *helps* rather than hurts the
    shared representation, so removing it is unlikely to improve precision and would cost a capability.)
-7. **Ensemble the two LLM modalities.** *Effort: ~2–3 days* (no new training — just score-combination
-   over existing per-window outputs). *Impact: medium–high.* Combine the recall-oriented text model
-   and the precision-oriented vision model: "**both must fire**" → very high precision; "**either
-   fires**" → very high recall. Because the two fail differently (§6.3), this is a promising,
-   low-cost win.
+7. **Ensemble the detectors via score-level fusion** (Plan Phase 14, depends on #6). *Effort: ~2–3
+   days* (no new training — fuse the continuous scores). *Impact: medium–high.* "Both must fire" (AND
+   → high precision) and "either fires" (OR → high recall) are only the two *endpoints*. The richer
+   move is to **fuse the continuous anomaly scores** (text + vision + the LSTM error score) with a
+   small learned **stacker** (logistic regression on a validation split) and sweep one threshold — a
+   whole precision–recall frontier. Because the modalities make *independent* errors (§6.3), the fused
+   frontier can **Pareto-dominate** any single model (higher F1/CEF0.5 at matched recall), not merely
+   interpolate. A 2-of-3 majority vote and a "disagreement → human review" tier are deployable
+   variants. Requires scoring all models on one shared window set (the fiddly part).
 8. **Fine-tune / RAG a frontier model — the true "own vs. adapt" comparison.** *Effort: medium.*
    *Impact: medium.* We compared a *fine-tuned* open model to a *prompted* frontier; fine-tuning a
    frontier (GPT-4o/Gemini tuning APIs; Claude has none public) or giving it channel history via RAG
