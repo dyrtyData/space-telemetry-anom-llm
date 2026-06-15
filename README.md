@@ -39,14 +39,16 @@ are costly (the ESA-benchmark-aligned score).
 
 **The honest headline (three sentences):**
 1. As a pure **detector**, the tuned **LSTM wins** (F1 0.552, 2.2× the precision of the direct
-   text-LLM, best CEF0.5, real Affinity-F1 0.649) — matching the published literature.
+   text-LLM, best CEF0.5, real Affinity-F1 0.649) — the two fine-tuned LLMs are mirror images (the
+   **vision** model precision-oriented at P 0.769 with the best LLM CEF0.5; the **text** model
+   recall-oriented) but neither out-detects the LSTM, matching the published literature.
 2. Yet **fine-tuning is justified and survives a skeptic**: read against the trivial *always-anomaly*
    baseline (free F1 0.399), the fine-tuned LLM is the **only** LLM-family approach that clears it
    with a *balanced* precision/recall — a few-shot base "matches" its F1 only by over-flagging ~80%
    of windows, and a frontier model prompted two ways sits **at chance** on this context-free input.
-3. The LLM's unique value is **advice**: graded **95% high-quality when the flag is correct** — but
-   gated by detection precision — so the design the data recommends is the **hybrid** (a cheap
-   high-precision detector triggers an LLM advisor).
+3. The LLM's unique value is **advice**: graded **95% high-quality when the flag is correct** (strong
+   for a showcase, not yet mission-critical-grade) — but gated by detection precision — so the design
+   the data recommends is the **hybrid** (a cheap high-precision detector triggers an LLM advisor).
 
 ---
 
@@ -275,7 +277,9 @@ grading → Phase 9). Residual gaps, stated up front:
 6. **1-hour resampling is lossy** for sub-hour transients; cross-mission generalization untested.
 
 Each has a concrete next step in the
-[analysis doc](thoughts/shared/research/2026-06-14-results-analysis.md#10-recommended-next-steps-priority-order).
+[analysis doc](thoughts/shared/research/2026-06-14-results-analysis.md#10-recommended-next-steps),
+and the three highest-priority detection/eval items are specced as ready-to-run **Phases 11–13** in
+the [implementation plan](thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md).
 
 ---
 

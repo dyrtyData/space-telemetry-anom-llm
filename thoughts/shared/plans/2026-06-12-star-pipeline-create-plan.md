@@ -2090,8 +2090,9 @@ git commit -m "[Setup] Initialize implementation log"
 > the results analysis (`thoughts/shared/research/2026-06-14-results-analysis.md`).
 >
 > **Recommended order & cost:** Phase 6 (free, ~½ day, highest value) → Phase 7 (free, ~1–1.5 h)
-> → Phase 9 (free, ~1 h) → Phase 8 (cloud ~$3–6, ~½ day, medium risk) → Phase 10 (teardown).
-> Phases 6/7/9 need no cloud and no API. Phase 8 is optional and the only one that costs money.
+> → Phase 9 (free, ~1 h) → Phase 8 (cloud ~$3–6, ~½ day, medium risk) → **optional post-report
+> hardening Phases 11–13** (see below) → Phase 10 (teardown, LAST). Phases 6/7/9/11/13 need no cloud
+> and no API; Phases 8 and 12 are the only ones that cost money (~$1–6 each).
 
 ## Current state & key facts (as of 2026-06-14)
 
@@ -2499,7 +2500,153 @@ Assets are ready (PNGs + `train_detection.py`); only the training run + eval rem
 
 ---
 
-## Phase 10 — Teardown (was the existing cleanup; precondition now Phases 1–9)
+# ═══════════════════════════════════════════════════════════════════════════
+# PHASES 11–13 — Post-report hardening (added 2026-06-15; run BEFORE Phase 10 teardown)
+# ═══════════════════════════════════════════════════════════════════════════
+
+> **Why these exist / numbering.** Phases 1–9 are complete and the final report is written
+> (`thoughts/shared/research/2026-06-14-results-analysis.md`, §10). These three are the
+> highest-priority *next* steps, specced to be runnable in a **fresh thread with only this section as
+> context**. They are numbered 11–13 because they were added after the original 1–10 plan; **they
+> must run before Phase 10 (teardown)** — Phases 11 and 12 need the raw data / PNGs that teardown
+> deletes (Phase 13 does not, but keep teardown last regardless). Each is independent; do any subset.
+> Recommended order: **13 (free, local, ~½–1 day) → 11 (free, local, ~1 day) → 12 (~$1 cloud, ~½ day).**
+> After running any of them, regenerate `results/comparison_report.md` with `make eval-all` and update
+> the numbers in the analysis doc + README if they move materially.
+
+## Phase 11 — Improve the LSTM detector (pruned dynamic thresholding) [FREE, LOCAL]
+
+**Goal.** Push the LSTM beyond its current **F1 0.552 / P 0.785 / CEF0.5 0.684 / Affinity-F1 0.649**
+(58 Mission-1 channels) using standard Telemanom levers. The implementation today uses a *flat*
+`threshold = mean(errors) + 3·std(errors)`; the canonical Telemanom uses **pruned dynamic error
+thresholding**, and the official "Telemanom-ESA-Pruned" reaches ~0.97 *event-wise* CEF on Mission 1
+under the ESA-ADB protocol (a harder protocol than ours, but it signals real headroom). Since the
+LSTM is already the best detector, raising it widens the margin over the LLMs and strengthens the
+report's central conclusion.
+
+**Inputs / preconditions (verify first):**
+- Raw ESA-AD on `/Volumes/DUAL DRIVE/esa-ad/ESA-Mission1/` (NOT yet deleted — Phase 10 pending).
+- `src/baselines/train_lstm.py` (the per-channel LSTM autoencoder + thresholding), `src/etl/io.py`
+  (shared loader), `src/inference/evaluate.py` (report generator), existing
+  `results/lstm/baseline_results.json`.
+- Run with `STAR_OUTPUT_DIR=/Volumes/DUAL DRIVE/star-pipeline` and `ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad"`.
+
+**Approach (in priority order — do #1 first; it is the biggest lever):**
+1. **Pruned dynamic error thresholding** (replace flat μ+3σ in `train_lstm.py`). Implement the
+   Hundman et al. (2018) scheme: smooth the per-step reconstruction errors (EWMA), compute a dynamic
+   threshold per window of errors as `mean(e) + z·std(e)` choosing `z` to maximize a reduction
+   criterion, then **prune** candidate anomalies whose error is not sufficiently above the next
+   highest (the % drop test) to kill false positives. Reference: telemanom repo `errors.py`.
+2. **Per-channel threshold tuning** on the validation split (search `z` per channel rather than a
+   global 3.0).
+3. **(Optional) architecture:** a bidirectional LSTM and/or a longer context window; **channel
+   ensembling** (average error scores across correlated channels).
+
+**Steps:**
+1. Branch the change in `train_lstm.py` behind a flag (e.g. `--threshold dynamic` vs `flat`) so the
+   old number stays reproducible.
+2. Re-run: `make baseline MISSION=1 MAX_CHANNELS=58 ESA_DATA_DIR="/Volumes/DUAL DRIVE/esa-ad" STAR_OUTPUT_DIR="/Volumes/DUAL DRIVE/star-pipeline"` (~95 min; `--resume` + per-channel atomic flush already exist).
+3. `make eval-all` → regenerate `results/comparison_report.md` + `comparison_metrics.json`.
+4. Compare new LSTM F1/CEF0.5/Affinity-F1 vs 0.552 / 0.684 / 0.649.
+
+**Success criteria:**
+- [ ] LSTM F1 and/or CEF0.5 improve over the current numbers (or a documented explanation of why the
+  dynamic threshold did not help on this subsampled split).
+- [ ] `comparison_report.md` regenerated; if numbers moved materially, update §2/§6.1 of the analysis
+  doc, the README TL;DR table, and §6.1's "headroom" note.
+- [ ] Old flat-threshold result preserved/reproducible behind the flag.
+
+**Effort:** ~1 day, no cloud. **Risk:** low. **Must precede teardown** (needs raw data).
+
+---
+
+## Phase 12 — Complete the skeptic table for vision (vision base control) [~$1 CLOUD]
+
+**Goal.** Mirror Phase 6's text controls for the *vision* modality: run an **un-fine-tuned
+Qwen3-VL-8B zero-shot** (and optionally a frontier VL model) over the same 2,000 test PNGs through the
+identical vision harness, to show what the vision fine-tune *added*. Phase 6's controls were
+text-only because they predated Phase 8; the analysis doc §5 flags this scope gap explicitly.
+
+**Inputs / preconditions:**
+- Test PNGs at `data/processed/plots/test/` + `data/processed/plots/test_metadata.jsonl`
+  (`{image_path, is_anomaly, mission, channel}`). These are derived from raw via `make plots`; if
+  missing, regenerate before teardown.
+- `src/inference/eval_vision.py` (the on-instance VL eval used in Phase 8), the fine-tuned result
+  `results/inference_vision.json` (for the comparison), `src/inference/evaluate.py`.
+- Base model id: `unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit` (the Phase-8 base; the fine-tune
+  added the LoRA adapter `dyrtyData/star-pipeline-qwen3-vl-8b-detection` on top).
+
+**Approach.** The VL model needs a GPU. Mirror Phase 8: spin a Vast.ai A6000 (~$0.40/hr, US region;
+see `scripts/cloud/launch_vast.sh`), but **load the base model WITHOUT the LoRA adapter**.
+1. Add a `--base` / `--no-adapter` flag to `eval_vision.py` (skip the `PeftModel.from_pretrained`
+   step; keep the identical prompt + decoding + parser).
+2. Run over all 2,000 test PNGs → `results/inference_vision_base.json` (same schema as
+   `inference_vision.json`). Capture format-compliance (fraction emitting a parseable
+   ANOMALY/NOMINAL) — base VL models often ramble, so this is the headline, exactly as for the text
+   base in Phase 6.
+3. Add a loader + row to `evaluate.py` ("LLM detection (vision, base zero-shot)") with graceful
+   degradation if the file is absent.
+4. `make eval-all`; add the row to the §5 skeptic table and §6.3 of the analysis doc; update the §5
+   "Scope note."
+
+**Success criteria:**
+- [ ] `results/inference_vision_base.json` produced over 2,000 PNGs; base-VL row in
+  `comparison_metrics.json` + report.
+- [ ] §5 skeptic table now has a vision base control; §5 scope note updated to "closed."
+- [ ] Instance destroyed after eval (billing stopped); adapter/base ids recorded.
+
+**Effort:** ~½ day, ~$1 cloud. **Risk:** low–medium (cloud setup; reuse Phase-8 runbook above).
+**Should precede teardown** (needs the PNGs; safe to keep raw until done).
+
+---
+
+## Phase 13 — Calibrate the text-LLM operating point (precision–recall curve) [FREE, LOCAL]
+
+**Goal.** The text LLM is reported at a single hard operating point (**P 0.360 / R 0.609** — it
+over-flags). Produce a **precision–recall curve** by deriving a continuous anomaly *score* and
+sweeping a threshold, then report an alternative higher-precision operating point and the AUC-PR.
+This is the cheapest way to make the standalone text LLM more deployable. **Do NOT** pursue a
+detection-only SFT — see the note at the end (the over-flagging is a calibration issue, not a
+capacity one).
+
+**Inputs / preconditions:**
+- `src/inference/test_local_gguf.py` (the Metal inference harness), the fine-tuned GGUF at
+  `$STAR_MODEL_DIR/.../qwen3-8b.Q4_K_M.gguf`, and the 4,500-window test set
+  (`data/splits/test_with_advice.jsonl`). **Does NOT need raw data** — independent of teardown.
+- Existing per-window results `results/inference_test.json` (hard verdicts only — no score yet).
+
+**Approach — get a continuous score, then sweep:**
+1. **Score (preferred):** modify `test_local_gguf.py` to capture the **token log-probabilities** of
+   the decision token (the relative logprob of "ANOMALY" vs "NOMINAL" at the verdict position;
+   `llama-cpp-python` exposes `logprobs`). That ratio is a deterministic per-window anomaly score.
+   *(Alternative if logprobs are awkward: sample the verdict N times at temperature 0.7 and use the
+   fraction answering ANOMALY as the score — simpler but noisier and N× slower.)*
+2. Re-run inference over the 4,500 windows capturing the score → `results/inference_test_scored.json`
+   (reuse `--checkpoint-every`/`--resume`; ~2.5 h).
+3. Write `src/inference/pr_curve.py`: sweep the threshold over the score, compute P/R/F1/CEF0.5 at
+   each, write the curve to `results/llm_pr_curve.json` and (optionally, via matplotlib) a PNG; report
+   **AUC-PR** and the operating point that maximizes CEF0.5 (precision-weighted).
+4. Add a short P–R subsection to the analysis doc §6.1/§7 with the curve and the
+   higher-precision operating point; mark §10 item 6 done.
+
+**Success criteria:**
+- [ ] A continuous score per window captured for the text LLM.
+- [ ] `results/llm_pr_curve.json` (+ optional PNG) with AUC-PR and a CEF0.5-optimal operating point
+  that beats the default P 0.360 on precision at acceptable recall.
+- [ ] Analysis doc updated with the curve; the single-point caveat in §9 limitation #7 softened.
+
+**Effort:** ~½–1 day, local, no cloud, no raw data. **Risk:** low. **Independent of teardown.**
+
+> **On the dropped "detection-only SFT" idea:** not recommended. The text model's low precision is a
+> *decision-boundary/calibration* problem (its threshold for calling ANOMALY is too loose, partly
+> from the 25%-balanced training prior and hard-token output), not a *capacity* problem. The
+> auxiliary advice objective is multi-task signal that likely *helps* the shared representation, so
+> stripping it to train detection-only is unlikely to raise precision and would cost a capability.
+> Threshold calibration (this phase) and training-label balance are the right levers.
+
+# ═══════════════════════════════════════════════════════════════════════════
+
+## Phase 10 — Teardown (run LAST — after any Phases 11–13 you choose to do; precondition Phases 1–9)
 
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -2512,14 +2659,19 @@ for any re-download. Both are torn down together as the final step.
 
 **Preconditions (all must be true before teardown):**
 - [ ] Phases 5–9 complete and results committed (Phase 8 vision is optional — note if skipped).
+- [ ] **Any of the optional Phases 11–13 you intend to run are done** — Phases 11 (LSTM) and 12
+  (vision base control) need the raw data / PNGs that this teardown deletes. Phase 13 is independent.
 - [ ] Final models exported (GGUF) and stored on `DUAL DRIVE` and/or pushed to their cloud home.
 - [ ] No open question that could require re-running the ETL from raw.
 
 **Teardown steps:**
-1. [ ] **Rotate the Kaggle API token** — it was pasted in plaintext in-session on 2026-06-12
-   (`KGAT_25dc6d88f7c823b7c8a6a64b90cb45fd`). Go to kaggle.com → Settings → API → Expire Token,
-   then create a new one. Update `~/.kaggle/access_token` only if future downloads are expected;
-   otherwise just expire it.
+1. [ ] **Rotate the Kaggle API token** — one was used in-session during the project (value redacted;
+   see SECURITY note below). Go to kaggle.com → Settings → API → Expire Token, then create a new one.
+   Update `~/.kaggle/access_token` only if future downloads are expected; otherwise just expire it.
+   **SECURITY (must do before publishing):** that token was previously committed to this file in
+   plaintext, so it lives in the git *history* even though it is redacted here now. Expire it at
+   Kaggle (above) so the leaked value is worthless, and consider scrubbing history
+   (`git filter-repo`/BFG) before making the repo public.
 2. [ ] **Delete raw data** from the drive:
    `rm -rf "/Volumes/DUAL DRIVE/esa-ad/ESA-Mission1" "ESA-Mission2" "ESA-Mission3"`
    (or the whole `/Volumes/DUAL DRIVE/esa-ad/` if nothing else lives there).

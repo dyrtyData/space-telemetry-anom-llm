@@ -34,8 +34,12 @@ and few-shot), and a deliberately dumb "flag everything" control.
 Three findings carry the project:
 
 1. **As a pure detector, the tuned LSTM wins** (F1 0.552, precision 0.785, the best
-   precision-weighted CEF0.5 0.684, and a genuine interval-aware Affinity-F1 0.649). Direct LLM
-   detection does not beat it — consistent with the published literature.
+   precision-weighted CEF0.5 0.684, and a genuine interval-aware Affinity-F1 0.649). The two
+   fine-tuned LLM detectors land below it and are *mirror images* of one another — the **vision**
+   model (Qwen3-VL reading rendered plots) is precision-oriented (P 0.769, and the best
+   false-alarm-aware CEF0.5 of any LLM here, 0.604), while the **text** model is recall-oriented
+   (R 0.609, over-flags). Neither beats the LSTM at detection — consistent with the published
+   literature.
 2. **Fine-tuning is nonetheless justified, and the proof survives a skeptic.** Read against a
    *trivial always-anomaly baseline* (F1 0.399 for free on this 25%-positive set), the fine-tuned
    LLM is the **only LLM-family approach that clears that line with a balanced precision/recall
@@ -53,8 +57,9 @@ Three findings carry the project:
 
 Putting these together, the architecture the data recommends is the **two-stage hybrid the
 industry already uses**: a cheap, high-precision detector (the LSTM) triggers, and the fine-tuned
-LLM explains each flag. That is exactly the localized, open-source, no-external-API system the
-original brief set out to validate — and the headline is neither "LLMs win" nor "LLMs lose," but
+text LLM explains each flag — with the precision-oriented vision model available as an optional
+low-false-alarm cross-check. That is exactly the localized, open-source, no-external-API system this
+project set out to validate — and the headline is neither "LLMs win" nor "LLMs lose," but
 *"here is the measured trade-off, and here is the design it dictates."*
 
 ---
@@ -492,8 +497,10 @@ phases — each with *why it stands* and what it would take to close:
 
 ## 10. Recommended next steps
 
-Prioritized, each with a rough **effort** and **expected impact**. (These are mirrored as a proposed
-hardening phase in the implementation plan.)
+Prioritized, each with a rough **effort** and **expected impact**. The three detection-and-evaluation
+items most worth doing next — **improve the LSTM** (#4), **complete the vision skeptic table** (#5),
+and **calibrate the LLM operating point** (#6) — are written up as concrete, self-contained next
+phases (Phases 11–13) in the implementation plan.
 
 1. **Ship the Hybrid as the reference design.** *Effort: low* (packaging, not new modeling).
    *Impact: high.* It is the architecture the numbers support. **Who needs it:** operators of
@@ -513,24 +520,35 @@ hardening phase in the implementation plan.)
    comparison far more honest and the result matches the literature. But doing it converts a
    "believable upper bound on the LSTM's edge" into a settled like-for-like number, which is *more*
    authoritative.
-4. **Complete the skeptic table for vision.** *Effort: low* (~half a day — run an un-fine-tuned
-   Qwen3-VL zero-shot on the 2,000 test PNGs, optionally a frontier-VL too). *Impact: medium.* Closes
-   the text-only scope gap noted in §5 so the "did fine-tuning help?" story covers both modalities.
-5. **Calibrate the LLM's operating point + try a detection-only SFT.** *Effort: low–medium.*
-   *Impact: medium.* Sweep a decision threshold to report a P–R curve instead of one point (cheapest
-   way to make the standalone text LLM more deployable); separately, train a detection-only SFT to see
-   if it shifts precision/recall.
-6. **Ensemble the two LLM modalities.** *Effort: ~2–3 days* (no new training — just score-combination
+4. **Improve the LSTM detector itself** (Plan Phase 11). *Effort: medium.* *Impact: medium–high.*
+   Our LSTM uses the Telemanom *method* but a basic implementation (flat μ+3σ threshold). The standard
+   levers to push it further: Telemanom's **pruned dynamic error thresholding** (the official
+   "Telemanom-ESA-Pruned" reaches ~0.97 *event-wise* CEF on Mission 1 under the ESA-ADB protocol —
+   a different, harder protocol than ours, but the gap signals real headroom), **per-channel threshold
+   tuning**, **attention/bidirectional** layers, **longer context windows**, and **channel
+   ensembling**. Since the LSTM is already the best detector, raising it widens the margin over the
+   LLMs and strengthens the central conclusion.
+5. **Complete the skeptic table for vision** (Plan Phase 12). *Effort: low* (~half a day — run an
+   un-fine-tuned Qwen3-VL zero-shot on the 2,000 test PNGs, optionally a frontier-VL too).
+   *Impact: medium.* Closes the text-only scope gap noted in §5 so the "did fine-tuning help?" story
+   covers both modalities.
+6. **Calibrate the LLM's operating point** (Plan Phase 13). *Effort: low–medium.* *Impact: medium.*
+   Sweep a decision threshold to report a **precision–recall curve** instead of one fixed point — the
+   cheapest way to make the standalone text LLM less trigger-happy. (A *detection-only* SFT — dropping
+   the advice head — is **not** recommended: the over-flagging is a calibration/decision-boundary
+   issue, not a capacity one, and the auxiliary advice task likely *helps* rather than hurts the
+   shared representation, so removing it is unlikely to improve precision and would cost a capability.)
+7. **Ensemble the two LLM modalities.** *Effort: ~2–3 days* (no new training — just score-combination
    over existing per-window outputs). *Impact: medium–high.* Combine the recall-oriented text model
    and the precision-oriented vision model: "**both must fire**" → very high precision; "**either
    fires**" → very high recall. Because the two fail differently (§6.3), this is a promising,
    low-cost win.
-7. **Fine-tune / RAG a frontier model — the true "own vs. adapt" comparison.** *Effort: medium.*
+8. **Fine-tune / RAG a frontier model — the true "own vs. adapt" comparison.** *Effort: medium.*
    *Impact: medium.* We compared a *fine-tuned* open model to a *prompted* frontier; fine-tuning a
    frontier (GPT-4o/Gemini tuning APIs; Claude has none public) or giving it channel history via RAG
    would test whether you even need a custom 8B. **Caveat:** doing so re-introduces the vendor
    dependency, data-egress, cost, and latency the sovereign model exists to avoid.
-8. **Hyperparameter sweep + vision improvements + generalization tests.** *Effort: medium.*
+9. **Hyperparameter sweep + vision improvements + generalization tests.** *Effort: medium.*
    *Impact: medium.* A small **LoRA ablation** (rank / epochs / prompt format; ~1 day, ~$5–15) to
    confirm the fine-tune is near its ceiling; an **advice head** and larger backbone for the vision
    model; a **cross-mission generalization test** (train on one mission, test on a spacecraft the
