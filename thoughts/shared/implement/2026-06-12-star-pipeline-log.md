@@ -1171,3 +1171,78 @@ Phase 5/6's "99.6% structured" into a defensible "95% high-quality *when correct
 - **Phase 10 teardown** precondition ("Phases 5–9 complete, Phase 8 optional") is now FULLY
   satisfied — teardown is the only remaining step. It deletes the raw data Phase 7 depended on, so it
   must stay last and be user-confirmed (irreversible).
+
+---
+
+## Phase 12: Vision base zero-shot control (close the skeptic table for vision) — COMPLETE (2026-06-15)
+
+**Goal (plan §Phase 12):** mirror Phase 6's text base/frontier controls for the *vision* modality —
+run the un-fine-tuned Qwen3-VL-8B zero-shot over the same 2,000 test PNGs through the identical
+harness, to isolate what the Phase-8 vision fine-tune added.
+
+**Done in a separate git worktree** (`phase-12-vision-base`, branched off `e2462ad`) per the user's
+instruction, to stay isolated from the **parallel Phase-11 WIP** in the main tree (Phase 11 has
+uncommitted edits to `train_lstm.py`/`Makefile`/`.gitignore`). No worktree conflict: Phase 12 only
+touches `eval_vision.py`, `evaluate.py`, `results/`, and `thoughts/`.
+
+### What was built / committed
+- **`src/inference/eval_vision.py` `--base` flag** (commit `97a2267`): loads the un-fine-tuned base
+  `unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit` (no LoRA adapter; `FastVisionModel.from_pretrained`
+  resolves a bare repo id to base-only) through the **identical** prompt/decoding/parser, defaulting
+  output to `results/inference_vision_base.json` and the approach label to
+  "LLM detection (vision, base zero-shot)". `compute_summary`/`write_results` gained an `approach`
+  param; `load_model(adapter)` → `load_model(model_ref)`. Lint + `--help` verified.
+- **`src/inference/evaluate.py` base-vision row** (commit `df6e323`): `VISION_BASE_FILE`/
+  `VISION_BASE_APPROACH` + `load_vision_base_results()` (graceful degradation, unit `windows (PNG)`),
+  wired into `main()`; the "Did fine-tuning help?" section gained the **vision pair** (fine-tuned vs
+  base) + a "mirror story" bullet; a methodology note added. Regenerated `comparison_report.md` +
+  `comparison_metrics.json` (now **11 approaches**); `evaluate.py --all` + the validate-eval checks
+  pass. The result JSON was `git add -f`'d (this repo force-tracks `results/*.json` against its own
+  `.gitignore` — followed that established convention).
+
+### Cloud run (Vast.ai)
+- **Instance**: id **41077724**, 1× **RTX A6000 46 GB**, **Delaware US-East**, **$0.401/hr**, rel
+  0.9995, ~7.5 Gbps both ways (same datacenter profile as Phase 8). Image
+  `pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel`; onstart `pip install unsloth unsloth_zoo
+  huggingface_hub pillow`. Direct SSH `root@38.29.145.20:40014`, key `~/.ssh/vast_star`.
+- **Upload**: tar-stream over SSH (no rsync in the image, D12/D15) — 2,000 test PNGs (47 MB) +
+  `test_metadata.jsonl` from the main tree, `src/`+`pyproject.toml` from the worktree (so the
+  instance got the `--base` code). `COPYFILE_DISABLE=1` to skip macOS xattr forks.
+- **Run**: `eval_vision.py --base --resume --checkpoint-every 250`, detached
+  (`setsid … nohup … &`). Smoke (5) warmed the model; full 2,000 ran at **~0.67–0.71 s/sample
+  (~24 min)** — far under the ~½-day plan estimate. `partial=false`, scp'd back, **instance
+  destroyed** (billing stopped, 0 instances). **Total cloud cost ≈ $0.4–0.6** (~1 h instance life).
+
+### Result (2,000 test PNGs, base zero-shot, 0 UNKNOWN)
+**P 0.3098 / R 0.4032 / F1 0.3504 / CEF0.5 0.3249**, accuracy 0.626, TP 202 / FP 450 / FN 299 /
+TN 1049, pred dist 652 ANOMALY / 1348 NOMINAL. **100% format-compliant.** F1 0.350 sits **below the
+always-anomaly line (0.399)** → the base VL *complies but does not discriminate*. The fine-tune
+(Phase 8) is **P 0.769 / R 0.325 / F1 0.457 / CEF0.5 0.604** → fine-tuning's gain is essentially all
+**precision (0.310 → 0.769, Δ +0.459)**.
+
+### Deviations (Phase 12)
+- **D39 — torchvision upgrade required again (recurrence of Phase-8 D33).** `pip install unsloth`
+  pulled torch `2.10.0+cu128` but the image shipped torchvision 0.19 → `operator torchvision::nms
+  does not exist` + an Unsloth import error. Fixed with `pip install torchvision==0.25.0
+  --index-url https://download.pytorch.org/whl/cu128`. This is now a **known recurring step** for any
+  VL cloud run on this image — fold it into the onstart next time.
+- **D40 — the base VL is format-compliant; the fine-tuning delta is precision, not compliance.**
+  Expected (from the text base, which was ~0% compliant) that the base VL might also fail the output
+  contract. It did not — the chat-tuned Qwen3-VL base emits a parseable ANOMALY/NOMINAL on **100%** of
+  windows. So the modalities expose the *same* lesson from opposite ends: text fine-tuning bought
+  **compliance**, vision fine-tuning bought **discrimination/precision**. Not a bug — a finding now
+  foregrounded in §5 (new point 5) and §6.3 of the analysis doc.
+- **D41 — separate worktree + shared-merge deferral.** Per the user's instruction and the plan's
+  SHARED MERGE RULE, Phase 12 ran in worktree `phase-12-vision-base`; its `evaluate.py` +
+  `results/comparison_*` edits are committed on that branch and **must be merged into `main`** (and
+  `evaluate.py --all` re-run once) after Phase 11 lands. No conflict expected — Phase 11 edits
+  `train_lstm.py`/`Makefile`/`.gitignore`, not `evaluate.py`. (A frontier-VL control was left
+  unrun — optional; the base control alone closes the §5 symmetry.)
+
+### Impact on the rest of the plan
+- **No changes needed to other phases.** Phase 12 only *adds* a row; the report regeneration left
+  every other approach untouched (diff was the new base-vision row + the vision pair in the
+  fine-tuning section). Phase 13/14 are unaffected.
+- **Phase 10 teardown** is now even closer — the only remaining cloud/PNG-dependent optional work is
+  Phase 14's vision-score run (Phase 13 first). The raw data / PNGs must stay until those are done or
+  declared skipped. Teardown stays last + user-confirmed.

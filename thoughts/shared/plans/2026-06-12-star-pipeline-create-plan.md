@@ -2613,10 +2613,26 @@ see `scripts/cloud/launch_vast.sh`), but **load the base model WITHOUT the LoRA 
    "Scope note."
 
 **Success criteria:**
-- [ ] `results/inference_vision_base.json` produced over 2,000 PNGs; base-VL row in
-  `comparison_metrics.json` + report.
-- [ ] §5 skeptic table now has a vision base control; §5 scope note updated to "closed."
-- [ ] Instance destroyed after eval (billing stopped); adapter/base ids recorded.
+- [x] `results/inference_vision_base.json` produced over 2,000 PNGs; base-VL row in
+  `comparison_metrics.json` + report. **DONE** — P 0.310 / R 0.403 / F1 0.350 / CEF0.5 0.325,
+  100% format-compliant (0 UNKNOWN). Row "LLM detection (vision, base zero-shot)" renders;
+  `evaluate.py --all` + validate pass (11 approaches).
+- [x] §5 skeptic table now has a vision base control; §5 scope note updated to "closed." **DONE** —
+  added the fine-tuned-vision + base-vision pair to the §5 table, a new point 5 (mirror story), the
+  "Scope note (closed, Phase 12)", a §6.3 base-control bullet, and marked §10 item 5 done.
+- [x] Instance destroyed after eval (billing stopped); adapter/base ids recorded. **DONE** — Vast.ai
+  A6000 instance 41077724 destroyed (0 instances). Base id `unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit`
+  (no adapter); the fine-tune's adapter is `dyrtyData/star-pipeline-qwen3-vl-8b-detection`.
+
+> **✅ Phase 12 COMPLETE (2026-06-15).** Implemented in worktree `phase-12-vision-base` (branched off
+> `e2462ad`, isolated from the parallel Phase-11 WIP). Two commits: `97a2267` (eval_vision.py `--base`
+> flag) + `df6e323` (evaluate.py base-vision row + regenerated report/metrics + the result JSON).
+> The base VL is fully format-compliant but **does not discriminate** (F1 0.350, below the 0.399
+> flag-everything line) — the mirror of the text base (which had 0% compliance): for text fine-tuning
+> bought *compliance*, for vision it bought *precision* (0.310 → 0.769). Deviations D39–D41 in the log.
+> **Merge note:** the shared `evaluate.py` + `results/comparison_*` edits must be merged into `main`
+> per the SHARED MERGE RULE — do it once Phase 11 lands (no conflict expected: Phase 11 touches
+> `train_lstm.py`/`Makefile`/`.gitignore`, not `evaluate.py`).
 
 **Effort:** ~½ day, ~$1 cloud. **Risk:** low–medium (cloud setup; reuse Phase-8 runbook above).
 **Should precede teardown** (needs the PNGs; safe to keep raw until done).

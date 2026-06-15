@@ -202,6 +202,8 @@ This is the question a fine-tuning showcase lives or dies on. The method: **hold
 | Base Qwen3-8B — few-shot (2-ex) | 0.420 | 0.325 | 1.000 | 0.129 | 500 windows |
 | Frontier (Claude) — zero-shot | 0.254 | 0.284 | 1.000 | 1.000 | 150-window sample |
 | Frontier (Claude) — few-shot | 0.239 | 0.214 | 1.000 | 1.000 | 150-window sample |
+| **Fine-tuned LLM (vision)** | **0.457** | **0.604** | 1.000 | 0.000 | 2,000 PNGs |
+| Base Qwen3-VL — zero-shot | 0.350 | 0.325 | 1.000 | 0.000 | 2,000 PNGs |
 | **Always-anomaly (trivial)** | **0.399** | 0.294 | 1.000 | 0.000 | flag-all (4,500) |
 
 How to read it, in order:
@@ -234,16 +236,27 @@ How to read it, in order:
    The fine-tune, by contrast, **learned each channel's normal from 21,000 training windows**, which
    is exactly the prior the frontier lacks. (Two ways to give a frontier that context — retrieval/RAG
    over channel history, or fine-tuning a frontier model — were not tried here; see §10.)
-5. **The honest headline.** The **fine-tuned model is the only approach in the LLM family that
+5. **The vision modality tells the mirror story (Phase 12 control).** Running the *un-fine-tuned*
+   Qwen3-VL-8B base through the identical PNG harness, it is **fully format-compliant (100% parseable,
+   0 UNKNOWN)** — a chat-VL simply answers the ANOMALY/NOMINAL question — *unlike* the text base,
+   which emitted 0%. But it does **not discriminate**: F1 **0.350** (P **0.310**, R **0.403**), which
+   sits **below the flag-everything line (0.399)**. Fine-tuning lifts it to F1 **0.457** and,
+   decisively, **precision 0.310 → 0.769** (Δ **+0.459**). So the two modalities expose the *same*
+   lesson from opposite ends: for **text**, fine-tuning's headline win is **output compliance** (the
+   base can't even produce a verdict); for **vision**, the base already complies, so fine-tuning's win
+   is **learned discrimination** — the channel-specific priors that turn a compliant guesser into a
+   precise detector. Both wins come from one lever: localizing the model to this mission's data.
+6. **The honest headline.** The **fine-tuned model is the only approach in the LLM family that
    beats the always-anomaly baseline with a balanced precision/recall** — the lone real detector
    among them. On top of detection it delivers output compliance, reliable structured advice, and
    3× lower latency. **What fine-tuning bought is the mission/channel-specific priors that no prompt
    over 10 normalized values can supply** — exactly the localized capability the brief targeted.
 
-**Scope note.** These controls isolate the *text* model — the base and frontier were run through the
-text harness on the numeric windows. An equivalent base/frontier control for the *vision* detector
-(e.g. an un-fine-tuned Qwen3-VL on the same PNGs) was not run, because the controls were built before
-the vision model existed. It is a cheap, listed next step (§10) that would complete the symmetry.
+**Scope note (closed, Phase 12).** The table now isolates the fine-tuning effect in **both**
+modalities. The text controls (base zero-shot/few-shot, frontier zero-/few-shot) run the *text* harness
+on the numeric windows; the **vision base zero-shot** runs the *PNG* harness on the same 2,000 test
+plots as the Phase-8 fine-tune (base weights only, identical prompt/decoding/parser). The earlier
+asymmetry — text-only controls because they predated the vision model — is resolved.
 
 ---
 
@@ -312,6 +325,12 @@ test PNGs:
   **highest CEF0.5 of any LLM approach (0.604)** — it almost never false-alarms (49 FP vs 1,450 TN)
   but misses more (338 FN).
 - It is a **pure detector** — no diagnostic advice by design (its advice fields are 0).
+- **Fine-tuning is what made it a detector (Phase 12 control).** The un-fine-tuned Qwen3-VL-8B base,
+  run zero-shot over the same 2,000 PNGs through the identical harness, scores only **P 0.310 / R
+  0.403 / F1 0.350** — *below* the always-anomaly line (0.399). It is 100% format-compliant (it answers
+  the question) but cannot tell anomalous plots from nominal ones. Fine-tuning raised precision
+  **0.310 → 0.769**: the gain is almost entirely a precision/discrimination gain, learned from the
+  mission's own plots (full skeptic table in §5).
 
 The practical implication: the two LLM modalities **fail differently** (one trigger-happy, one
 conservative), which makes them attractive for an ensemble. Hard rules — require *both* to fire (high
@@ -531,10 +550,12 @@ concrete, self-contained next phases (Phases 11–14) in the implementation plan
    tuning**, **attention/bidirectional** layers, **longer context windows**, and **channel
    ensembling**. Since the LSTM is already the best detector, raising it widens the margin over the
    LLMs and strengthens the central conclusion.
-5. **Complete the skeptic table for vision** (Plan Phase 12). *Effort: low* (~half a day — run an
-   un-fine-tuned Qwen3-VL zero-shot on the 2,000 test PNGs, optionally a frontier-VL too).
-   *Impact: medium.* Closes the text-only scope gap noted in §5 so the "did fine-tuning help?" story
-   covers both modalities.
+5. ~~**Complete the skeptic table for vision** (Plan Phase 12).~~ **✅ DONE (Phase 12).** Ran the
+   un-fine-tuned Qwen3-VL-8B zero-shot over the 2,000 test PNGs through the identical harness (Vast.ai
+   A6000, ~$0.6): **P 0.310 / R 0.403 / F1 0.350**, 100% format-compliant. It complies but does not
+   discriminate (below the 0.399 flag-everything line); fine-tuning's gain is precision 0.310 → 0.769.
+   The §5 skeptic table and scope note now cover both modalities. (A frontier-VL control was not run —
+   optional; the base control already closes the symmetry.)
 6. **Calibrate the LLM's operating point** (Plan Phase 13). *Effort: low–medium.* *Impact: medium.*
    Sweep a decision threshold to report a **precision–recall curve** instead of one fixed point — the
    cheapest way to make the standalone text LLM less trigger-happy. (A *detection-only* SFT — dropping
