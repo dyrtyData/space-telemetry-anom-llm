@@ -326,7 +326,7 @@ def train_channel_model(
     pred_starts = [int(i) * stride for i in np.nonzero(predicted)[0]]
     gt_starts = [int(i) * stride for i in np.nonzero(actual)[0]]
 
-    return {
+    record = {
         "channel": channel_name,
         "mission": mission,
         "precision": float(precision),
@@ -344,6 +344,13 @@ def train_channel_model(
         "pred_starts": pred_starts,
         "gt_starts": gt_starts,
     }
+    # Phase 14: optionally attach the DENSE continuous per-window reconstruction error
+    # (errors[i] is the window starting at i*stride). This is the continuous LSTM score the
+    # ensemble fuses; it is far larger than the sparse start lists, so it is written to a
+    # SEPARATE dump file (not baseline_results.json) and stripped before the metrics write.
+    if args.dump_window_scores:
+        record["window_errors"] = [round(float(e), 8) for e in errors]
+    return record
 
 
 def parse_args() -> argparse.Namespace:
@@ -419,6 +426,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="skip channels already present in results/lstm/baseline_results.json",
     )
+    p.add_argument(
+        "--dump-window-scores",
+        default=None,
+        help="Phase 14: also write the DENSE continuous per-window reconstruction error to this "
+        "file (within results/lstm/) for score-level fusion. Keep --results-file distinct from "
+        "the canonical baseline_results.json so the calibrated metrics file is not overwritten. "
+        "Typical: --reuse-models --threshold flat --z-score 4.0 --dump-window-scores "
+        "window_scores.json --results-file baseline_results_scoredump.json",
+    )
     return p.parse_args()
 
 
@@ -435,22 +451,62 @@ def summarize(results: list[dict]) -> dict:
     }
 
 
+def _atomic_write_json(obj, path: Path) -> None:
+    """Write JSON via temp + os.replace so an interrupted write never corrupts the file."""
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp, "w") as f:
+        json.dump(obj, f, indent=2, default=str)
+    os.replace(tmp, path)
+
+
 def write_output(all_results: list[dict], args: argparse.Namespace, results_file: Path) -> dict:
     """Atomically (temp + replace) write the current results to disk and return the summary.
 
     Called after every channel so a death costs at most one channel, not the whole run
     (train_lstm.py is otherwise a single long pass with no checkpointing).
+
+    When --dump-window-scores is set, the dense per-window error arrays are split into a
+    SEPARATE dump file (keyed by mission/channel) and stripped from the metrics file, so
+    baseline_results.json stays slim and the dump carries everything the ensemble needs.
     """
-    summary = summarize(all_results)
+    if args.dump_window_scores:
+        dump_path = RESULTS_DIR / args.dump_window_scores
+        dump_channels = [
+            {
+                "mission": r["mission"],
+                "channel": r["channel"],
+                "window": r.get("window"),
+                "stride": r.get("stride"),
+                "threshold": r.get("threshold"),
+                # errors[i] is the reconstruction error for the window starting at i*stride.
+                "window_errors": r["window_errors"],
+            }
+            for r in all_results
+            if "window_errors" in r
+        ]
+        _atomic_write_json(
+            {
+                "config": vars(args) | {"data_dir": str(args.data_dir)},
+                "note": "window_errors[i] = LSTM reconstruction error for window start i*stride; "
+                "map a test window via i = start_idx // stride.",
+                "channels": dump_channels,
+            },
+            dump_path,
+        )
+        # Slim copy for the metrics file: drop the dense arrays.
+        metrics_results = [
+            {k: v for k, v in r.items() if k != "window_errors"} for r in all_results
+        ]
+    else:
+        metrics_results = all_results
+
+    summary = summarize(metrics_results)
     output = {
         "summary": summary,
         "config": vars(args) | {"data_dir": str(args.data_dir)},
-        "channels": all_results,
+        "channels": metrics_results,
     }
-    tmp = results_file.with_suffix(".json.tmp")
-    with open(tmp, "w") as f:
-        json.dump(output, f, indent=2, default=str)
-    os.replace(tmp, results_file)
+    _atomic_write_json(output, results_file)
     return summary
 
 

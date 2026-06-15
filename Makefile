@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision grade-advice-select grade-advice-assemble
+.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble
 
 PYTHON := python3
 VENV := .venv
@@ -172,6 +172,29 @@ grade-advice-assemble:
 #   python src/inference/eval_vision.py --resume --checkpoint-every 250
 eval-vision:
 	$(PY) src/inference/eval_vision.py --limit $(LIMIT) --resume --checkpoint-every 250
+
+# Phase 14: vision continuous verdict score (1-step prefill logits) over the 2,000 test PNGs.
+# Runs ON the Vast.ai instance like eval-vision; scp results/inference_vision_scored.json back.
+#   python src/inference/eval_vision.py --score --resume --checkpoint-every 250
+eval-vision-score:
+	$(PY) src/inference/eval_vision.py --score --resume --checkpoint-every 250
+
+# Phase 14: derive the LSTM continuous per-window score (reuse the saved M1 models, ~6 min).
+# Writes results/lstm/window_scores.json (dense errors) WITHOUT touching baseline_results.json.
+lstm-window-scores:
+	KERAS_BACKEND=torch ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/baselines/train_lstm.py \
+		--missions 1 --max-channels 58 --threshold flat --z-score 4.0 \
+		--reuse-models --loss-source baseline_results.json \
+		--results-file baseline_results_scoredump.json --dump-window-scores window_scores.json
+
+# Phase 14: vision PR curve (mirror of the text Phase-13 curve) + score-level fusion ensemble.
+vision-pr-curve:
+	$(PY) src/inference/pr_curve.py --scored results/inference_vision_scored.json \
+		--out results/vision_pr_curve.json --hard results/inference_vision.json \
+		--label "Vision LLM (Qwen3-VL-8B)"
+
+ensemble:
+	$(PY) src/inference/ensemble.py
 
 # Evaluation -- Phase 5: unified comparison report across all approaches.
 # Phase 6 adds Base + Frontier rows automatically when their result files are present.

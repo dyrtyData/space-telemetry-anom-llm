@@ -11,9 +11,18 @@ recall.
 CEF0.5 is the precision-weighted F-beta used throughout the project (beta=0.5), so the
 curve is directly comparable to the detection bake-off in the analysis doc §6.1.
 
+It is modality-agnostic: point ``--scored`` at any file with the scored-row schema
+(``{score, is_anomaly, ...}``) written by ``test_local_gguf.py --score`` (text) or
+``eval_vision.py --score`` (vision, Phase 14). The PNG path is derived from ``--out`` and the
+plot title from ``--label``, so the same script produces both the text and the vision curve.
+
 Usage:
-    python src/inference/pr_curve.py                 # default in/out paths
+    python src/inference/pr_curve.py                 # text: default in/out paths
     python src/inference/pr_curve.py --no-plot       # skip the PNG
+    python src/inference/pr_curve.py \\
+        --scored results/inference_vision_scored.json \\
+        --out results/vision_pr_curve.json \\
+        --label "Vision LLM (Qwen3-VL-8B)"           # Phase 14 vision curve
 """
 
 import argparse
@@ -67,9 +76,23 @@ def main() -> None:
     ap.add_argument("--out", default=str(OUT_JSON))
     ap.add_argument("--no-plot", action="store_true", help="Skip writing the PNG.")
     ap.add_argument(
+        "--label",
+        default="Text LLM (Qwen3-8B)",
+        help="Model label for the 'approach' field + plot title (e.g. 'Vision LLM (Qwen3-VL-8B)').",
+    )
+    ap.add_argument(
+        "--hard",
+        default=str(HARD_FILE),
+        help="Hard-verdict generation run for the 'default operating point' annotation "
+        "(text: inference_test.json; vision: inference_vision.json).",
+    )
+    ap.add_argument(
         "--n-grid", type=int, default=200, help="Threshold grid resolution in [0,1]. Default 200."
     )
     args = ap.parse_args()
+    # PNG sits beside the --out JSON (e.g. results/vision_pr_curve.json -> vision_pr_curve.png),
+    # so the text and vision curves never overwrite each other.
+    out_png = Path(args.out).with_suffix(".png")
 
     scored_path = Path(args.scored)
     if not scored_path.exists():
@@ -105,10 +128,11 @@ def main() -> None:
     # The default reported operating point comes from the original generation run
     # (hard ANOMALY/NOMINAL verdicts), preserved for an apples-to-apples comparison.
     default_pt = None
-    if HARD_FILE.exists():
-        s = json.loads(HARD_FILE.read_text())["summary"]
+    hard_path = Path(args.hard)
+    if hard_path.exists():
+        s = json.loads(hard_path.read_text())["summary"]
         default_pt = {
-            "source": "generation hard-verdict (results/inference_test.json)",
+            "source": f"generation hard-verdict ({hard_path})",
             "precision": s["precision"],
             "recall": s["recall"],
             "f1": s["f1"],
@@ -116,7 +140,7 @@ def main() -> None:
         }
 
     out = {
-        "approach": "LLM detection (text, Qwen3-8B) — PR calibration",
+        "approach": f"{args.label} — PR calibration",
         "n_samples": len(y_true),
         "n_anomalies": n_pos,
         "base_rate": round(base_rate, 4),
@@ -179,12 +203,12 @@ def main() -> None:
             ax.set_ylabel("Precision")
             ax.set_xlim(0, 1)
             ax.set_ylim(0, 1)
-            ax.set_title("Text LLM (Qwen3-8B) — precision-recall calibration")
+            ax.set_title(f"{args.label} — precision-recall calibration")
             ax.legend(loc="upper right", fontsize=8)
             ax.grid(True, alpha=0.3)
             fig.tight_layout()
-            fig.savefig(OUT_PNG, dpi=120)
-            print(f"Plot written to {OUT_PNG}")
+            fig.savefig(out_png, dpi=120)
+            print(f"Plot written to {out_png}")
         except Exception as e:  # noqa: BLE001 - plotting is optional
             print(f"(plot skipped: {e})")
 

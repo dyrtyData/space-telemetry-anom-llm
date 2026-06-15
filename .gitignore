@@ -30,6 +30,12 @@ models/lstm/
 # ignored. (Previously results/**/*.json + results/*.md were ignored as "regenerable" —
 # reverted 2026-06-14: re-running inference to recover them is not acceptable.)
 
+# Phase 14: the LSTM dense per-window error dump (~9 MB) and its throwaway metrics file are
+# cheap to regenerate (~6 min, `make lstm-window-scores`, reuses saved models), so they are
+# NOT tracked — unlike the hours-long inference results above. The ensemble consumes them.
+results/lstm/window_scores.json
+results/lstm/baseline_results_scoredump.json
+
 # Transient run logs
 *.log
 results/.*.log
@@ -42,3 +48,4 @@ access_token
 !**/.gitkeep
 
 .env
+FinalReport_FollowUp.md

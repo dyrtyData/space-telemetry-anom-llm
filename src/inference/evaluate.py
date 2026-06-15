@@ -34,6 +34,7 @@ FRONTIER_FILE = RESULTS_DIR / "inference_frontier_sample.json"  # Phase 6: front
 FRONTIER_FS_FILE = RESULTS_DIR / "inference_frontier_fewshot.json"  # Phase 6: frontier few-shot
 VISION_FILE = RESULTS_DIR / "inference_vision.json"  # Phase 8: Qwen3-VL detector on PNG plots
 VISION_BASE_FILE = RESULTS_DIR / "inference_vision_base.json"  # Phase 12: un-fine-tuned VL control
+ENSEMBLE_FILE = RESULTS_DIR / "ensemble_metrics.json"  # Phase 14: score-level fusion rows
 ADVICE_GRADE_FILE = RESULTS_DIR / "advice_grading_sample.json"  # Phase 9: semantic advice grading
 TEST_WITH_ADVICE = Path("data/splits/test_with_advice.jsonl")
 
@@ -335,6 +336,19 @@ def load_vision_results() -> dict:
     if "error" not in out:
         out["unit"] = "windows (PNG)"
     return out
+
+
+def load_ensemble_results() -> list[dict]:
+    """Phase 14: score-level fusion rows (text+vision, text+vision+LSTM).
+
+    ensemble.py writes results/ensemble_metrics.json as a list of metric dicts already in the
+    unified schema (the CEF0.5-optimal stacker operating point per fused variant). Returns []
+    when the file is absent, so the report stays valid before the fusion has been run.
+    """
+    if not ENSEMBLE_FILE.exists():
+        return []
+    rows = json.loads(ENSEMBLE_FILE.read_text())
+    return rows if isinstance(rows, list) else []
 
 
 def load_vision_base_results() -> dict:
@@ -807,15 +821,17 @@ def main() -> None:
     trivial = trivial_always_anomaly()  # the dumb reference line
     vision = load_vision_results()  # Phase 8: Qwen3-VL on PNG plots
     vision_base = load_vision_base_results()  # Phase 12: un-fine-tuned VL zero-shot control
+    ensemble = load_ensemble_results()  # Phase 14: score-level fusion rows (may be empty)
 
     # Report order: baselines, fine-tuned text LLM, vision LLM (+ its base control), text base
-    # controls, frontier, hybrid.
+    # controls, frontier, ensemble (fusion), hybrid.
     results = [iso, lstm, llm]
     results += [
         r
         for r in (vision, vision_base, base, base_fs, frontier, frontier_fs, trivial)
         if "error" not in r
     ]
+    results += [r for r in ensemble if "error" not in r]
     results.append(hybrid)
 
     report = generate_report(results)
