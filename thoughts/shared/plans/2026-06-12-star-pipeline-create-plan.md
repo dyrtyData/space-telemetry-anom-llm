@@ -2747,21 +2747,44 @@ capacity one).
 ## Phase 14 — Ensemble the detectors via score-level fusion [FREE, LOCAL] (depends on Phase 13)
 
 **Goal.** Combine the detectors so the result improves on *both* precision and recall instead of
-sitting at one corner. Today the modalities are mirror images — text LLM **P 0.360 / R 0.609**
-(recall-oriented), vision LLM **P 0.769 / R 0.325** (precision-oriented), LSTM **P 0.785 / R 0.451**
-(best single). "Both must fire" (AND → high precision) and "either fires" (OR → high recall) are only
+sitting at one corner. The modalities are mirror images — text LLM **P 0.360 / R 0.609**
+(recall-oriented; default point — calibratable up to P 0.838 along its Phase-13 PR curve, §6.4), vision
+LLM **P 0.769 / R 0.325** (precision-oriented), LSTM **P 0.837 / R 0.432** (best single, z=4.0 calibrated
+in Phase 11). "Both must fire" (AND → high precision) and "either fires" (OR → high recall) are only
 the two *endpoints*; **score-level fusion** traces the whole frontier between/beyond them and — because
 the modalities make *independent* errors — can **Pareto-dominate** any single model on F1/CEF0.5.
 
 **Why it depends on Phase 13.** Fusion needs *continuous scores*, not hard ANOMALY/NOMINAL verdicts.
-Phase 13 produces the text-LLM score (logprob of ANOMALY); this phase adds the analogous vision score
-and reuses the LSTM's per-window error score.
+Phase 13 (✅ **DONE**) produced the text-LLM score (logprob of ANOMALY, in
+`results/inference_test_scored.json`); this phase adds the analogous **vision** score and reuses the
+LSTM's per-window error score.
+
+> **Fold the vision calibration in here (don't make it a separate phase).** Producing the vision
+> continuous score requires one GPU run — and that is *exactly* the run a standalone "vision PR curve"
+> would need. So **Step 0 below captures the vision score AND emits a vision PR curve** (reusing
+> `src/inference/pr_curve.py`, which already takes `--scored/--out`), giving the vision modality the
+> same calibration treatment the text LLM got in Phase 13 (§6.4) at **zero marginal cost** — one
+> session yields the fusion input *and* a calibrated vision operating point that closes the text/vision
+> reporting symmetry. Note there is **no free "turn off sampling" win** for vision (unlike text):
+> `eval_vision.py` already decodes greedily (`do_sample=False`), so P 0.769 / R 0.325 is already its
+> honest deterministic point — the only lever is the threshold sweep. A *deeper* vision improvement
+> (more/varied data, larger backbone, more epochs to lift its weak recall — the true analogue of Phase
+> 11's architecture levers) is **deliberately deferred**: fusion is the cheaper way to buy the recall
+> vision lacks (text supplies R 0.609), so retrain only if the ensemble still leaves a gap.
 
 **Inputs / preconditions:**
 - **Phase 13 done** → text-LLM per-window score in `results/inference_test_scored.json`.
 - Fine-tuned vision adapter (`dyrtyData/star-pipeline-qwen3-vl-8b-detection`) + `eval_vision.py`
-  extended to emit the ANOMALY-token logprob (mirror of Phase 13's change; needs a GPU run — local
-  MPS or a short A6000 session as in Phase 8/12).
+  extended to emit the ANOMALY-token logprob (mirror of Phase 13's `--score`; in transformers use
+  `generate(..., output_scores=True, return_dict_in_generate=True)` or a single forward pass, then
+  softmax the ANOMALY-vs-NOMINAL first-token logits). Needs a GPU run:
+  - **Try local first (free).** The M3 Max may run Qwen3-VL-8B in **bf16 on MPS** (e.g. via
+    **MLX-VLM**, or transformers with `device_map="mps"`, `torch_dtype=bfloat16` — *not* the bnb-4bit
+    build, since bitsandbytes needs CUDA). If it loads and runs at a tolerable rate over the 2,000
+    PNGs, the whole calibration is free and local. Merge the LoRA adapter into the base first (or load
+    base + adapter via PEFT if MPS supports it).
+  - **Fallback (proven, ~$0.5–1).** A short **Vast.ai A6000** session per the Phase-8/12 runbook
+    (`scripts/cloud/launch_vast.sh`; ~25 min; remember the recurring torchvision-0.25 fix, Phase-12 D39).
 - LSTM per-window scores: already persisted in `results/lstm/baseline_results.json` (the
   `pred_starts` + reconstruction errors from Phase 7/11).
 
@@ -2785,6 +2808,13 @@ shared set where every window has all three signals:
    agree-NOMINAL = clear, disagree = route to operator. Report the size of the "review" bucket.
 
 **Steps:**
+0. **(Vision calibration — fold-in, do this first.)** Extend `eval_vision.py` with a `--score` path
+   (per the precondition above) and run it over the 2,000 test PNGs → `results/inference_vision_scored.json`
+   (schema mirrors `inference_test_scored.json`: `score`, `is_anomaly`, `mission`, `channel`, `index`).
+   Then `python src/inference/pr_curve.py --scored results/inference_vision_scored.json --out
+   results/vision_pr_curve.json` → vision AUC-PR + a calibrated operating point + PNG. Add a short
+   vision-calibration note to analysis §6.4 (so both modalities have a curve). This same scored file is
+   the vision input to fusion below.
 1. Write `src/inference/ensemble.py`: load the three per-window scores, build the aligned matrix,
    fit the stacker on val, apply to test, sweep the fused-score threshold → P/R/F1/CEF0.5 at each →
    `results/ensemble_pr_curve.json`; report AUC-PR and the CEF0.5-optimal operating point.
@@ -2792,6 +2822,8 @@ shared set where every window has all three signals:
 3. Compare the fused frontier against each single model's point; document whether it Pareto-improves.
 
 **Success criteria:**
+- [ ] **Vision continuous score captured** → `results/inference_vision_scored.json` + a vision PR curve
+  (`results/vision_pr_curve.json`, AUC-PR + calibrated point); §6.4 notes both modalities' curves.
 - [ ] A fused per-window score over the shared set, from ≥2 models (3 incl. LSTM ideal).
 - [ ] `results/ensemble_pr_curve.json` + an ensemble row in `comparison_metrics.json`/report.
 - [ ] Either a fused operating point that beats the best single model on F1 **and** CEF0.5 (Pareto
