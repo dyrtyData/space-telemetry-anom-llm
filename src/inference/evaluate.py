@@ -767,6 +767,20 @@ def generate_report(results: list[dict]) -> str:
             f"adapter). It is the vision-modality analogue of the text base/frontier controls and "
             f"closes the §5 'Did fine-tuning help?' table across both modalities."
         )
+    if any("Ensemble" in r["approach"] for r in results):
+        lines.append(
+            "- **Ensemble (score-level fusion, Phase 14)** fuses the detectors' CONTINUOUS "
+            "per-window scores (text + vision verdict-token logprobs, LSTM reconstruction error) "
+            "with a leakage-free out-of-fold logistic stacker, then reports the CEF0.5-optimal "
+            "operating point. ⚠️ It is evaluated on a DIFFERENT unit than the rows above — the "
+            "**2,000 windows that have PNGs** (text+vision), and the **1,378 Mission-1 subset** "
+            "where all three signals exist (text+vision+LSTM) — so its numbers are NOT directly "
+            "comparable to the 4,500-window / 58-channel rows. The honest claim is internal to "
+            "the shared set: on those windows the fused score beats every single model's *own* "
+            "best operating point (computed on the same windows) on both AUC-PR and CEF0.5 — a "
+            "Pareto win driven by the modalities' independent errors. See §6.3 and "
+            "results/ensemble_pr_curve.json."
+        )
     lines.append(
         "- **Hybrid (LSTM + LLM advice)** inherits the LSTM's detection metrics by "
         "construction: the LSTM flags anomalies (high precision) and the LLM attaches "

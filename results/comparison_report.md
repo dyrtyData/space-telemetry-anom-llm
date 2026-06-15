@@ -16,12 +16,14 @@ End-to-end comparison of anomaly-detection approaches on the ESA-AD test split. 
 | Frontier zero-shot (Claude, n=150 sample) | 0.308 | 0.216 | 0.254 | 0.284 | N/A | 150 windows |
 | Frontier few-shot (Claude, n=150 sample) | 0.200 | 0.297 | 0.239 | 0.214 | N/A | 150 windows |
 | Always-anomaly (trivial baseline) | 0.250 | 1.000 | 0.399 | 0.294 | N/A | 4500 windows |
+| Ensemble (text+vision, stacked) | 0.810 | 0.511 | 0.627 | 0.725 | N/A | 2000 shared windows |
+| Ensemble (text+vision+LSTM, stacked) | 0.922 | 0.486 | 0.636 | 0.781 | N/A | 1378 shared windows |
 | Hybrid (LSTM + LLM advice) | 0.837 | 0.432 | 0.553 | 0.705 | N/A | 58 channels |
 
 ## Key Findings
 
-- Highest detection F1: **LSTM Baseline** (F1=0.553, precision=0.837, recall=0.432).
-- Best precision-weighted score (CEF0.5, the operationally relevant metric for costly false alarms): **LSTM Baseline** (CEF0.5=0.705).
+- Highest detection F1: **Ensemble (text+vision+LSTM, stacked)** (F1=0.636, precision=0.922, recall=0.486).
+- Best precision-weighted score (CEF0.5, the operationally relevant metric for costly false alarms): **Ensemble (text+vision+LSTM, stacked)** (CEF0.5=0.781).
 - The LSTM baseline detects with higher precision (0.837 vs 0.360); the LLM trades precision for recall (0.609 vs 0.432) while adding a capability the baselines lack: free-text diagnostic advice.
 - LLM advice coherence: 100% of the 1898 anomaly predictions emitted structured DIAGNOSIS+ADVICE text (responses persisted truncated at 300 chars) -- the hybrid's added value over the bare LSTM.
 - LLM inference cost: 2.77s/window on M3 Max Metal over 4500 windows (vs near-instant scoring for the baselines).
@@ -70,6 +72,7 @@ The detection table above shows the fine-tuned model emits structured advice on 
 - **LLM Detection** is scored per window (micro-averaged) over the 4500-window test slice; ANOMALY/NOMINAL is parsed from the generated text.
 - **LLM Detection (vision, Qwen3-VL)** is the AnomSeer-style detector: a Qwen3-VL-8B fine-tuned to read a *rendered PNG plot* of the telemetry window (not the numeric text) and emit ANOMALY/NOMINAL. Scored on 2000 test-split PNGs (micro-averaged). It is a pure detector — no diagnostic advice, so its advice fields are 0 by design; it adds a second, modality-independent detection signal that completes the original three-way LLM design.
 - **LLM detection (vision, base zero-shot)** is the Phase-12 control for the vision fine-tune: the *un-fine-tuned* Qwen3-VL-8B base run over the SAME 2000 test PNGs through the identical prompt/decoding/parser (base weights only, no LoRA adapter). It is the vision-modality analogue of the text base/frontier controls and closes the §5 'Did fine-tuning help?' table across both modalities.
+- **Ensemble (score-level fusion, Phase 14)** fuses the detectors' CONTINUOUS per-window scores (text + vision verdict-token logprobs, LSTM reconstruction error) with a leakage-free out-of-fold logistic stacker, then reports the CEF0.5-optimal operating point. ⚠️ It is evaluated on a DIFFERENT unit than the rows above — the **2,000 windows that have PNGs** (text+vision), and the **1,378 Mission-1 subset** where all three signals exist (text+vision+LSTM) — so its numbers are NOT directly comparable to the 4,500-window / 58-channel rows. The honest claim is internal to the shared set: on those windows the fused score beats every single model's *own* best operating point (computed on the same windows) on both AUC-PR and CEF0.5 — a Pareto win driven by the modalities' independent errors. See §6.3 and results/ensemble_pr_curve.json.
 - **Hybrid (LSTM + LLM advice)** inherits the LSTM's detection metrics by construction: the LSTM flags anomalies (high precision) and the LLM attaches diagnostic advice to each flag. Its value is the advice layer, not better detection.
 - **Affinity-F1** merges per-window predictions into intervals within each (mission, channel) timeline and matches predicted vs. ground-truth intervals within a tolerance. The ESA-AD test split here is a *shuffled, balanced-subsampled* set (~1.4 windows/channel), so intervals are mostly isolated single windows and Affinity-F1 ≈ window-level F1; it is wired for correctness and becomes meaningful on a contiguous evaluation stream.
 - **CEF0.5** uses beta=0.5 (precision-weighted). Computed from each approach's reported precision/recall.
