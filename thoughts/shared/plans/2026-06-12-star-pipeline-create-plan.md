@@ -2094,6 +2094,21 @@ git commit -m "[Setup] Initialize implementation log"
 > hardening Phases 11–14** (see below) → Phase 10 (teardown, LAST). Phases 6/7/9/11/13/14 need no
 > cloud and no API; Phases 8 and 12 are the only ones that cost money (~$1–6 each).
 
+> ### ⚠️ SHARED MERGE RULE — applies to EVERY phase that produces a result (6, 7, 8, 9, 11, 12, 13, 14)
+> Every one of these phases finishes the same way: it **edits `src/inference/evaluate.py`** (adds a
+> loader/row) and runs **`make eval-all`**, which regenerates the **shared** output files
+> `results/comparison_report.md` and `results/comparison_metrics.json`. So:
+> - **The compute can run in parallel, but the merge cannot.** You may run the heavy compute of
+>   several phases concurrently (e.g. cloud Phase 8/12 alongside a local phase; note Phases 11 and 13
+>   both want the local GPU, so run one on CPU or stagger them) — but each should write **only its own
+>   per-approach results JSON** (e.g. `inference_vision_base.json`, `inference_test_scored.json`).
+> - **Serialize the stitch-in step.** Do the `evaluate.py` edits and `make eval-all` **one phase at a
+>   time**, or you will clobber each other's report. The clean way for true parallelism is to give
+>   each phase **its own git worktree**, then merge the `evaluate.py` changes and run `make eval-all`
+>   **once** at the end.
+> - **Never `git add -A`** while another phase is in flight — stage only your phase's files (the repo
+>   already learned this the hard way; see the concurrency notes in Phases 7–8).
+
 ## Current state & key facts (as of 2026-06-14)
 
 **What exists:**
@@ -2514,12 +2529,11 @@ Assets are ready (PNGs + `train_detection.py`); only the training run + eval rem
 > Recommended order: **13 (free, local, ~½–1 day) → 11 (free, local, ~1 day) → 12 (~$1 cloud, ~½ day)
 > → 14 (~2–3 days, local, needs 13).**
 >
-> **Parallelism note.** The *compute* can overlap — Phase 12 is cloud (independent of the laptop);
-> Phases 11 and 13 both want the local GPU, so run 11 on CPU alongside 13's Metal run, or stagger.
-> But all phases end by editing `evaluate.py` and running `make eval-all`, which writes the shared
-> `results/comparison_report.md`/`comparison_metrics.json` — **serialize that merge step** (or run
-> each phase in its own git worktree and regenerate the report once after merging). Phase 14's
-> alignment needs the other phases' per-window score JSONs to exist first.
+> **Parallelism.** See the **⚠️ SHARED MERGE RULE** at the top of the Phases 6–10 block — it governs
+> these phases too (run the compute in parallel, but serialize the `evaluate.py` + `make eval-all`
+> merge, or use one worktree per phase). Phase-specific: Phase 12 is cloud (independent of the laptop);
+> Phases 11 and 13 both want the local GPU (run 11 on CPU or stagger); Phase 14's alignment needs the
+> other phases' per-window score JSONs to exist first.
 > After running any of them, regenerate `results/comparison_report.md` with `make eval-all` and update
 > the numbers in the analysis doc + README if they move materially.
 
