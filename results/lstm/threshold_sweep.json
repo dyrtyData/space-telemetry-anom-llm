@@ -1,0 +1,81 @@
+{
+  "z_grid": [
+    2.5,
+    3.0,
+    3.5,
+    4.0,
+    4.5,
+    5.0,
+    6.0
+  ],
+  "best_z_by_cef": 4.5,
+  "curve": {
+    "flat_z2.5": {
+      "n_channels_scored": 58,
+      "avg_precision": 0.7300075913027705,
+      "avg_recall": 0.4632858728131871,
+      "avg_f1": 0.5400061145378726,
+      "avg_cef_0.5": 0.6546310945203638
+    },
+    "flat_z3.0": {
+      "n_channels_scored": 58,
+      "avg_precision": 0.7849892029032086,
+      "avg_recall": 0.4507483158276625,
+      "avg_f1": 0.5519125038047114,
+      "avg_cef_0.5": 0.6836069520771657
+    },
+    "flat_z3.5": {
+      "n_channels_scored": 58,
+      "avg_precision": 0.8190441271026698,
+      "avg_recall": 0.4410194123040303,
+      "avg_f1": 0.5550540667604341,
+      "avg_cef_0.5": 0.6991818250641164
+    },
+    "flat_z4.0": {
+      "n_channels_scored": 58,
+      "avg_precision": 0.8367674060600128,
+      "avg_recall": 0.43252445401016415,
+      "avg_f1": 0.5533794427150489,
+      "avg_cef_0.5": 0.7049890316084039
+    },
+    "flat_z4.5": {
+      "n_channels_scored": 58,
+      "avg_precision": 0.8500250942732729,
+      "avg_recall": 0.4251754085394862,
+      "avg_f1": 0.550400626380191,
+      "avg_cef_0.5": 0.7084447006769972
+    },
+    "flat_z5.0": {
+      "n_channels_scored": 58,
+      "avg_precision": 0.8550935233970582,
+      "avg_recall": 0.41905645262840985,
+      "avg_f1": 0.546948751847104,
+      "avg_cef_0.5": 0.7077978147204026
+    },
+    "flat_z6.0": {
+      "n_channels_scored": 58,
+      "avg_precision": 0.8618054642640831,
+      "avg_recall": 0.4064924041693231,
+      "avg_f1": 0.5373905087787719,
+      "avg_cef_0.5": 0.7040776671868715
+    },
+    "dynamic": {
+      "n_channels_scored": 58,
+      "avg_precision": 0.697884012539185,
+      "avg_recall": 0.06779227406373368,
+      "avg_f1": 0.1126961818518595,
+      "avg_cef_0.5": 0.244110172153661
+    }
+  },
+  "config": {
+    "data_dir": "/Volumes/DUAL DRIVE/esa-ad",
+    "missions": "1",
+    "max_channels": 58,
+    "ewma_span": 5,
+    "prune_p": 0.13,
+    "resample": "1h",
+    "window": 32,
+    "stride": 16,
+    "reused_models": true
+  }
+}

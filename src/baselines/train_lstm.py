@@ -86,8 +86,148 @@ def create_sequences(data: np.ndarray, window_size: int, stride: int = 1) -> np.
 
 
 def dynamic_threshold(errors: np.ndarray, z_score: float = Z_SCORE) -> float:
-    """Telemanom-style threshold: mean + z*std of the (normal) error distribution."""
+    """Flat Telemanom threshold: mean + z*std of the (normal) error distribution.
+
+    This is the Phase-2/7 baseline ("flat" method). It is *semi-supervised* -- it sets the
+    cutoff from the true-normal window errors only -- and is preserved as the reproducible
+    reference. Phase 11 adds the unsupervised pruned-dynamic method below.
+    """
     return float(np.mean(errors) + z_score * np.std(errors))
+
+
+# --------------------------------------------------------------------------- #
+# Phase 11: Telemanom pruned dynamic error thresholding (Hundman et al., 2018)
+# --------------------------------------------------------------------------- #
+# The canonical Telemanom scheme, applied to our per-window reconstruction-error stream
+# (windows are at a fixed stride on a CONTIGUOUS per-channel timeline, so the error series
+# is an ordered signal -- smoothing + sequence grouping are meaningful, unlike the LLM's
+# shuffled split). It is fully *unsupervised* (uses no labels to set the cutoff): a flat
+# mean+z*std under-thresholds noisy channels and over-thresholds clean ones; this searches
+# z per channel and then PRUNES marginal candidates whose error is not sufficiently above
+# the noise floor, which is the main false-positive killer.
+
+
+def _ewma(x: np.ndarray, span: int) -> np.ndarray:
+    """Exponentially-weighted moving average (smooth the error stream before thresholding)."""
+    if span <= 1 or len(x) == 0:
+        return x.astype("float64")
+    alpha = 2.0 / (span + 1.0)
+    out = np.empty(len(x), dtype="float64")
+    out[0] = x[0]
+    for i in range(1, len(x)):
+        out[i] = alpha * x[i] + (1.0 - alpha) * out[i - 1]
+    return out
+
+
+def _contiguous_runs(flags: np.ndarray) -> list[tuple[int, int]]:
+    """Return [(start, end_inclusive), ...] for each contiguous True run in a bool array."""
+    runs: list[tuple[int, int]] = []
+    i, n = 0, len(flags)
+    while i < n:
+        if flags[i]:
+            j = i
+            while j + 1 < n and flags[j + 1]:
+                j += 1
+            runs.append((i, j))
+            i = j + 1
+        else:
+            i += 1
+    return runs
+
+
+def find_epsilon(
+    e_s: np.ndarray, z_min: float = 2.5, z_max: float = 12.0, z_step: float = 0.5
+) -> float:
+    """Telemanom find_epsilon: pick the threshold that maximally cleans the error stream.
+
+    For each candidate z, eps = mean + z*std; removing the errors above eps should sharply
+    reduce both the mean and std of what remains, *without* flagging too many points or too
+    many separate sequences. Maximizes (Δmean% + Δstd%) / (n_sequences^2 + n_anomalies).
+    """
+    mean_e = float(np.mean(e_s))
+    std_e = float(np.std(e_s))
+    fallback = mean_e + Z_SCORE * std_e
+    if std_e == 0:
+        return fallback
+
+    best_score = -np.inf
+    best_eps = fallback
+    z = z_min
+    while z <= z_max:
+        eps = mean_e + z * std_e
+        above = e_s >= eps
+        n_anom = int(above.sum())
+        if 0 < n_anom < 0.5 * len(e_s):
+            kept = e_s[~above]
+            if len(kept) > 0:
+                d_mean = (mean_e - float(np.mean(kept))) / mean_e if mean_e else 0.0
+                d_std = (std_e - float(np.std(kept))) / std_e if std_e else 0.0
+                n_seqs = len(_contiguous_runs(above))
+                score = (d_mean + d_std) / (n_seqs**2 + n_anom)
+                if score > best_score:
+                    best_score = score
+                    best_eps = eps
+        z += z_step
+    return best_eps
+
+
+def prune_sequences(
+    e_s: np.ndarray, seqs: list[tuple[int, int]], p: float = 0.13
+) -> list[tuple[int, int]]:
+    """Telemanom pruning: drop anomaly sequences too close to the noise floor.
+
+    Sort the sequences' peak errors (plus the max non-anomalous error) descending; walk the
+    list and tentatively mark a sequence for removal when the % drop to the next peak is below
+    `p`, but RESET that removal list whenever a large drop appears (everything above the last
+    big drop is kept). Only the low-error tail of barely-separated candidates is pruned.
+    """
+    if not seqs:
+        return []
+    seq_max = [float(e_s[s : e + 1].max()) for s, e in seqs]
+    flags = np.zeros(len(e_s), dtype=bool)
+    for s, e in seqs:
+        flags[s : e + 1] = True
+    non_anom_max = float(e_s[~flags].max()) if (~flags).any() else 0.0
+
+    order = list(np.argsort(seq_max)[::-1])  # sequence indices, highest peak first
+    sorted_max = [seq_max[i] for i in order] + [non_anom_max]
+
+    remove_positions: list[int] = []
+    for i in range(len(sorted_max) - 1):
+        top = sorted_max[i]
+        drop = (top - sorted_max[i + 1]) / top if top > 0 else 0.0
+        if drop < p:
+            remove_positions.append(i)
+        else:
+            remove_positions = []  # a real separation -> keep everything up to here
+    remove = {order[i] for i in remove_positions}
+    return [seqs[i] for i in range(len(seqs)) if i not in remove]
+
+
+def detect_dynamic(errors: np.ndarray, ewma_span: int, prune_p: float) -> tuple[np.ndarray, float]:
+    """Run the full pruned-dynamic pipeline on a per-window error stream.
+
+    Returns (predicted_bool_per_window, epsilon-in-error-space). Pipeline:
+    log-transform -> EWMA smooth -> find_epsilon -> threshold -> group sequences -> prune.
+
+    The log transform is essential: reconstruction MSE is positive and heavy-tailed, so a
+    raw mean + z*std is dominated by a few catastrophic windows (epsilon explodes, recall
+    collapses). log makes the error distribution roughly Gaussian, so mean + z*std -- and the
+    Telemanom find_epsilon search over it -- behave as intended. The threshold is reported
+    back in linear error space (exp).
+    """
+    linear = np.asarray(errors, dtype="float64")
+    log_e = np.log(linear + 1e-12)
+    e_s = _ewma(log_e, ewma_span)
+    eps = find_epsilon(e_s)
+    above = e_s >= eps
+    # Prune on the *linear* error peaks (positive magnitudes, so the %-drop test is meaningful;
+    # log peaks are negative for sub-1 errors and break the ratio).
+    kept = prune_sequences(linear, _contiguous_runs(above), p=prune_p)
+    predicted = np.zeros(len(errors), dtype=bool)
+    for s, e in kept:
+        predicted[s : e + 1] = True
+    return predicted, float(np.exp(eps))
 
 
 def train_channel_model(
@@ -96,8 +236,14 @@ def train_channel_model(
     channel_name: str,
     mission: str,
     args: argparse.Namespace,
+    prior: dict | None = None,
 ) -> dict:
-    """Train an LSTM autoencoder on one channel and score it."""
+    """Train (or reuse) an LSTM autoencoder on one channel and score it.
+
+    `prior` is the same channel's record from a previous run; when --reuse-models loads a
+    saved model (skipping training), the loss history isn't regenerated, so initial/final
+    loss are carried over from `prior` (same weights => same losses).
+    """
     scaler = StandardScaler()
     normalized = scaler.fit_transform(series_values.reshape(-1, 1))
 
@@ -120,25 +266,44 @@ def train_channel_model(
         sel = rng.choice(len(train_sequences), size=args.max_train_seq, replace=False)
         train_sequences = train_sequences[sel]
 
-    model = build_lstm_model(input_shape=(args.window, 1))
-    early_stop = keras.callbacks.EarlyStopping(
-        monitor="loss", patience=3, restore_best_weights=True
-    )
-    history = model.fit(
-        train_sequences,
-        train_sequences,
-        epochs=args.epochs,
-        batch_size=BATCH_SIZE,
-        callbacks=[early_stop],
-        verbose=0,
-    )
-    losses = history.history["loss"]
+    model_path = MODELS_DIR / mission / f"{channel_name}.keras"
+    if args.reuse_models and model_path.exists():
+        # Re-thresholding only: the LSTM weights don't change, so reuse the saved model and
+        # carry the loss history from the prior run (avoids ~95 min of redundant retraining).
+        model = keras.models.load_model(model_path)
+        losses = [
+            float((prior or {}).get("initial_loss", float("nan"))),
+            float((prior or {}).get("final_loss", float("nan"))),
+        ]
+        epochs_ran = int((prior or {}).get("epochs_ran", 0))
+    else:
+        model = build_lstm_model(input_shape=(args.window, 1))
+        early_stop = keras.callbacks.EarlyStopping(
+            monitor="loss", patience=3, restore_best_weights=True
+        )
+        history = model.fit(
+            train_sequences,
+            train_sequences,
+            epochs=args.epochs,
+            batch_size=BATCH_SIZE,
+            callbacks=[early_stop],
+            verbose=0,
+        )
+        losses = history.history["loss"]
+        epochs_ran = len(losses)
 
     predictions = model.predict(sequences, verbose=0)
     errors = np.mean((sequences - predictions) ** 2, axis=(1, 2))
-    threshold = dynamic_threshold(errors[normal_mask])
 
-    predicted = errors > threshold
+    if args.threshold == "dynamic":
+        # Phase 11: unsupervised pruned dynamic thresholding over the contiguous error stream.
+        predicted, threshold = detect_dynamic(errors, args.ewma_span, args.prune_p)
+    else:
+        # Flat (Phase 2/7): semi-supervised mean + z*std of the true-normal-window errors.
+        # z is tunable (Phase 11): the untuned default 3.0 over-flags; ~4.0 lifts both F1 and
+        # CEF0.5 (fewer false positives) -- see tune_threshold.py for the operating curve.
+        threshold = dynamic_threshold(errors[normal_mask], z_score=args.z_score)
+        predicted = errors > threshold
     actual = window_is_anomaly
 
     tp = int(np.sum(predicted & actual))
@@ -148,8 +313,7 @@ def train_channel_model(
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
 
-    if args.save_models:
-        model_path = MODELS_DIR / mission / f"{channel_name}.keras"
+    if args.save_models and not (args.reuse_models and model_path.exists()):
         model_path.parent.mkdir(parents=True, exist_ok=True)
         model.save(model_path)
 
@@ -169,11 +333,12 @@ def train_channel_model(
         "recall": float(recall),
         "f1": float(f1),
         "threshold": threshold,
+        "threshold_method": args.threshold,
         "n_sequences": int(len(sequences)),
         "n_anomaly_windows": int(actual.sum()),
         "initial_loss": float(losses[0]),
         "final_loss": float(losses[-1]),
-        "epochs_ran": len(losses),
+        "epochs_ran": epochs_ran,
         "window": int(args.window),
         "stride": stride,
         "pred_starts": pred_starts,
@@ -195,6 +360,38 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--epochs", type=int, default=EPOCHS)
     p.add_argument(
+        "--threshold",
+        choices=["flat", "dynamic"],
+        default="flat",
+        help="flat = Phase-2/7 mean+3sigma (reproducible reference); "
+        "dynamic = Phase-11 Telemanom pruned dynamic thresholding",
+    )
+    p.add_argument(
+        "--z-score",
+        type=float,
+        default=Z_SCORE,
+        help="z for flat threshold mean+z*std (Phase-2/7 default 3.0; ~4.0 CEF0.5/F1-optimal)",
+    )
+    p.add_argument(
+        "--ewma-span",
+        type=int,
+        default=5,
+        help="EWMA smoothing span for the error stream (dynamic threshold only; <=1 disables). "
+        "Kept light: ESA anomalies are short (~3 windows), so heavy smoothing hurts recall.",
+    )
+    p.add_argument(
+        "--prune-p",
+        type=float,
+        default=0.13,
+        help="min %% drop between consecutive sequence peaks to keep a candidate (dynamic only)",
+    )
+    p.add_argument(
+        "--results-file",
+        default="baseline_results.json",
+        help="output filename within results/lstm/ (use a distinct name per threshold method "
+        "to keep both reproducible, e.g. baseline_results_dynamic.json)",
+    )
+    p.add_argument(
         "--max-channels",
         type=int,
         default=5,
@@ -205,6 +402,17 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--save-models", action="store_true", default=True)
     p.add_argument("--no-save-models", dest="save_models", action="store_false")
+    p.add_argument(
+        "--reuse-models",
+        action="store_true",
+        help="load the saved per-channel model instead of retraining (re-thresholding only); "
+        "loss history is carried over from --loss-source",
+    )
+    p.add_argument(
+        "--loss-source",
+        default="baseline_results.json",
+        help="prior results file (in results/lstm/) to copy loss history from when --reuse-models",
+    )
     p.add_argument("--seed", type=int, default=42)
     p.add_argument(
         "--resume",
@@ -254,15 +462,30 @@ def main():
 
     print(f"keras backend: {keras.backend.backend()}  |  raw data: {args.data_dir}")
     print(f"models -> {MODELS_DIR if args.save_models else '(not saved)'}")
+    print(f"threshold method: {args.threshold}  |  output: results/lstm/{args.results_file}")
 
-    results_file = RESULTS_DIR / "baseline_results.json"
+    results_file = RESULTS_DIR / args.results_file
+
+    # --reuse-models: carry loss history from a prior run keyed by (mission, channel), since
+    # loading a saved model doesn't regenerate it.
+    loss_lookup: dict[tuple[str, str], dict] = {}
+    if args.reuse_models:
+        loss_file = RESULTS_DIR / args.loss_source
+        if loss_file.exists():
+            prior_run = json.loads(loss_file.read_text())
+            loss_lookup = {
+                (c.get("mission"), c.get("channel")): c for c in prior_run.get("channels", [])
+            }
+            print(f"reuse-models: loaded loss history for {len(loss_lookup)} channel(s)")
+        else:
+            print(f"reuse-models: no loss source at {loss_file} (loss fields will be NaN)")
 
     # --resume: keep channels already scored in a prior run; skip re-training them.
     all_results: list[dict] = []
     done: set[tuple[str, str]] = set()
     if args.resume and results_file.exists():
-        prior = json.loads(results_file.read_text())
-        all_results = prior.get("channels", [])
+        prior_results = json.loads(results_file.read_text())
+        all_results = prior_results.get("channels", [])
         done = {(c.get("mission"), c.get("channel")) for c in all_results}
         print(f"resume: {len(done)} channel(s) already scored, skipping those")
 
@@ -281,7 +504,14 @@ def main():
             else:
                 point_mask = anomaly_mask_for_channel(series.index, channel, labels)
                 all_results.append(
-                    train_channel_model(series.values, point_mask, channel, mission, args)
+                    train_channel_model(
+                        series.values,
+                        point_mask,
+                        channel,
+                        mission,
+                        args,
+                        prior=loss_lookup.get((mission, channel)),
+                    )
                 )
             # Flush after every channel so an interruption is a cheap re-run (with --resume).
             write_output(all_results, args, results_file)

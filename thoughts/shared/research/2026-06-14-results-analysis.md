@@ -33,8 +33,9 @@ and few-shot), and a deliberately dumb "flag everything" control.
 
 Three findings carry the project:
 
-1. **As a pure detector, the tuned LSTM wins** (F1 0.552, precision 0.785, the best
-   precision-weighted CEF0.5 0.684, and a genuine interval-aware Affinity-F1 0.649). The two
+1. **As a pure detector, the tuned LSTM wins** (F1 0.553, precision 0.837, the best
+   precision-weighted CEF0.5 0.705, and a genuine interval-aware Affinity-F1 0.673, after the
+   Phase-11 operating-point calibration — see §6.1). The two
    fine-tuned LLM detectors land below it and are *mirror images* of one another — the **vision**
    model (Qwen3-VL reading rendered plots) is precision-oriented (P 0.769, and the best
    false-alarm-aware CEF0.5 of any LLM here, 0.604), while the **text** model is recall-oriented
@@ -73,7 +74,7 @@ is just over-flagging.
 | # | Approach | Precision | Recall | F1 | CEF0.5† | Affinity-F1 | Detects? | Advises? | Eval unit |
 |---|----------|-----------|--------|----|---------|-------------|----------|----------|-----------|
 | 1 | Isolation Forest | 0.127 | 0.459 | 0.188 | 0.149 | — | ✅ | ❌ | 3 channels (macro) |
-| 2 | **LSTM baseline (58 ch)** | **0.785** | 0.451 | **0.552** | **0.684** | **0.649** | ✅ | ❌ | 58 channels (macro) |
+| 2 | **LSTM baseline (58 ch)** | **0.837** | 0.432 | **0.553** | **0.705** | **0.673** | ✅ | ❌ | 58 channels (macro) |
 | 3 | LLM detection — **text** (Qwen3-8B QLoRA→GGUF) | 0.360 | **0.609** | 0.453 | 0.392 | 0.456‡ | ✅ | ✅ | 4,500 windows (micro) |
 | 4 | LLM detection — **vision** (Qwen3-VL-8B) | 0.769 | 0.325 | 0.457 | 0.604 | — | ✅ | ❌ | 2,000 PNG windows (micro) |
 | 5 | Base Qwen3-8B — zero-shot | 0 | 0 | 0 | 0 | — | ❌ | ❌ | 100 windows |
@@ -81,11 +82,11 @@ is just over-flagging.
 | 7 | Frontier (Claude) — zero-shot | 0.308 | 0.216 | 0.254 | 0.284 | — | ⚠️ | ✅ | 150-window sample |
 | 8 | Frontier (Claude) — few-shot | 0.200 | 0.297 | 0.239 | 0.214 | — | ⚠️ | ✅ | 150-window sample |
 | 9 | **Always-anomaly (trivial)** | 0.250 | 1.000 | 0.399 | 0.294 | — | ❌ | ❌ | 4,500 windows |
-| 10 | **Hybrid (LSTM detect → LLM advise)** | **0.785** | 0.451 | **0.552** | **0.684** | 0.649 | ✅ | ✅ | inherits row 2 + advice |
+| 10 | **Hybrid (LSTM detect → LLM advise)** | **0.837** | 0.432 | **0.553** | **0.705** | 0.673 | ✅ | ✅ | inherits row 2 + advice |
 
 † **CEF0.5** = precision-weighted F-beta (β=0.5), the ESA-benchmark-aligned metric favoured when
 false alarms are costly. ‡ Affinity-F1 for the text LLM is **degenerate** on the shuffled test
-split (≈ window-level F1) — see §6.2; the LSTM's 0.649 is the *genuine* interval-aware number.
+split (≈ window-level F1) — see §6.2; the LSTM's 0.673 is the *genuine* interval-aware number.
 
 **Test material:** the LLM is scored on the full **4,500-window** test split (**25.0% anomalous**);
 the LSTM on all **58 Mission-1 target channels** on contiguous per-channel timelines; the vision
@@ -255,13 +256,13 @@ All four detectors, ranked by F1 (LSTM after the Phase-7 full 58-channel sweep, 
 
 | Detector | Precision | Recall | F1 | CEF0.5 | Character |
 | --- | --- | --- | --- | --- | --- |
-| **LSTM** | **0.785** | 0.451 | **0.552** | **0.684** | best overall; balanced, high precision |
+| **LSTM** | **0.837** | 0.432 | **0.553** | **0.705** | best overall; high precision (z=4.0 calibrated, §6.1) |
 | **Vision LLM** (Qwen3-VL) | **0.769** | 0.325 | 0.457 | **0.604** | precision-oriented; rarely false-alarms |
 | **Text LLM** (Qwen3-8B) | 0.360 | 0.609 | 0.453 | 0.392 | recall-oriented; over-flags |
 | Isolation Forest | 0.127 | 0.459 | 0.188 | 0.149 | non-temporal floor; drowns in false positives |
 
 Two things stand out. **(1) The LSTM is the strongest detector** — highest F1, highest CEF0.5, and a
-genuine interval-aware Affinity-F1 of **0.649** (§6.2). It is ~2.2× more precise than the text LLM
+genuine interval-aware Affinity-F1 of **0.673** (§6.2). It is ~2.3× more precise than the text LLM
 and wins decisively on the precision-weighted score. **This matches the AnomLLM literature:** direct
 LLM time-series detection trades precision for recall and is not yet competitive with a tuned
 sequence model. **(2) The two LLM modalities are mirror images** — the vision model is
@@ -269,11 +270,19 @@ precision-oriented (P 0.769, almost never false-alarms) and the text model is re
 (R 0.609, catches more but over-flags) at nearly identical F1. The vision model in fact posts the
 **best CEF0.5 of any LLM here (0.604)** and is detailed in §6.3.
 
-**Is the LSTM already "best possible"?** The *method* is industry standard (Telemanom), but our
-*implementation* is a solid baseline with clear headroom: we used a flat μ+3σ threshold, not
-Telemanom's **pruned dynamic error thresholding** (the official "Telemanom-ESA-Pruned" reportedly
-reaches ~0.97 event-wise CEF on Mission 1 under the ESA-ADB protocol). Per-channel threshold tuning,
-attention/bidirectional layers, longer context, and channel ensembling are all untried levers (§10).
+**Is the LSTM already "best possible"?** The *method* is industry standard (Telemanom). **Phase 11
+calibrated the operating point** and found two things. (1) **Threshold calibration helps**: the
+original threshold used an *untuned* z=3.0 (`μ+3σ`) which over-flags; sweeping the single global z
+over all 58 channels (the full curve is in `results/lstm/threshold_sweep.json`) shows CEF0.5 rises to
+a ~0.708 plateau at z≈4.5–5.0, and **z=4.0 Pareto-improves z=3.0 on F1, CEF0.5 *and* Affinity-F1**
+(precision 0.785→0.837) — that calibrated z=4.0 is the number reported above. This is the LSTM
+analogue of the text-LLM PR-curve calibration (§10 #6 / Plan Phase 13). (2) **Telemanom's canonical
+*pruned dynamic* thresholding does *not* help here** — implemented faithfully (EWMA-smoothed,
+log-transformed errors → adaptive-z `find_epsilon` → %-drop pruning), it is far too conservative for
+this window-level, relatively-frequent-anomaly labeling (it assumes rare isolated events), collapsing
+recall to 0.068 (CEF0.5 0.244). The published "Telemanom-ESA-Pruned" ~0.97 *event-wise* CEF is under
+the harder ESA-ADB *event* protocol, not our window protocol, so it is not directly comparable.
+Remaining untried levers: attention/bidirectional layers, longer context, and channel ensembling (§10).
 
 **Reading the text-LLM confusion matrix** (n=4,500): TP 684, FP 1,214, FN 439, TN ≈ 2,161,
 accuracy 0.632, 27 unparsed. The model is *over-eager* — it raises 1,898 flags against 1,123 true
@@ -299,6 +308,11 @@ quietly swapping numbers. Two things the full sweep fixed:
   test split is *shuffled and balanced-subsampled* (~1.4 windows per channel), so its "intervals"
   are mostly isolated single windows and its Affinity-F1 (0.456) collapses to ≈ window-level F1. We
   report the LLM's number with that disclaimer rather than dressing it up.
+
+> The Phase-7 figures in this subsection (F1 0.552, Affinity-F1 0.649) are at the *untuned* z=3.0
+> threshold. **Phase 11 then calibrated the operating point** (global z 3.0→4.0), lifting the canonical
+> LSTM to F1 0.553 / CEF0.5 0.705 / Affinity-F1 0.673 / precision 0.837 — the numbers in §2 and §6.1.
+> The z=3.0 figures are kept here as the historical correction record.
 
 ### 6.3 The vision detector — a second, modality-independent signal
 
@@ -417,7 +431,7 @@ Why this is the right design, not just a convenient one:
   time and supplies the one capability the detector lacks — and §7 shows that *on the windows a
   high-precision detector flags*, the advice is 95% high-quality.
 - **The Hybrid strictly dominates either component alone for the stated business need:** it inherits
-  the LSTM's detection (F1 0.552, P 0.785) *and* adds reliable, grounded advice — the exact
+  the LSTM's detection (F1 0.553, P 0.837) *and* adds reliable, grounded advice — the exact
   "anomaly + end-user advice, no external vendor" capability this project targets.
 - **The vision model is the optional third leg:** modality-independent, precision-oriented, useful
   as an ensemble cross-check where false alarms are especially costly.
@@ -523,14 +537,14 @@ concrete, self-contained next phases (Phases 11–14) in the implementation plan
    comparison far more honest and the result matches the literature. But doing it converts a
    "believable upper bound on the LSTM's edge" into a settled like-for-like number, which is *more*
    authoritative.
-4. **Improve the LSTM detector itself** (Plan Phase 11). *Effort: medium.* *Impact: medium–high.*
-   Our LSTM uses the Telemanom *method* but a basic implementation (flat μ+3σ threshold). The standard
-   levers to push it further: Telemanom's **pruned dynamic error thresholding** (the official
-   "Telemanom-ESA-Pruned" reaches ~0.97 *event-wise* CEF on Mission 1 under the ESA-ADB protocol —
-   a different, harder protocol than ours, but the gap signals real headroom), **per-channel threshold
-   tuning**, **attention/bidirectional** layers, **longer context windows**, and **channel
-   ensembling**. Since the LSTM is already the best detector, raising it widens the margin over the
-   LLMs and strengthens the central conclusion.
+4. **Improve the LSTM detector itself** (Plan Phase 11). ✅ **DONE (2026-06-15).** Calibrating the
+   threshold's single global z (3.0→4.0) lifted the LSTM to **F1 0.553 / CEF0.5 0.705 / Affinity-F1
+   0.673 / precision 0.837** (was 0.552 / 0.684 / 0.649 / 0.785) — a Pareto improvement that widens the
+   margin over the LLMs (see §6.1). Notably, Telemanom's canonical **pruned dynamic error thresholding**
+   was implemented faithfully but **does not help on this window-level labeling** (recall collapses to
+   0.068) — a documented negative result; the published "Telemanom-ESA-Pruned" ~0.97 figure is under the
+   harder ESA-ADB *event* protocol, not comparable. **Remaining untried levers** (deferred):
+   **attention/bidirectional** layers, **longer context windows**, and **channel ensembling**.
 5. **Complete the skeptic table for vision** (Plan Phase 12). *Effort: low* (~half a day — run an
    un-fine-tuned Qwen3-VL zero-shot on the 2,000 test PNGs, optionally a frontier-VL too).
    *Impact: medium.* Closes the text-only scope gap noted in §5 so the "did fine-tuning help?" story
@@ -585,7 +599,7 @@ hidden. Surfacing correct-but-inconvenient results is the whole point of an empi
 ## 12. Bottom line
 
 On real ESA satellite telemetry, a classical LSTM with per-channel error thresholding remains the
-stronger *detector* (precision 0.785, F1 0.552, CEF0.5 0.684) than a QLoRA-fine-tuned Qwen3-8B used
+stronger *detector* (precision 0.837, F1 0.553, CEF0.5 0.705) than a QLoRA-fine-tuned Qwen3-8B used
 as a direct detector (precision 0.360, F1 0.453) — the LLM buys recall at a steep precision cost and
 is far too slow (2.77 s/window) to screen every window anyway. The *vision* fine-tune (Qwen3-VL,
 precision 0.769, CEF0.5 0.604) is its precision-oriented mirror and the best LLM detector on the

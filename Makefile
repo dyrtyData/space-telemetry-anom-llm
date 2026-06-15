@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision grade-advice-select grade-advice-assemble
+.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision grade-advice-select grade-advice-assemble
 
 PYTHON := python3
 VENV := .venv
@@ -12,6 +12,12 @@ MISSION ?= 1
 # Channels per mission for the LSTM baseline. Default 5 (quick smoke); set to 58 for the
 # full Mission-1 target-channel sweep (Phase 7): make baseline MAX_CHANNELS=58
 MAX_CHANNELS ?= 5
+# LSTM thresholding method (Phase 11). flat = Phase-2/7 mean+3sigma (reproducible
+# reference); dynamic = Telemanom pruned dynamic thresholding. Write each method to its own
+# RESULTS_FILE so both stay reproducible, then make the winner canonical for evaluate.py:
+#   make baseline MISSION=1 MAX_CHANNELS=58 THRESHOLD=dynamic RESULTS_FILE=baseline_results_dynamic.json
+THRESHOLD ?= flat
+RESULTS_FILE ?= baseline_results.json
 
 # Setup
 setup:
@@ -33,10 +39,16 @@ etl:
 # Baselines -- keras 3 runs on the torch backend (no tensorflow installed); raw data
 # comes from ESA_DATA_DIR, trained models go under STAR_OUTPUT_DIR (external drive).
 baseline:
-	KERAS_BACKEND=torch ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/baselines/train_lstm.py --missions $(MISSION) --max-channels $(MAX_CHANNELS) --resume
+	KERAS_BACKEND=torch ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/baselines/train_lstm.py --missions $(MISSION) --max-channels $(MAX_CHANNELS) --threshold $(THRESHOLD) --results-file $(RESULTS_FILE) --resume
 
 baseline-if:
 	ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/baselines/isolation_forest.py --missions $(MISSION)
+
+# Phase 11: calibrate the LSTM operating point. REUSES the saved per-channel models (no
+# retraining) to sweep the flat-threshold z grid + the Telemanom dynamic method in one pass,
+# writing results/lstm/threshold_sweep.json + the CEF0.5-optimal per-channel result file.
+tune-threshold:
+	KERAS_BACKEND=torch ESA_DATA_DIR="$(ESA_DATA_DIR)" $(PY) src/baselines/tune_threshold.py --missions $(MISSION) --max-channels $(MAX_CHANNELS)
 
 validate-baseline:
 	$(PY) -c "\
