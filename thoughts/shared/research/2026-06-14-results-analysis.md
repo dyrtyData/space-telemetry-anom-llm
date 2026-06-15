@@ -12,6 +12,8 @@ limitations, and the next steps.
 - Auto-generated metrics report: [`results/comparison_report.md`](../../../results/comparison_report.md)
   and [`results/comparison_metrics.json`](../../../results/comparison_metrics.json)
 - Original brief: [`space_telemetry_anom_llm_ISSUE.md`](../issues/space_telemetry_anom_llm_ISSUE.md)
+  (the brief is a product brief: a PM needs anomaly detection + end-user advice and wants to own the
+  model rather than depend on an external API)
 - Validated architecture research: [`2026-06-12-star-pipeline-codebase-research.md`](2026-06-12-star-pipeline-codebase-research.md)
 - Implementation plan: [`2026-06-12-star-pipeline-create-plan.md`](../plans/2026-06-12-star-pipeline-create-plan.md)
 - Implementation log (every deviation D1–D38, the full saga):

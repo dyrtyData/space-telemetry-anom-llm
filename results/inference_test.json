@@ -12,7 +12,7 @@
     "tn": 2161,
     "unknown_responses": 27,
     "avg_time_s": 2.765,
-    "gguf_path": "/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf",
+    "gguf_path": "~/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf",
     "partial": false
   },
   "results": [

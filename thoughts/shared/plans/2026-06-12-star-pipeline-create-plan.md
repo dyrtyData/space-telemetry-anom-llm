@@ -10,7 +10,7 @@ Build an end-to-end Space Telemetry Anomaly Detection & Resolution Pipeline (STA
 > self-contained (current state, paths, commands, risks, fallbacks). Start there. Recommended
 > first: **Phase 6** (prove fine-tuning helped — free, no cloud).
 
-**Target**: FDL AI Engineering interview showcase demonstrating ability to fine-tune models for localized business use cases.
+**Target**: An AI-engineering technical showcase demonstrating the ability to fine-tune open-source models for localized business use cases.
 
 ## Current State Analysis
 
@@ -1499,7 +1499,7 @@ if __name__ == "__main__":
 > 1. **§4.2 GGUF cannot go on DUAL DRIVE (FAT32 4 GB file limit).** The GGUF is 5,027,784,160
 >    bytes (~4.68 GiB). FAT32 has a hard 4 GB-per-file limit — the download will corrupt or fail
 >    at the 4 GB mark. **Download the GGUF to the local APFS SSD instead:**
->    `STAR_MODEL_DIR = /Users/laptop/Developer/fdl_technicalInterview/models`
+>    `STAR_MODEL_DIR = ~/models`
 >    (63 GB free as of 2026-06-13). The Makefile default has been updated accordingly (D17).
 >    The LoRA adapter (167 MB each file) is fine on DUAL DRIVE; only the GGUF needs APFS.
 > 2. **Vast.ai instance location affects download speed.** The Phase 3 instance was in Hungary
@@ -1703,7 +1703,7 @@ pandas>=2.1.0
 - [x] §4.1 GGUF export ran on instance: `qwen3-8b.Q4_K_M.gguf` (4.7GB q4_k_m) produced by Unsloth
 - [x] §4.4 llama-cpp-python 0.3.29 installed with Metal: `llama_supports_gpu_offload()=True` on M3 Max
 - [x] §4.3 `test_local_gguf.py` written: loads from STAR_MODEL_DIR, uses test_with_advice.jsonl
-- [x] GGUF downloaded to local SSD: 5,027,784,160 bytes at `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
+- [x] GGUF downloaded to local SSD: 5,027,784,160 bytes at `~/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
   (D19: US relay spun up but obsoleted by D20; D20: uploaded to HF Hub `dyrtyData/star-pipeline-qwen3-8b-advice-gguf` at 102 MB/s from Hungary, downloaded via CDN in <60s)
 - [x] Instance terminated: Hungary 40838191 + relay 40866462 both destroyed (GGUF on local + HF)
 - [x] Model loads without errors: `make eval-llm` ✅ exit code 0; n_gpu_layers=2147483647 (all layers Metal)
@@ -1768,7 +1768,7 @@ pandas>=2.1.0
 >    - Hybrid (LSTM flags + LLM advice) isn't wired yet — define how it's scored before claiming it
 >
 > 6. **GGUF is on local APFS SSD, not DUAL DRIVE.**
->    `STAR_MODEL_DIR=/Users/laptop/Developer/fdl_technicalInterview/models` (updated in Makefile).
+>    `STAR_MODEL_DIR=~/models` (updated in Makefile).
 >    The Phase 4 storage note about DUAL DRIVE applied to LoRA only; the GGUF exceeded FAT32's
 >    4 GB file limit (D17) and was redirected to APFS. Phase 5 only needs to read
 >    `results/inference_test.json` (already on local disk), so no model loading needed.
@@ -2097,7 +2097,7 @@ git commit -m "[Setup] Initialize implementation log"
 
 **What exists:**
 - **Fine-tuned TEXT model** (advice SFT, the one evaluated in Phase 5):
-  - GGUF (4.7 GB, WORKING): `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
+  - GGUF (4.7 GB, WORKING): `~/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
   - LoRA adapter (167 MB): `/Volumes/DUAL DRIVE/star-pipeline/models/lora/qwen3-8b-advice/`
   - HF: `dyrtyData/star-pipeline-qwen3-8b-advice-gguf` (public)
 - **Baselines:** `results/lstm/baseline_results.json` (3 channels), `results/isolation_forest/if_results.json` (3 channels)
@@ -2451,7 +2451,7 @@ Assets are ready (PNGs + `train_detection.py`); only the training run + eval rem
 > - `results/inference_test.json` — fine-tuned text model, **n=4500**. ⚠️ **gitignored**
 >   (`results/**/*.json`), so it lives on the working-tree disk but is NOT in git history. If a
 >   fresh thread finds it missing, regenerate with `make eval-llm LIMIT=0` (~2.5 h, M3 Max; needs
->   the GGUF at `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/`).
+>   the GGUF at `~/models/gguf/star-pipeline-advice_gguf/`).
 >   Per-record schema: `{index, mission, channel, is_anomaly, predicted ("ANOMALY"|"NOMINAL"|
 >   "UNKNOWN"), correct, expected_response, actual_response (≤300 chars), elapsed_s}`. The model's
 >   advice IS `actual_response`; **it is truncated at 300 chars, which clips the trailing `ACTION:`

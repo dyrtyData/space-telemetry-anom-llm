@@ -52,15 +52,15 @@ are costly (the ESA-benchmark-aligned score).
 
 ## Why this project
 
-The brief, from a friend evaluating the author for a mission-critical AI role: a product needs
-**anomaly detection + end-user advice on the effect of a change**, and the team wants to **own the
-model** rather than depend on an external API. The open question — *can a fine-tuned open-source LLM
-do this, and is fine-tuning even worth it over prompting an API?* — is answered **empirically** here.
+The brief: a product needs **anomaly detection + end-user advice on the effect of a change** for a
+mission-critical system, and the team wants to **own the model** rather than depend on an external
+API. The open question — *can a fine-tuned open-source LLM do this, and is fine-tuning even worth it
+over prompting an API?* — is answered **empirically** here.
 
-The hiring signal is explicitly *"the ability to move beyond external API wrappers and successfully
-fine-tune open-source foundation models for highly specific, localized business use cases."* So the
-project demonstrates production-style ETL, classical-ML baselines, **LLM fine-tuning via
-QLoRA/Unsloth** (text *and* vision), GGUF export, local Metal inference, and a rigorous,
+The target capability is explicitly *"the ability to move beyond external API wrappers and
+successfully fine-tune open-source foundation models for highly specific, localized business use
+cases."* So the project demonstrates production-style ETL, classical-ML baselines, **LLM fine-tuning
+via QLoRA/Unsloth** (text *and* vision), GGUF export, local Metal inference, and a rigorous,
 honestly-reported evaluation — including the controls most fine-tuning demos skip.
 
 ---
@@ -281,5 +281,8 @@ Each has a concrete next step in the
 
 ## License & data
 
-Code is provided for review. The ESA-AD dataset is governed by its own license/terms (see Zenodo);
-raw telemetry is not redistributed in this repo.
+Code in this repository is released under the **MIT License** (see [`LICENSE`](LICENSE)). The
+**ESA Anomaly Dataset** is governed by its own license — **CC BY 3.0 IGO** (attribution required,
+commercial use permitted, no share-alike) — per its [Zenodo record](https://doi.org/10.5281/zenodo.12528696);
+raw telemetry is **not** redistributed here. Any derived artifacts published elsewhere (e.g. the
+fine-tuned models on Hugging Face) attribute ESA / the ESA-AD authors accordingly.

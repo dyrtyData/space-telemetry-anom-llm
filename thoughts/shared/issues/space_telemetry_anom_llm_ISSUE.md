@@ -21,7 +21,7 @@
 
 The primary objective of this project is to build an end-to-end, production-ready AI pipeline that detects anomalies in multivariate time-series data and automatically generates human-readable diagnostic advice.
 
-Ultimate Goal: This project serves as a technical showcase for an upcoming AI Engineering interview for a mission-critical infrastructure role. The hiring team needs to see a demonstrated ability to move beyond external API wrappers and successfully fine-tune open-source foundation models for highly specific, localized business use cases (specifically, anomaly detection and end-user resolution advice). The architecture, ETL robustness, and evaluation metrics must reflect senior-level engineering standards.
+Ultimate Goal: This project is a technical showcase for a mission-critical infrastructure use case. It demonstrates the ability to move beyond external API wrappers and successfully fine-tune open-source foundation models for highly specific, localized business use cases (specifically, anomaly detection and end-user resolution advice). The architecture, ETL robustness, and evaluation metrics are held to senior-level engineering standards.
 
 ## 2. Hardware Constraints & Compute Strategy
 
@@ -53,7 +53,7 @@ The model needs to learn the rhythm of nominal spacecraft operations to identify
 * ESA Anomaly Dataset (ESA-AD): A ~12 GB real-life satellite telemetry dataset from the European Space Agency with curated anomaly annotations. [d-nb.info/1361113049/34](https://d-nb.info/1361113049/34) (Official benchmark pipeline reference: kplabs-pl/ESA-ADB on GitHub).
 * NASA MSL & SMAP Telemetry: Real spacecraft multivariate time-series telemetry from the Curiosity Rover and SMAP satellite. [kaggle.com/datasets/patrickfleith/nasa-anomaly-detection-dataset-smap-msl](https://www.kaggle.com/datasets/patrickfleith/nasa-anomaly-detection-dataset-smap-msl)
 
-note: Validate this approach against your research and propose adjustments in your generated plan. If there are more relevant datasets that would be better for this project, please do deep research to find them, ideally they also satisfy what FDL in /Users/laptop/Developer/fdl_technicalInterview/space-telemetry-anom-llm/thoughts/issues/Nina_FDL.png is looking for -- 'space-based observing and working with satellite/space telescope data'. Explain all of your reasoning for whatever you choose.
+note: Validate this approach against your research and propose adjustments in your generated plan. If there are more relevant datasets that would be better for this project, please do deep research to find them, ideally ones suited to space-based observing and working with satellite / space-telescope data. Explain all of your reasoning for whatever you choose.
 
 ## 5. Suggested Pipeline Walkthrough
 
@@ -72,7 +72,5 @@ Note: these are proposed...Validate this approach against your research and prop
 * A traditional ML baseline (e.g., LSTM) is trained and evaluated.
 * An open-source LLM is fine-tuned via Unsloth and successfully infers both the presence of an anomaly and the correct diagnostic advice from a raw telemetry patch.
 * Evaluation metrics (False Positives, Precision, Recall) are documented comparing the LLM approach vs. the traditional baseline.
-
-Reference Doc - original Gemini thread: /Users/laptop/Developer/fdl_technicalInterview/space-telemetry-anom-llm/thoughts/issues/space-anomaly-detection-ai-advice_exploratoryThread.md
 
 Note: always track all changes to git.

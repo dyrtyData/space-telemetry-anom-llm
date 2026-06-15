@@ -7,7 +7,7 @@ set -e
 SSH_OPTS="-i ~/.ssh/vast_star -p 60642 -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o Compression=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3"
 REMOTE="root@81.183.231.113"
 REMOTE_FILE="/workspace/star-pipeline/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf"
-LOCAL_BASE="/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf"
+LOCAL_BASE="$HOME/models/gguf/star-pipeline-advice_gguf"
 EXPECTED_BYTES=5027784160
 NUM_PARTS=8
 CHUNK_MB=600

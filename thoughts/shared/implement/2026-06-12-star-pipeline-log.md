@@ -298,7 +298,7 @@ Re-audited true Phase 1 state against the plan's success criteria:
 
 ### Phase 2 impact on remaining phases
 - No impact on Phases 3–5 (LLM fine-tuning uses JSONL splits, not the LSTM models).
-- The 3-channel smoke run is sufficient for the interview showcase; a full sweep can run
+- The 3-channel smoke run is sufficient for the initial showcase; a full sweep can run
   in background before the Phase 5 comparison table is generated.
 
 ---
@@ -462,7 +462,7 @@ code had known bugs flagged in the MUST-READ blocks). Files:
 - **Deviation D17 — GGUF (5GB) exceeds FAT32 4 GB file limit**: DUAL DRIVE is FAT32 and cannot
   hold a single file larger than 4,294,967,295 bytes. The GGUF is 5,027,784,160 bytes (~4.68 GiB).
   **Fix**: download GGUF to local APFS SSD at
-  `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/`
+  `~/models/gguf/star-pipeline-advice_gguf/`
   (63 GB free). Makefile STAR_MODEL_DIR default updated to this path. LoRA remains on DUAL DRIVE
   (each file <200 MB, within FAT32 limit). Plan MUST-READ updated with FAT32 warning.
 - **Deviation D18 — Hungary instance → slow SSH transfer (300–400 KB/s aggregate)**: Instance 40838191
@@ -521,7 +521,7 @@ issue was local environment. Ran background HF upload on Hungary:
   `https://huggingface.co/dyrtyData/star-pipeline-qwen3-8b-advice-gguf/commit/2732a9ffb8de9b4af6c74225e622b89ebb8aede4`
 - Local download via `hf_hub_download` with CDN: ~4.7 GB/s effective throughput, completed in <60s.
   Temp file in `.cache/huggingface/download/`, moved to final path on completion.
-- **Final path**: `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
+- **Final path**: `~/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
 - **Verified**: `stat -f "%z"` → 5,027,784,160 bytes (exact match)
 
 **Instances destroyed**: Hungary 40838191 and relay 40866462 both destroyed after GGUF confirmed locally.
@@ -531,7 +531,7 @@ issue was local environment. Ran background HF upload on Hungary:
 - **Started**: 2026-06-13 19:45 local
 - **Completed**: 2026-06-13 19:55 local
 - **Status**: completed ✅
-- **Command**: `STAR_MODEL_DIR=/Users/laptop/Developer/fdl_technicalInterview/models make eval-llm`
+- **Command**: `STAR_MODEL_DIR=~/models make eval-llm`
 - **Output**: `results/inference_test.json`
 - **Results (100-sample smoke test)**:
   - Accuracy: 0.690 | Precision: 0.432 | Recall: 0.615 | **F1: 0.508**
@@ -704,7 +704,7 @@ Background Processes", committed `eed8d41` + a follow-up).
 - **Attempt 3 (CURRENT, running)**: detached daemon, survives session + blocks system sleep:
   ```
   cd <repo> && ( nohup caffeinate -dimsu env \
-    STAR_MODEL_DIR="/Users/laptop/Developer/fdl_technicalInterview/models" PYTHONUNBUFFERED=1 \
+    STAR_MODEL_DIR="~/models" PYTHONUNBUFFERED=1 \
     .venv/bin/python src/inference/test_local_gguf.py --limit 0 --resume --checkpoint-every 250 \
     > results/.eval_llm_full.log 2>&1 < /dev/null & )
   ```
@@ -727,7 +727,7 @@ Background Processes", committed `eed8d41` + a follow-up).
 COMPLETE and committed; the only thing in flight is the optional **full 4,500-sample LLM eval**
 (Attempt 3 running detached). Everything else is done.
 
-**Repo:** `/Users/laptop/Developer/fdl_technicalInterview/space-telemetry-anom-llm` (branch `main`).
+**Repo:** `~/space-telemetry-anom-llm` (branch `main`).
 **Plan:** `thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`.
 **Key git commits:** `6c9220a` (Phase 5 report + evaluate.py), `1bfd715` (eval hardening),
 `eed8d41` in `~/.claude` (CLAUDE.md durability guidance).
@@ -736,9 +736,9 @@ COMPLETE and committed; the only thing in flight is the optional **full 4,500-sa
 - Raw ESA-AD: `/Volumes/DUAL DRIVE/esa-ad/` (FAT32; KEEP until project teardown).
 - LoRA: `/Volumes/DUAL DRIVE/star-pipeline/models/lora/qwen3-8b-advice/`.
 - GGUF (5 GB, exceeds FAT32 4 GB limit → on local APFS):
-  `/Users/laptop/Developer/fdl_technicalInterview/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
+  `~/models/gguf/star-pipeline-advice_gguf/qwen3-8b.Q4_K_M.gguf`
   (also on HF: `dyrtyData/star-pipeline-qwen3-8b-advice-gguf`).
-- `STAR_MODEL_DIR=/Users/laptop/Developer/fdl_technicalInterview/models` (Makefile default).
+- `STAR_MODEL_DIR=~/models` (Makefile default).
 
 **To check the in-flight eval:**
 ```

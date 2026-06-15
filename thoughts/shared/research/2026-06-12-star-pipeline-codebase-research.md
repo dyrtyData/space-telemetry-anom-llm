@@ -15,7 +15,7 @@ last_updated_by: Claude Code
 
 **Purpose**: This document provides the validated research findings and recommended architecture for the Space Telemetry Anomaly Detection & Resolution Pipeline (STAR-Pipeline). It is ready for the `/create_plan` workflow.
 
-**Target**: FDL (Frontier Development Lab) AI Engineering interview showcase demonstrating fine-tuning capability for mission-critical infrastructure.
+**Target**: An AI-engineering technical showcase demonstrating fine-tuning capability for mission-critical infrastructure.
 
 ---
 

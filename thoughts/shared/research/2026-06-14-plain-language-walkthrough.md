@@ -20,7 +20,7 @@ something drifts, spikes, or freezes: an **anomaly**. Two things are wanted:
 1. **Detection** — automatically notice the anomaly.
 2. **Advice** — tell a human operator, in plain English, *what* it means and *what to do*.
 
-A friend who manages a mission-critical product asked: *can a fine-tuned, open-source AI model do
+A product manager for a mission-critical system asked: *can a fine-tuned, open-source AI model do
 both — so we own the model instead of renting an external API?* This project answers that
 **empirically** (by building and measuring it) rather than by opinion.
 
