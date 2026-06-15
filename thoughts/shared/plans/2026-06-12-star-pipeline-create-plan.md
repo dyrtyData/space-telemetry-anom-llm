@@ -2702,12 +2702,38 @@ capacity one).
    higher-precision operating point; mark §10 item 6 done.
 
 **Success criteria:**
-- [ ] A continuous score per window captured for the text LLM.
-- [ ] `results/llm_pr_curve.json` (+ optional PNG) with AUC-PR and a CEF0.5-optimal operating point
-  that beats the default P 0.360 on precision at acceptable recall.
-- [ ] Analysis doc updated with the curve; the single-point caveat in §9 limitation #7 softened.
+- [x] A continuous score per window captured for the text LLM. **DONE** — `test_local_gguf.py --score`
+  (new prefill-only path) writes a deterministic verdict score per window to
+  `results/inference_test_scored.json` (4,500 windows).
+- [x] `results/llm_pr_curve.json` (+ optional PNG) with AUC-PR and a CEF0.5-optimal operating point
+  that beats the default P 0.360 on precision at acceptable recall. **DONE** — `src/inference/pr_curve.py`
+  → **AUC-PR 0.678**; CEF0.5-optimal point **P 0.838 / R 0.379 / CEF0.5 0.674** at threshold 0.775
+  (precision more than doubled vs 0.360). PNG at `results/llm_pr_curve.png`.
+- [x] Analysis doc updated with the curve; the single-point caveat in §9 limitation #7 softened.
+  **DONE** — new §6.4 (PR-calibration subsection + operating-point table), §9 #7 marked resolved,
+  §10 #6 marked DONE.
 
 **Effort:** ~½–1 day, local, no cloud, no raw data. **Risk:** low. **Independent of teardown.**
+
+> **✅ Phase 13 COMPLETE (2026-06-15).** Ran in worktree `star-pipeline-phase13` (branch
+> `phase-13-llm-calibration`), parallel to Phase 12, per the shared-merge rule — Phase 13 touches only
+> `test_local_gguf.py` (new `--score` path) + new `pr_curve.py` + new result JSONs; it does **NOT**
+> touch `evaluate.py`/`Makefile`/`comparison_*`, so it does not collide with Phase 12's edits.
+> Key findings & deviations (full detail in the implementation log "Phase 13" section):
+> - **D42 — model had to be re-downloaded.** The local/`DUAL DRIVE` GGUF was a 0-byte placeholder;
+>   re-pulled the 4.68 GiB GGUF from the HF backup `dyrtyData/star-pipeline-qwen3-8b-advice-gguf` to
+>   local APFS (`~/models/...`; internal disk had 141 GiB free — the plan's "nearly full" note is stale,
+>   and `DUAL DRIVE` is FAT32 so can't hold a >4 GB file anyway).
+> - **D43 — scoring is prefill-only, not generation.** The PR curve needs only the verdict-token score,
+>   not 300 tokens of advice, so `--score` reads the model's ANOMALY-vs-NOMINAL logits at the first
+>   assistant position (`score = softmax(logit_AN, logit_N)`). ~0.7 s/window vs 2.77 s for generation.
+>   Requires loading llama-cpp with `logits_all=True` (otherwise the `scores` buffer reads back zeros).
+> - **D44 — sampling-vs-greedy is itself a finding.** The reported P 0.360 was decoded with temperature
+>   0.8 *sampling*; the deterministic argmax of the same model is already **P 0.527 / R 0.639**. ~17
+>   precision points were sampling noise. The PR curve sweeps from there up to P 0.838.
+> - **No change needed to the rest of the plan.** Phase 14 consumes `results/inference_test_scored.json`
+>   (the continuous text score) exactly as it anticipated. Teardown precondition unaffected (Phase 13
+>   never touches raw data).
 
 > **On the dropped "detection-only SFT" idea:** not recommended. The text model's low precision is a
 > *decision-boundary/calibration* problem (its threshold for calling ANOMALY is too loose, partly

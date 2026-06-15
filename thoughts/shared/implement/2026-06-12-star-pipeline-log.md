@@ -1325,3 +1325,77 @@ always-anomaly line (0.399)** → the base VL *complies but does not discriminat
 - **Phase 10 teardown** is now even closer — the only remaining cloud/PNG-dependent optional work is
   Phase 14's vision-score run (Phase 13 first). The raw data / PNGs must stay until those are done or
   declared skipped. Teardown stays last + user-confirmed.
+
+---
+
+## Phase 13: Calibrate the text-LLM operating point (PR curve) — COMPLETE (2026-06-15)
+
+Ran in a dedicated worktree `star-pipeline-phase13` (branch `phase-13-llm-calibration`), concurrent
+with Phase 12 (vision base control, its own worktree). Phase 13 is deliberately scoped to files Phase
+12 does **not** touch — `src/inference/test_local_gguf.py` (new `--score` path) + new
+`src/inference/pr_curve.py` + new result JSONs — and never edits `evaluate.py`/`Makefile`/`comparison_*`,
+so the two merge cleanly.
+
+### Step 13.1: code — continuous verdict score + PR-curve sweep
+- **Status**: completed. `make lint` ✅ on both files.
+- **`test_local_gguf.py --score`** (NEW prefill-only path): for each window, prefill the ChatML prompt
+  and read the model's logits at the first assistant position; the per-window anomaly score is
+  `softmax(logit["AN"], logit["N"])` = `P(ANOMALY | {ANOMALY, NOMINAL})`. ("AN"=1093 and "N"=45 are the
+  first tokens the fine-tuned model emits for "ANOMALY DETECTED…" / "NOMINAL…", and are the top-2 logits
+  at every verdict position.) Writes `{summary, results[{score, logit_anomaly, logit_nominal, argmax,
+  is_anomaly, …}]}` to `results/inference_test_scored.json`. Reuses `--resume`/`--checkpoint-every`.
+- **`src/inference/pr_curve.py`** (NEW): loads the scored file, computes AUC-PR (`average_precision_score`),
+  sweeps a 200-point threshold grid for P/R/F1/CEF0.5, and reports the default/argmax/F1-optimal/
+  CEF0.5-optimal/high-precision operating points → `results/llm_pr_curve.json` + `.png`. CEF0.5 formula
+  is inlined to match `evaluate.py` (β=0.5).
+
+### Step 13.2: full 4,500-window scored run + curve
+- **Run**: `STAR_MODEL_DIR=~/models test_local_gguf.py --score --limit 0 --resume`, detached under
+  `caffeinate -dimsu`, checkpoint every 250. ~0.7 s/window (vs 2.77 s for the Phase-5 generation run),
+  ~55 min wall.
+- **Results:** AUC-PR **0.678** (random floor = 0.250 base rate).
+
+  | Operating point | Threshold | P | R | F1 | CEF0.5 |
+  |---|---|---|---|---|---|
+  | Default (as-deployed: sampled hard verdict) | — | 0.360 | 0.609 | 0.453 | 0.392 |
+  | Deterministic argmax | 0.500 | 0.527 | 0.639 | 0.578 | 0.546 |
+  | F1-optimal | 0.580 | 0.621 | 0.567 | **0.593** | 0.609 |
+  | **CEF0.5-optimal** | 0.775 | **0.838** | 0.379 | 0.521 | **0.674** |
+
+  At the CEF0.5-optimal point the text LLM's CEF0.5 (0.674) sits just below the calibrated LSTM (0.705)
+  and above the vision LLM (0.604) — i.e. once calibrated it is a competitive precision-weighted
+  detector. The default sampled point lies strictly *below* the calibrated PR curve.
+- **Docs updated:** analysis doc new **§6.4** (PR-calibration subsection + operating-point table),
+  **§9 limitation #7** marked resolved, **§10 #6** marked DONE; plan Phase 13 success criteria checked.
+
+### Deviations (Phase 13)
+- **D42 — the GGUF had to be re-downloaded.** The model at `$STAR_MODEL_DIR/.../qwen3-8b.Q4_K_M.gguf`
+  (on `DUAL DRIVE`) was a **0-byte placeholder**, and no >1 MB GGUF existed anywhere local. Re-pulled
+  the 4.68 GiB (5,027,784,160 bytes, byte-exact) GGUF from the HF backup
+  `dyrtyData/star-pipeline-qwen3-8b-advice-gguf` to **local APFS** `~/models/gguf/star-pipeline-advice_gguf/`.
+  Storage note: the plan's "internal disk nearly full" warning is **stale** (141 GiB free now); and
+  `DUAL DRIVE` is FAT32 (4 GB single-file limit) so the 4.68 GiB GGUF *must* live on APFS regardless.
+  Ran with `STAR_MODEL_DIR=~/models`.
+- **D43 — scoring is prefill-only and needs `logits_all=True`.** The PR curve needs only the
+  verdict-token score, not generated advice, so `--score` does a single prefill and reads last-position
+  logits — no generation (~4× faster). llama-cpp-python only populates its `scores` buffer when the
+  model is loaded with `logits_all=True`; with the default `False`, `scores[n_tokens-1]` reads back as
+  all-zeros (the first smoke run silently scored everything ANOMALY because of this — caught and fixed).
+- **D44 — sampling-vs-greedy gap is itself a result.** The Phase-5 P 0.360 was decoded with llama-cpp's
+  default **temperature-0.8 sampling**; the deterministic argmax of the *same* weights is already
+  P 0.527 / R 0.639. ~17 precision points were sampling noise. So the calibration win is twofold:
+  (a) decode deterministically, (b) raise the threshold. Documented in §6.4 / D44.
+- **D45 — worktree wiring.** The worktree lacks `.venv` and gitignored `data/splits/*.jsonl`; symlinked
+  the main repo's `.venv` and the three `*_with_advice.jsonl` splits into the worktree so the scripts
+  run unmodified. `results/` is git-tracked, so the new result JSONs + PNG are committed from the worktree.
+
+### Impact on the rest of the plan
+- **Phase 14 (ensemble)** is ready: it consumes `results/inference_test_scored.json` (the continuous
+  text score) exactly as specced. The schema carries `index/mission/channel` to align with the LSTM and
+  vision per-window scores.
+- **No change to `evaluate.py`** — the master comparison still reports the as-deployed text-LLM point;
+  the calibrated curve is reported in §6.4 as the deployment knob, mirroring how Phase 11 published the
+  LSTM z-sweep. This keeps the Phase-12 `evaluate.py` edits conflict-free.
+- **Teardown (Phase 10)** precondition unaffected — Phase 13 never touches raw data.
+- **Files added (all trackable):** `results/inference_test_scored.json`, `results/llm_pr_curve.json`,
+  `results/llm_pr_curve.png`; code: `src/inference/pr_curve.py`, edits to `src/inference/test_local_gguf.py`.

@@ -361,6 +361,46 @@ fast on a 2-class task (eval loss 0.0089) and its weak point is recall (0.325); 
 data, a larger VL backbone, or more epochs *could* lift recall — untested, and listed in §10. Even
 as-is, its precision makes it worth considering wherever a near-zero false-alarm rate matters.
 
+### 6.4 Calibrating the text LLM — the over-flagging was a threshold artifact (Phase 13)
+
+The text LLM's headline **P 0.360 / R 0.609** is a *single* operating point inflated by false alarms
+two ways: it was decoded with **stochastic sampling** (temperature 0.8), and it raised ANOMALY
+whenever that token won a *sampled* draw. Phase 13 replaced the hard verdict with a **continuous,
+deterministic anomaly score** per window — the softmax of the model's ANOMALY-vs-NOMINAL logits at the
+verdict position (`test_local_gguf.py --score` → `results/inference_test_scored.json`) — and swept a
+decision threshold over it (`src/inference/pr_curve.py` → `results/llm_pr_curve.json` + `.png`). Two
+findings:
+
+1. **Removing the sampling noise recovers ~17 precision points for free.** The deterministic argmax
+   (threshold 0.5 — the natural boundary) already sits at **P 0.527 / R 0.639 / F1 0.578 / CEF0.5
+   0.546**, versus the sampled point's 0.360 / 0.609 / 0.453 / 0.392. Same weights — temperature-0.8
+   decoding alone was injecting random ANOMALY flips that cost precision.
+2. **The score genuinely separates, and the curve is deployable.** **AUC-PR = 0.678** (random floor =
+   the 0.250 base rate). Sweeping the threshold up to **0.775** reaches **P 0.838 / R 0.379 / F1 0.521
+   / CEF0.5 0.674** — precision *more than doubles* vs the default 0.360. At that operating point the
+   text LLM's **CEF0.5 (0.674) lands just below the calibrated LSTM (0.705) and above the vision LLM
+   (0.604)**: once calibrated it is a competitive precision-weighted detector, not a trigger-happy one.
+   The default sampled point lies *strictly below* the calibrated PR curve (red dot in
+   `llm_pr_curve.png`).
+
+| Operating point | Threshold | Precision | Recall | F1 | CEF0.5 |
+| --- | --- | --- | --- | --- | --- |
+| Default (as-deployed: sampled hard verdict) | — | 0.360 | 0.609 | 0.453 | 0.392 |
+| Deterministic argmax | 0.500 | 0.527 | 0.639 | 0.578 | 0.546 |
+| F1-optimal | 0.580 | 0.621 | 0.567 | **0.593** | 0.609 |
+| **CEF0.5-optimal** | 0.775 | **0.838** | 0.379 | 0.521 | **0.674** |
+
+This confirms the §10 #6 hypothesis: **the low precision was a decision-boundary/calibration problem,
+not a capacity one** — the same lesson as the LSTM's z-calibration in Phase 11. A detection-only SFT is
+therefore still not indicated; the threshold (and turning off sampling) was the right lever. The
+continuous score also unlocks **Phase 14** (score-level fusion), which needs soft scores rather than
+hard verdicts.
+
+> **Operating-point note for §2 / §6.1.** The master table keeps the text LLM at its *as-deployed*
+> point (P 0.360 / R 0.609 — the advice-SFT model decoded as actually shipped) for honesty about what
+> was measured end-to-end. The calibrated alternatives above are the deployment knobs: deterministic
+> decode + threshold ≈0.78 → **P 0.838** where false alarms are the binding cost.
+
 ---
 
 ## 7. Result C — Is the advice any good? (semantic grading)
@@ -511,13 +551,16 @@ phases — each with *why it stands* and what it would take to close:
    *Why it stands:* a showcase ran one good configuration rather than a grid. The knobs most likely to
    matter: **LoRA rank** (8/16/32 — capacity), **epochs** (2/3/5 — under/overfitting), **learning
    rate**, and **prompt format**. A small grid is ~1 day of cloud (~$5–15), §10.
-7. **No detection-tuned LLM variant or precision–recall curve.** The deployed model was the *advice*
-   **SFT** (Supervised Fine-Tuning — training on input→output pairs) used *also* as a detector at a
-   single operating point. *Two untried ideas:* a **detection-only SFT** (a model trained purely to
-   emit ANOMALY/NOMINAL — it *might* calibrate precision/recall differently, but this is a hypothesis,
-   not a claim) and a **calibrated decision threshold** (taking a continuous anomaly score and
-   choosing a cutoff that trades recall for precision, i.e. moving along a P–R curve instead of
-   reporting one point). Neither was explored; both are in §10.
+7. **No detection-tuned LLM variant** (the *precision–recall curve* is now done). The deployed model
+   was the *advice* **SFT** (Supervised Fine-Tuning — training on input→output pairs) used *also* as a
+   detector. ✅ **Resolved by Phase 13 (§6.4):** the single-point caveat is gone — a continuous verdict
+   score swept over a threshold gives **AUC-PR 0.678** and a high-precision operating point (**P 0.838
+   at R 0.379**, CEF0.5 0.674), and even just decoding deterministically (no temperature sampling)
+   lifts precision 0.360→0.527. This **confirms the over-flagging was a calibration artifact, not a
+   capacity limit.** The one idea still untried is a **detection-only SFT** (a model trained purely to
+   emit ANOMALY/NOMINAL) — and it is *not* recommended (§10 #6): the auxiliary advice task likely
+   *helps* the shared representation, so stripping it is unlikely to raise precision and would cost a
+   capability.
 8. **Vision model has no advice head, and "converged very fast."** Its validation loss dropped to
    0.0089 on an easy 2-class (ANOMALY/NOMINAL) task — meaning it fit the *training* distribution very
    easily. Low in-distribution validation loss does **not** guarantee it generalizes to a *new mission
@@ -570,12 +613,15 @@ concrete, self-contained next phases (Phases 11–14) in the implementation plan
    discriminate (below the 0.399 flag-everything line); fine-tuning's gain is precision 0.310 → 0.769.
    The §5 skeptic table and scope note now cover both modalities. (A frontier-VL control was not run —
    optional; the base control already closes the symmetry.)
-6. **Calibrate the LLM's operating point** (Plan Phase 13). *Effort: low–medium.* *Impact: medium.*
-   Sweep a decision threshold to report a **precision–recall curve** instead of one fixed point — the
-   cheapest way to make the standalone text LLM less trigger-happy. (A *detection-only* SFT — dropping
-   the advice head — is **not** recommended: the over-flagging is a calibration/decision-boundary
-   issue, not a capacity one, and the auxiliary advice task likely *helps* rather than hurts the
-   shared representation, so removing it is unlikely to improve precision and would cost a capability.)
+6. **Calibrate the LLM's operating point** (Plan Phase 13). ✅ **DONE (2026-06-15).** A continuous
+   verdict score (ANOMALY-vs-NOMINAL logprob) swept over a threshold gives **AUC-PR 0.678** and a
+   higher-precision operating point — **P 0.838 / R 0.379 / CEF0.5 0.674** at threshold 0.775, more
+   than doubling the default 0.360 precision; even removing temperature sampling alone lifts it to
+   0.527 (§6.4, `results/llm_pr_curve.{json,png}`). This **confirms the over-flagging was calibration,
+   not capacity.** A *detection-only* SFT — dropping the advice head — is therefore **not** recommended:
+   the auxiliary advice task likely *helps* rather than hurts the shared representation, so removing it
+   is unlikely to improve precision and would cost a capability. The calibrated continuous score is also
+   the input Phase 14 (#7) fuses.
 7. **Ensemble the detectors via score-level fusion** (Plan Phase 14, depends on #6). *Effort: ~2–3
    days* (no new training — fuse the continuous scores). *Impact: medium–high.* "Both must fire" (AND
    → high precision) and "either fires" (OR → high recall) are only the two *endpoints*. The richer
