@@ -12,9 +12,11 @@ Inputs : data/processed/plots/test_metadata.jsonl
 Outputs: results/inference_vision.json  ({summary, results}, schema below).
 
 Usage on the instance (from the repo root so image_path resolves):
-    python src/inference/eval_vision.py                 # all test windows
+    python src/inference/eval_vision.py                 # all test windows (fine-tuned adapter)
     python src/inference/eval_vision.py --limit 50      # smoke test
     python src/inference/eval_vision.py --resume        # resume after interruption
+    python src/inference/eval_vision.py --base          # Phase 12: un-fine-tuned base zero-shot
+                                                        #   -> results/inference_vision_base.json
 
 Durability: --checkpoint-every N (atomic temp+rename) + --resume, mirroring
 test_local_gguf.py. Samples are processed in deterministic file order.
@@ -28,6 +30,11 @@ from pathlib import Path
 PLOTS_DIR = Path("data/processed/plots")
 DEFAULT_ADAPTER = "models/lora/qwen3-vl-detection"
 RESULTS_FILE = Path("results/inference_vision.json")
+# Phase 12: un-fine-tuned base control (no adapter) — mirrors the Phase-6 text base/frontier
+# controls for the vision modality. Same base weights the Phase-8 fine-tune was trained on
+# (train_detection.py::DEFAULT_MODEL); the fine-tune merely added the LoRA adapter on top.
+BASE_MODEL = "unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit"
+BASE_RESULTS_FILE = Path("results/inference_vision_base.json")
 MAX_SEQ_LENGTH = 2048
 
 # Same prompt the model was fine-tuned with (train_detection.py::USER_PROMPT).
@@ -36,6 +43,7 @@ USER_PROMPT = (
     "Does it show anomalous behaviour? Answer with ANOMALY DETECTED or NOMINAL."
 )
 APPROACH_LABEL = "LLM Detection (vision, Qwen3-VL)"
+BASE_APPROACH_LABEL = "LLM detection (vision, base zero-shot)"
 
 
 def classify_response(response: str) -> str:
@@ -48,11 +56,14 @@ def classify_response(response: str) -> str:
     return "UNKNOWN"
 
 
-def compute_summary(results: list[dict], adapter: str, partial: bool = False) -> dict:
+def compute_summary(
+    results: list[dict], adapter: str, partial: bool = False, approach: str = APPROACH_LABEL
+) -> dict:
     """Compute the metrics summary from a (possibly partial) results list.
 
     Mirrors test_local_gguf.compute_summary so the JSON schema is identical and
-    evaluate.py's shared loader works unchanged.
+    evaluate.py's shared loader works unchanged. `approach` distinguishes the
+    fine-tuned detector (default) from the Phase-12 base zero-shot control.
     """
     n = len(results)
     tp = sum(1 for r in results if r["is_anomaly"] and r["predicted"] == "ANOMALY")
@@ -67,7 +78,7 @@ def compute_summary(results: list[dict], adapter: str, partial: bool = False) ->
     unknown = sum(1 for r in results if r["predicted"] == "UNKNOWN")
 
     return {
-        "approach": APPROACH_LABEL,
+        "approach": approach,
         "n_samples": n,
         "accuracy": round(accuracy, 4),
         "precision": round(precision, 4),
@@ -84,10 +95,16 @@ def compute_summary(results: list[dict], adapter: str, partial: bool = False) ->
     }
 
 
-def write_results(results: list[dict], adapter: str, partial: bool, results_file: Path) -> None:
+def write_results(
+    results: list[dict],
+    adapter: str,
+    partial: bool,
+    results_file: Path,
+    approach: str = APPROACH_LABEL,
+) -> None:
     """Atomically write {summary, results} (temp + rename)."""
     results_file.parent.mkdir(parents=True, exist_ok=True)
-    summary = compute_summary(results, adapter, partial=partial)
+    summary = compute_summary(results, adapter, partial=partial, approach=approach)
     tmp = results_file.with_suffix(".json.tmp")
     with open(tmp, "w") as f:
         json.dump({"summary": summary, "results": results}, f, indent=2)
@@ -102,12 +119,17 @@ def load_test_samples(split: str) -> list[dict]:
         return [json.loads(line) for line in f]
 
 
-def load_model(adapter: str):
-    """Load the fine-tuned Qwen3-VL adapter (+ base) for inference via Unsloth."""
+def load_model(model_ref: str):
+    """Load a Qwen3-VL model for inference via Unsloth.
+
+    `model_ref` is either the fine-tuned LoRA adapter dir (loads base+adapter, the
+    Phase-8 detector) or a bare base-model repo id (loads base weights only, the
+    Phase-12 zero-shot control). FastVisionModel.from_pretrained resolves both.
+    """
     from unsloth import FastVisionModel
 
     model, processor = FastVisionModel.from_pretrained(
-        model_name=adapter,
+        model_name=model_ref,
         max_seq_length=MAX_SEQ_LENGTH,
         load_in_4bit=True,
     )
@@ -137,14 +159,31 @@ def classify_image(model, processor, image) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--adapter", default=DEFAULT_ADAPTER, help="Trained VL LoRA dir.")
+    parser.add_argument(
+        "--base",
+        action="store_true",
+        help="Phase 12: load the un-fine-tuned base VL model (no adapter) for a zero-shot "
+        "control. Defaults the output to results/inference_vision_base.json and the approach "
+        "label to the base row; identical prompt/decoding/parser otherwise.",
+    )
     parser.add_argument("--split", default="test", help="Metadata split to evaluate.")
     parser.add_argument("--limit", type=int, default=0, help="Cap samples (0 = all).")
     parser.add_argument("--checkpoint-every", type=int, default=250)
     parser.add_argument("--resume", action="store_true")
-    parser.add_argument("--results-file", default=str(RESULTS_FILE))
+    parser.add_argument(
+        "--results-file",
+        default=None,
+        help="Output JSON (default: inference_vision.json; --base: inference_vision_base.json).",
+    )
     args = parser.parse_args()
 
-    results_file = Path(args.results_file)
+    # --base loads the base weights only and writes the base-control file/label by default;
+    # everything downstream (prompt, decoding, parser, schema) is identical to the fine-tune.
+    model_ref = BASE_MODEL if args.base else args.adapter
+    approach = BASE_APPROACH_LABEL if args.base else APPROACH_LABEL
+    default_file = BASE_RESULTS_FILE if args.base else RESULTS_FILE
+    results_file = Path(args.results_file) if args.results_file else default_file
+
     samples = load_test_samples(args.split)
     if args.limit and args.limit > 0:
         samples = samples[: args.limit]
@@ -157,14 +196,16 @@ def main() -> None:
         start = len(results)
         if start >= len(samples):
             print(f"Already complete: {start} samples in {results_file}.", flush=True)
-            write_results(results, args.adapter, partial=False, results_file=results_file)
+            write_results(
+                results, model_ref, partial=False, results_file=results_file, approach=approach
+            )
             return
         print(f"Resuming from sample {start}/{len(samples)}.", flush=True)
 
     from PIL import Image
 
-    model, processor = load_model(args.adapter)
-    print(f"Model loaded from {args.adapter}. Scoring {start}..{len(samples)}.", flush=True)
+    model, processor = load_model(model_ref)
+    print(f"Model loaded from {model_ref}. Scoring {start}..{len(samples)}.", flush=True)
 
     recent: list[float] = []
     for i in range(start, len(samples)):
@@ -202,11 +243,13 @@ def main() -> None:
             avg10 = sum(recent[-10:]) / min(len(recent), 10)
             print(f"  [{i + 1}/{len(samples)}] avg {avg10:.2f}s/sample", flush=True)
         if args.checkpoint_every and (i + 1) % args.checkpoint_every == 0:
-            write_results(results, args.adapter, partial=True, results_file=results_file)
+            write_results(
+                results, model_ref, partial=True, results_file=results_file, approach=approach
+            )
             print(f"  checkpoint: {len(results)} saved to {results_file}", flush=True)
 
-    write_results(results, args.adapter, partial=False, results_file=results_file)
-    s = compute_summary(results, args.adapter, partial=False)
+    write_results(results, model_ref, partial=False, results_file=results_file, approach=approach)
+    s = compute_summary(results, model_ref, partial=False, approach=approach)
     print(f"\n=== Vision Eval ({s['n_samples']} samples) ===")
     print(f"  Accuracy:  {s['accuracy']:.3f}")
     print(f"  Precision: {s['precision']:.3f}  Recall: {s['recall']:.3f}  F1: {s['f1']:.3f}")

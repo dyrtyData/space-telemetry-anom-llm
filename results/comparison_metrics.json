@@ -75,6 +75,25 @@
     "advice_structured_frac": 0.0
   },
   {
+    "approach": "LLM detection (vision, base zero-shot)",
+    "precision": 0.3098,
+    "recall": 0.4032,
+    "f1": 0.3504,
+    "cef_0.5": 0.3249,
+    "accuracy": 0.6255,
+    "affinity_f1": null,
+    "n_units": 2000,
+    "unit": "windows (PNG)",
+    "averaging": "micro (pooled over windows)",
+    "avg_time_s": 0.71,
+    "unknown_responses": 0,
+    "format_compliance": 1.0,
+    "partial": false,
+    "n_anomaly_predictions": 652,
+    "advice_avg_chars": 16.0,
+    "advice_structured_frac": 0.0
+  },
+  {
     "approach": "Base Qwen3-8B (zero-shot)",
     "precision": 0,
     "recall": 0.0,
