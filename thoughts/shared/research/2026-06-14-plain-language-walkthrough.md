@@ -6,7 +6,7 @@ background** and explains, from scratch, every concept, every decision, and ever
 can present the project confidently and answer follow-up questions. If a term shows up in the
 analysis doc and you're not 100% sure what it means, it's defined here.
 
-Read it top to bottom once; after that, §10 (the interview Q&A) and §11 (glossary) are the
+Read it top to bottom once; after that, §10 (the FAQ) and §11 (glossary) are the
 quick-reference parts.
 
 ---
@@ -180,10 +180,18 @@ work sessions over three days and hit plenty of real-world walls. Here's the arc
   added 1-hour resampling and balanced subsampling to cap it at 30,000 (**D4**). One mission stored
   some channels as words instead of numbers, which crashed things until handled (**D5**). *Lesson:
   real data never matches the spec; budget for it.*
-- **Phase 1.5 — Advice labels.** To teach the model to write advice, we first need example advice.
-  We generated 7,457 structured advice records (one per anomaly) *in-session* (no paid API), each
-  with a diagnosis, recommended action, severity, and pattern type. (These are *synthetic* labels —
-  a noted limitation.)
+- **Phase 1.5 — Advice labels (what they were for, and how they were made).** To *teach* the model
+  to write advice, we first need example advice to learn from — you can't fine-tune a model to
+  produce something you never show it. So we generated **7,457 advice records, one per anomaly
+  window**, each with a `DIAGNOSIS / ADVICE / ACTION`, a severity, and a pattern type. They were
+  **templated in-session from each window's own statistics** (e.g. the *shape* and *fraction* of the
+  window that deviates → a pattern like "subtle deviation" or "persistent anomaly" → a severity → a
+  matching recommended action). No paid API, and — importantly — **not written by human experts**, so
+  they are *synthetic* labels (a real limitation; the model's advice can only be as good as these).
+  These advice records were then merged into the **training answers**. **One model learns both
+  jobs:** the text Qwen3-8B was trained on `(window → verdict + advice)` pairs, so the *same* model
+  emits ANOMALY/NOMINAL **and** the advice — detection and explanation come from one checkpoint. (The
+  vision model is separate and detection-only.)
 - **Phase 2 — Baselines.** Built the LSTM and Isolation Forest. To keep it quick, we first ran just
   **3 channels** as a smoke test. (This "only 3 channels" shortcut becomes important later.)
 - **Phase 3 — Fine-tuning in the cloud.** Rented an NVIDIA RTX 4090 on Vast.ai (~$0.49/hr). Lots of
@@ -237,8 +245,14 @@ CEF0.5 0.684). The direct text-LLM detector loses on precision badly (0.360) —
 windows when only 1,123 are truly anomalous, so ~2 of every 3 alarms are wrong. Its *one* edge is
 recall (it catches more), but at an unacceptable false-alarm cost for a control room. **This is the
 expected result** — it matches the published AnomLLM finding that LLMs trade precision for recall
-and don't beat tuned sequence models at detection yet. Reporting this honestly (rather than hiding a
-negative result) is exactly the signal the brief wanted.
+and don't beat tuned sequence models at detection yet. Reporting this honestly, rather than hiding a
+negative result, is the whole point of an empirical bake-off.
+
+The **vision LLM** (Qwen3-VL, reading the *plots*) is the interesting opposite: it's
+*precision-oriented* (0.769 precision — it almost never false-alarms) where the text LLM is
+*recall-oriented*, at nearly the same F1. So it actually has the **best false-alarm-aware score
+(CEF0.5 0.604) of any LLM here** — a genuinely useful third signal, especially as a low-false-alarm
+cross-check. It's a pure detector, though (no advice).
 
 ### 7b. But fine-tuning *did* help — and here's the airtight version
 Rank the LLM-family approaches against the **trivial always-anomaly line (F1 0.399)**:
@@ -251,8 +265,21 @@ Rank the LLM-family approaches against the **trivial always-anomaly line (F1 0.3
   detecting.** It's also 3× slower and writes proper advice only 13% of the time.
 - **Frontier model (Claude), zero-shot and few-shot:** F1 **0.254 / 0.239** — *below* the dumb
   baseline. A much more capable general model, given two different prompts, **sits at chance.** Why?
-  Because it's being shown ~10 normalized numbers with no channel history — there's almost no signal
-  there to find. Adding examples doesn't help, which proves it's not a prompt-wording problem.
+  This is worth understanding because it's the core reason fine-tuning matters here. Each window is
+  shown to the model as **~10 normalized numbers plus a mission and channel name** — nothing else.
+  The information that actually separates "anomaly" from "normal" — the **signal** — is whether that
+  little run of numbers is unusual *for that specific channel*. And knowing that requires **channel
+  history**: what's normal for, say, `Mission1/channel_41` (its usual level, its rhythm, its noise).
+  *Example:* a reading of 0.6 might be completely normal on a battery-voltage channel but a glaring
+  fault on a temperature channel — with no history, you simply can't tell which. The frontier model
+  has **never seen this spacecraft's channels**, so 10 context-free numbers carry almost no signal —
+  especially for the most common anomalies here, which are *subtle deviations* that look nearly normal
+  in 10 numbers. The fine-tuned model, by contrast, **learned each channel's "normal" from 21,000
+  training windows** — that learned-in knowledge is exactly what the frontier lacks, and adding a
+  couple of prompt examples can't substitute for it (which is why few-shot doesn't help). *Could you
+  give the frontier that history?* Yes — by retrieving past windows for the channel into the prompt
+  (**RAG**), or by **fine-tuning the frontier** itself. Neither was done here; both are in "what next"
+  (§10) — with the caveat that doing so brings back the vendor dependency the owned model avoids.
 - **Our fine-tuned model:** F1 **0.453** with *balanced* precision/recall (0.360 / 0.609). **It is
   the only one that clears the trivial baseline with a real trade-off** — the lone genuine detector
   in the LLM family.
@@ -264,23 +291,48 @@ inference.
 
 ### 7c. The advice is good — *when the flag is right*
 We graded 120 of the model's flags (correctness / actionability / grounding, 0–6):
-- On **true positives** (the model correctly flagged a real anomaly): **5.58/6, 95% high-quality** —
-  it names the right channel, the right magnitude, a sensible action. Genuinely useful.
+- On **true positives** (the model correctly flagged a real anomaly): **5.58/6, 95% high-quality**,
+  with **near-perfect grounding (1.86 out of 2)**. Genuinely useful.
 - On **false positives** (false alarms): ~**1/6** — it confidently explains an anomaly that isn't
   there. Garbage in, garbage out.
+
+**What "grounding" / "right channel" / "subsystem" mean (you asked).** A **channel** is one single
+sensor's data stream — e.g. `Mission1/channel_41`, say a battery-bus voltage. A **subsystem** is the
+bigger functional group that channel belongs to: *power, thermal, attitude control, propulsion,
+comms.* So channel_41 (a voltage) lives in the *power* subsystem. "Grounding" measures whether the
+advice is tied to the actual data: did it name the **right channel**, and is the magnitude it quotes
+consistent with the numbers in the window? In our sample: **119 of 120 named the correct channel**,
+and only **3 of 120 put it in the wrong subsystem** (right sensor, wrong category — e.g. calling a
+power channel "thermal"). So to answer your question directly: **yes, it's still doing a good job** —
+even on the rare miss it usually points at the exact right sensor; what occasionally slips is the
+higher-level label, not the location. That's why grounding is 1.86/2 (near-perfect), not a flat 100%.
 
 So the advice quality is **gated by detection precision**. The conclusion writes itself: don't use
 the LLM to *decide* what's anomalous; use a high-precision detector for that, and use the LLM to
 *explain* the things that detector flags.
+
+**Is 95% enough for a "lives depend on it" system? No — and here's how you'd close the gap.** 95%
+high-quality-when-correct (graded by an LLM, on 120 examples, against *synthetic* advice labels) is a
+strong *showcase* number, not a production guarantee for mission-critical use. The biggest levers,
+in order:
+1. **Human-expert advice labels.** The current ceiling is the templated Phase-1.5 labels; real
+   fault-engineer advice (with true root causes) is the single biggest improvement.
+2. **Ground it in real references (RAG):** give the advisor the channel's spec sheet / fault catalog
+   so it cites documented causes and fixes instead of generic patterns.
+3. **Put it behind a high-precision detector** (the hybrid) so it's rarely asked to explain a false
+   alarm in the first place.
+4. **Let it say "I'm not sure"** (calibrated confidence / abstention) instead of confidently
+   inventing a story on a borderline window.
+5. **A bigger advisor model + a larger, human-checked grade** if resources allow.
 
 ### 7d. The recommended design: the Hybrid
 ```
 window → [LSTM detector: cheap, precise, instant] → if it flags → [Qwen3-8B: writes the advice] → operator
 ```
 Cheap precise detection + expensive-but-only-when-needed explanation. It inherits the LSTM's strong
-detection *and* adds the advice the baselines can't produce. **This is the answer to the friend's
-original question:** a localized, open-source, no-external-API system that both detects and advises,
-with a cost profile that works in production.
+detection *and* adds the advice the baselines can't produce. **This is the answer to the original
+question:** a localized, open-source, no-external-API system that both detects and advises, with a
+cost profile that works in production.
 
 ---
 
@@ -293,7 +345,7 @@ with a cost profile that works in production.
 | **QLoRA, not full fine-tuning** | Trains <1% of weights in 4-bit → a few dollars on one rented GPU instead of a cluster. |
 | **Cloud for training, laptop for inference** | Training needs NVIDIA/CUDA; inference runs fine on the Mac's Metal GPU — matches the "own the model, no API" goal and the hardware budget. |
 | **GGUF + Metal locally** | Lets the fine-tuned model run on the MacBook with no vendor dependency. |
-| **Build *all* approaches, not just the LLM** | Makes the recommendation empirical. The brief explicitly asked to validate, not assert. |
+| **Build *all* approaches, not just the LLM** | Makes the recommendation empirical rather than asserted. |
 | **CEF0.5 + Affinity-F1, not point-adjustment** | These are the ESA benchmark's metrics; point-adjustment is known to inflate scores. |
 | **The trivial baseline** | Without it, an over-flagging F1 of 0.42 looks like "detection." With it, the truth is visible. |
 | **Checkpoint/resume on long jobs** | A multi-hour job that dies at 90% shouldn't cost the whole run — a real production habit. |
@@ -316,12 +368,12 @@ If asked *"what does this contribute?"*, say:
 > prompting can't supply; and (3) LLM "explainability" is only as good as the detector feeding it —
 > which is why the deployable design is the hybrid.
 
-It's not a new algorithm; it's a **rigorous applied result with an honest headline** — which is
-precisely the engineering maturity the role is screening for.
+It's not a new algorithm; it's a **rigorous applied result with an honest headline** — the kind of
+engineering maturity that matters in mission-critical work.
 
 ---
 
-## 10. Interview Q&A (anticipate these)
+## 10. FAQ
 
 **Q: Did the LLM beat the traditional baseline?**
 A: At *detection*, no — and that's the honest, expected result. The LSTM is more precise (0.785 vs
@@ -351,15 +403,51 @@ A: Phase 9 graded a sample on a transparent rubric. On correct flags it's 5.58/6
 right channel and magnitude). On false alarms it's ~1/6 — it explains a non-existent anomaly. So
 advice quality is gated by detection precision, which is the argument for the hybrid.
 
-**Q: What was the hardest engineering part?**
-A: Making the multi-hour eval survivable. It died to output buffering and to machine sleep before I
-added unbuffered logging, atomic checkpoint/resume, and proper daemonization. That paid off when the
-58-channel LSTM run later died and resumed for free.
+**Q: Wait — the grader was an LLM (Claude). Isn't that circular? And if Claude can grade it, why not
+just use Claude instead of the fine-tuned model?**
+A: Two different jobs. The grader did **not** use its own knowledge as the answer key, and did **not**
+just compare against the synthetic Phase-1.5 labels (it couldn't — the saved predictions don't carry
+the keys to join to them). It scored against **the window's actual numbers and the known ground-truth
+label**: does the named channel match the window, is the stated magnitude consistent, and — since we
+*know* which windows were truly anomalous — advice about a truly-normal window scores zero by
+construction. So grading is *checking finished advice with the answer key in hand*, which is a far
+easier task than **producing** detections from scratch. As a *detector*, the same frontier model sat
+at chance (§7b) — it can't do the actual job. And even if a frontier could write the advice, you'd
+still be sending your telemetry to an outside vendor, paying per call, and waiting on its latency —
+the very things owning the model avoids.
 
-**Q: What would you do next?**
-A: Ship the hybrid; level the detection field on one contiguous stream; calibrate the LLM's decision
-threshold for a precision/recall curve; widen the advice grade with a human SME; and ensemble the
-recall-oriented text model with the precision-oriented vision model.
+**Q: What was the hardest / most important engineering part?**
+A: Designing the comparison so the "did fine-tuning help?" claim actually holds up. It's easy to show
+a fine-tuned model scoring some number; it's much harder to *prove the fine-tuning is what helped*.
+That meant: running the un-fine-tuned base **through the identical harness** (same prompt, decoding,
+parser — so only the weights differ); adding a **few-shot** base and a **frontier** model so
+"couldn't you just prompt instead?" is answered, not hand-waved; and — the key insight — anchoring
+everything to a **trivial always-anomaly baseline** so a high-F1-by-over-flagging result can't
+masquerade as real detection. That control design is what turns the result from a demo into evidence,
+and it's the part a domain expert will scrutinize hardest. (The supporting infra — making the
+multi-hour eval resumable/observable so a crash costs one checkpoint, not the whole run — mattered
+too, but was quick to add.)
+
+**Q: What would you do next, and why?**
+A: In priority order, with the reasoning for each:
+- **Ship the hybrid (cheap detector → LLM advisor).** It's the design the numbers support; everything
+  else is refinement. *Low effort.*
+- **Improve the advice toward production-grade.** Replace the synthetic advice labels with
+  **human-expert-written** advice and add **retrieval (RAG)** so the model cites real fault catalogs,
+  not templates — this is the biggest lever on whether the advice is trustworthy for mission-critical
+  use. *High effort, high impact.*
+- **Level the detection field fully.** Score the LSTM and the LLM on **one identical continuous
+  timeline** so the comparison is perfectly apples-to-apples (right now the LSTM is measured slightly
+  differently). The current result already matches the literature, but this makes it airtight.
+  *~1–2 days.*
+- **Calibrate the LLM's sensitivity.** Instead of one fixed cutoff, sweep it to draw a
+  precision/recall curve — the cheapest way to make the standalone LLM less trigger-happy. *Low.*
+- **Ensemble the text + vision models.** They make *opposite* mistakes (one over-flags, one is
+  over-cautious), so combining them — "flag only if both agree" for high precision, "if either fires"
+  for high recall — could beat either alone. *~2–3 days, no retraining.*
+- **The true "own vs. rent" test:** fine-tune (or RAG) a frontier model and compare. We compared a
+  fine-tuned *open* model to a *prompted* frontier; fine-tuning the frontier is the missing cell —
+  with the caveat that it gives up the privacy/cost/latency advantages of owning the model. *Medium.*
 
 ---
 
@@ -367,6 +455,8 @@ recall-oriented text model with the precision-oriented vision model.
 
 - **Anomaly** — a segment of telemetry that deviates from normal behavior.
 - **Channel** — one sensor's time series (e.g. one voltage line).
+- **Subsystem** — the functional group a channel belongs to (power, thermal, attitude, propulsion,
+  comms); e.g. a battery-voltage channel is in the *power* subsystem.
 - **Telemetry** — many channels of sensor data streamed from a spacecraft.
 - **Window / patch** — a short fixed-length slice of a channel (here 32 steps) — one example.
 - **Stride** — how far the window slides each step (16).
@@ -383,6 +473,10 @@ recall-oriented text model with the precision-oriented vision model.
 - **Base model** — the off-the-shelf LLM before any of our training (Qwen3-8B).
 - **Frontier model** — a top-tier general model (here Claude), used as a prompting sanity check.
 - **Fine-tuning** — extra training of a base model on your specific data to specialize it.
+- **SFT (Supervised Fine-Tuning)** — fine-tuning on input→output example pairs (what we did:
+  window → verdict + advice).
+- **RAG (retrieval-augmented generation)** — fetching relevant reference material (e.g. a channel's
+  history or fault catalog) into the prompt at run time so the model has context it wasn't trained on.
 - **LoRA** — fine-tune only small adapter matrices, leaving the big model frozen.
 - **QLoRA** — LoRA + loading the frozen model in compressed 4-bit form (saves memory).
 - **Quantization** — storing model weights in fewer bits (e.g. 4-bit) to shrink/speed it.
@@ -393,14 +487,21 @@ recall-oriented text model with the precision-oriented vision model.
   fine-tuning.
 - **Epoch** — one full pass through the training data.
 - **TP / FP / FN / TN** — true/false positive/negative (see §5).
+- **TP:FP ratio** — true-positive flags to false-positive flags; preserving it in a graded sample
+  keeps the real false-alarm rate (here ~43:77, reflecting ~0.36 precision).
 - **Precision** — fraction of flags that were real (alarm accuracy).
 - **Recall** — fraction of real anomalies caught (miss rate's complement).
+- **Calibrated decision threshold / P–R curve** — turning the model's score into a tunable cutoff to
+  trade recall for precision; the P–R curve plots that trade-off across all cutoffs (one model = many
+  operating points).
 - **F1** — balanced precision+recall score.
 - **CEF0.5** — precision-weighted F-score; the cost-of-false-alarm-aware metric.
 - **Affinity-F1** — interval-aware F-score for continuous streams.
 - **Trivial / always-anomaly baseline** — flag everything; the "free" score every detector must
   beat (F1 ≈ 0.40 here).
 - **Hybrid** — the recommended design: cheap precise detector triggers an LLM advisor.
+- **Ensemble** — combining several models' outputs (e.g. requiring the text and vision detectors to
+  agree) to get higher precision or recall than either alone.
 - **Telemanom** — NASA JPL's LSTM anomaly-detection method (our LSTM follows it).
 - **AnomLLM / AnomSeer / Time-LLM** — the research line on LLMs detecting time-series anomalies
   (text, vision, and patching approaches respectively).

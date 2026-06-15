@@ -19,12 +19,6 @@ limitations, and the next steps.
 - Implementation log (every deviation D1–D38, the full saga):
   [`2026-06-12-star-pipeline-log.md`](../implement/2026-06-12-star-pipeline-log.md)
 
-> **Note on this document's history.** An earlier version of this file was written at the end of
-> Phase 5 and listed four big gaps as "limitations": (1) no base-vs-fine-tuned comparison, (2) the
-> LSTM scored on only 3 channels, (3) the planned *vision* detector never run, (4) advice graded
-> only for *shape*, not *correctness*. **Phases 6–9 were built specifically to close those four
-> gaps.** This rewrite reflects the finished project. The headline changed as a result — read §2.
-
 ---
 
 ## 1. Executive summary
@@ -52,9 +46,10 @@ Three findings carry the project:
    and 3× lower latency.
 3. **The LLM's real, unique value is the advice layer — and it is good when it should be.** A
    graded sample shows that **when the model correctly flags an anomaly, its diagnostic advice
-   averages 5.58/6 and is 95% high-quality**, with the correct channel/subsystem/units. But advice
-   quality is *gated by detection precision*: on false alarms the advice is built on a false
-   premise and scores ~1/6.
+   averages 5.58/6 and is 95% high-quality** — naming the right channel with a window-consistent
+   magnitude (grounding 1.86/2). But advice quality is *gated by detection precision*: on false
+   alarms the advice is built on a false premise and scores ~1/6. (95%-when-correct is a strong
+   showcase result, not yet a mission-critical guarantee — see §7 for the path to that.)
 
 Putting these together, the architecture the data recommends is the **two-stage hybrid the
 industry already uses**: a cheap, high-precision detector (the LSTM) triggers, and the fine-tuned
@@ -97,38 +92,37 @@ The rest of this document explains how each row was produced and what it means.
 
 ## 3. The lay of the land — what's out there, what we used, what we contribute
 
-The brief explicitly asked the agent to *survey the field, validate the suggestions, and explain
-the reasoning* rather than just build the first idea. Here is the landscape this project sits in.
+This project deliberately surveys the field and validates the options against current research
+rather than committing to the first idea. Here is the landscape it sits in.
 
 ### 3.1 The two architectural philosophies
 
-The exploratory thread surfaced the genuine tension in the field:
+There is a genuine tension in the field:
 
 - **Two-stage (industry standard):** a cheap traditional detector (LSTM / autoencoder / isolation
   forest) flags deviations; a language model *explains* them. Reliable, cheap, decoupled.
 - **Unified LLM (research frontier):** a single fine-tuned LLM ingests the tokenized numeric window
   and **both detects and advises** — the *AnomLLM / Time-LLM* line of work.
 
-A naïve project picks one and asserts it is best. This project **builds and measures both**, plus a
-classical floor, so the recommendation is *empirical*. That decision is the spine of the whole
+Rather than assert that one approach is best, this project **builds and measures both**, plus a
+classical floor — so the recommendation is *empirical*. That decision is the spine of the whole
 result.
 
 ### 3.2 The reference works we drew on (the "gold standards")
 
 | Work | What it is | How we used it |
-|------|------------|----------------|
-| **ESA-ADB** (`kplabs-pl/ESA-ADB`, ESA + KP Labs, 2024) | The *official* benchmark + evaluation pipeline for the ESA Anomaly Dataset — the dataset's own gold-standard harness. Defines the dataset structure and the **CEF** / **Affinity-F1** evaluation philosophy. | Adopted its **dataset** (ESA-AD) and its **evaluation metrics** (CEF0.5, Affinity-F1), and explicitly avoided the discredited *point-adjustment* metric it warns against. |
-| **Telemanom** (Hundman et al., NASA JPL, KDD 2018) | The canonical LSTM-with-dynamic-error-thresholding detector; the baseline for the NASA MSL/SMAP datasets. | Re-implemented its *method* (per-channel LSTM reconstruction error + dynamic threshold) as our classical baseline — but applied to **ESA-AD**, not its native NASA data. |
-| **AnomLLM** (rose-stl-lab, ICLR 2025) | Benchmarks LLMs *as direct time-series anomaly detectors* (tokenized numeric input). Reports the precision/recall trade-off and that LLMs are not yet competitive with tuned sequence models. | Reproduced the *unified-LLM detection* idea (text model classifying tokenized windows) and confirmed its trade-off on a new dataset. |
-| **AnomSeer** (ICLR 2026) | Fine-tunes a *multimodal* LLM to read **rendered plots** of telemetry (vision), not the raw numbers. | Reproduced the *vision* approach: Qwen3-VL-8B fine-tuned on PNG plots of telemetry windows (Phase 8). |
-| **Time-LLM** (ICLR 2024) | Patching/reprogramming of numeric series into the LLM embedding space. | Informed the **windowing/patching** ETL design (32-step rolling windows). |
+| --- | --- | --- |
+| **ESA-ADB** (`kplabs-pl/ESA-ADB`, ESA + KP Labs, 2024) | The official benchmark and evaluation pipeline for the ESA Anomaly Dataset — the dataset's own gold-standard harness. | Adopted its **dataset** (ESA-AD) and its **metrics** (CEF0.5, Affinity-F1); avoided the discredited *point-adjustment* metric it warns against. |
+| **Telemanom** (NASA JPL, KDD 2018) | The canonical LSTM + dynamic-error-thresholding detector; the baseline for NASA MSL/SMAP. | Re-implemented its *method* (per-channel LSTM reconstruction error + threshold) as our baseline — applied to **ESA-AD**, not its native NASA data. |
+| **AnomLLM** (rose-stl-lab, ICLR 2025) | Benchmarks LLMs *as direct detectors* on tokenized numbers; finds they are not yet competitive with tuned sequence models. | Reproduced the *unified-LLM detection* idea (text model classifying tokenized windows) and confirmed the trade-off on a new dataset. |
+| **AnomSeer** (ICLR 2026) | Fine-tunes a *multimodal* LLM to read **rendered plots** of telemetry, not the raw numbers. | Reproduced the *vision* approach: Qwen3-VL-8B on PNG plots (Phase 8). |
+| **Time-LLM** (ICLR 2024) | Patching / reprogramming of numeric series into the LLM embedding space. | Informed the **windowing / patching** ETL design (32-step windows). |
 | **Unsloth** | QLoRA fine-tuning toolkit with Apple-silicon-friendly GGUF export. | The fine-tuning engine for both LLMs. |
 
 ### 3.3 What this project contributes
 
 It is not a new algorithm; it is a **rigorous, reproducible application study with an honest
-negative-and-positive result** — which is exactly the senior-engineering signal the brief asked
-for. Concretely:
+negative-and-positive result.** Concretely:
 
 1. **A like-for-like bake-off on real ESA telemetry** across *four* model families and *three*
    input modalities (numbers-as-text, numbers-as-image, classical features), all scored with the
@@ -158,17 +152,24 @@ The pipeline was built in phases. Phases 1–5 built the core; phases 6–9 clos
 gaps the Phase-5 review identified.
 
 | Phase | What it produced |
-|-------|------------------|
-| **1 — ETL** | Downloaded ESA-AD (3 missions, 224 channels, ~29 GB) from the Kaggle mirror; resampled to 1-hour cadence; **RevIN** per-channel reversible normalization; **32-step rolling windows** (stride 16); balanced subsample (keep all anomalous, cap 30,000). → **30,000** instruction/response records, **24.8% anomalous**, split **21,000 / 4,500 / 4,500** (train/val/test, seed 42). |
-| **1.5 — Advice labels** | Generated **7,457** structured diagnostic-advice records (one per anomaly window) in-session: `DIAGNOSIS / ADVICE / ACTION` + severity + pattern type. Merged into the training responses. |
-| **2 — Classical baselines** | **LSTM** (Telemanom-style autoencoder, per-channel reconstruction error, dynamic threshold μ+3σ) and **Isolation Forest**, as a *3-channel smoke run* (full sweep deferred to Phase 7). |
-| **3 — LLM fine-tune (cloud)** | **Qwen3-8B** + **QLoRA** (r=16, α=16, all-linear targets, lr 2e-4, **3 epochs**) on a rented **Vast.ai RTX 4090**; loss 2.85→0.24, eval loss ~0.256; → **GGUF Q4_K_M** export. Cost ~**$2.30**. |
-| **4 — Local inference** | GGUF pulled to the M3 Max; `llama-cpp-python` with **Metal** GPU offload (all layers). 100-window smoke: F1 0.508 @ ~2 s/window. |
-| **5 — Unified evaluation** | Full **4,500-window** LLM run (hardened with checkpoint/resume — the run died twice and recovered cleanly); `evaluate.py` produces the comparison report. Text-LLM: F1 0.453, P 0.360, R 0.609, 99.6% structured advice, 2.77 s/window. |
-| **6 — "Did fine-tuning help?"** | Controls under the *identical* harness: base **zero-shot**, base **few-shot** (2 examples/class), **frontier** (Claude) zero- and few-shot, and a **trivial always-anomaly** baseline. (§5) |
-| **7 — Level the field** | LSTM expanded from 3 → **all 58 Mission-1 target channels**, with per-window predictions persisted so **Affinity-F1 becomes real** (0.649). Honest F1 fell from the cherry-favourable 0.663 to **0.552** — and the LSTM still leads. |
-| **8 — Vision detector** | The originally-planned *AnomSeer-style* model: **Qwen3-VL-8B** fine-tuned on **PNG plots** of windows (Vast.ai A6000, 2 epochs, eval loss 0.0089). Scored on 2,000 test PNGs: F1 0.457, **P 0.769**, **CEF0.5 0.604**. Cost ~$1. (§6.3) |
-| **9 — Semantic advice grading** | A frozen seed-42 sample of **120** of the model's flags graded on a transparent rubric (correctness / actionability / grounding, 0–2 each). (§7) |
+| --- | --- |
+| **1 — ETL** | Downloaded ESA-AD (3 missions, 224 channels, ~29 GB) from the Kaggle mirror; resampled to 1-hour cadence; **RevIN** per-channel normalization; **32-step rolling windows** (stride 16); balanced subsample. → **30,000** instruction/response records, **24.8% anomalous**, split **21,000 / 4,500 / 4,500** (seed 42). |
+| **1.5 — Advice labels** | **7,457** structured `DIAGNOSIS / ADVICE / ACTION` records (one per anomaly window) + severity + pattern type, generated in-session and merged into the training responses. |
+| **2 — Classical baselines** | **LSTM** (Telemanom-style autoencoder + μ+3σ threshold) and **Isolation Forest**, as a *3-channel smoke run* (full sweep deferred to Phase 7). |
+| **3 — LLM fine-tune (cloud)** | **Qwen3-8B** + **QLoRA** (r=16, α=16, all-linear, lr 2e-4, **3 epochs**) on a rented **RTX 4090**; loss 2.85 → 0.24; → **GGUF Q4_K_M** export. ~**$2.30**. |
+| **4 — Local inference** | GGUF on the M3 Max via `llama-cpp-python` + **Metal** (all layers offloaded). 100-window smoke: F1 0.508. |
+| **5 — Unified evaluation** | Full **4,500-window** LLM run (hardened checkpoint/resume). Text-LLM: F1 0.453, P 0.360, R 0.609, 99.6% structured advice, 2.77 s/window. |
+| **6 — "Did fine-tuning help?"** | Controls under the *identical* harness: base **zero-shot**, base **few-shot**, **frontier** (Claude) zero- and few-shot, and a **trivial always-anomaly** baseline. (§5) |
+| **7 — Level the field** | LSTM expanded from 3 → **all 58 Mission-1 target channels**; per-window predictions persisted so **Affinity-F1 becomes real** (0.649). Honest F1 fell from 0.663 to **0.552** — still the top detector. |
+| **8 — Vision detector** | The *AnomSeer-style* model: **Qwen3-VL-8B** on **PNG plots** (A6000, 2 epochs). 2,000 test PNGs: F1 0.457, **P 0.769**, **CEF0.5 0.604**. ~$1. (§6.3) |
+| **9 — Advice grading** | A frozen seed-42 sample of **120** flags graded on a transparent rubric (correctness / actionability / grounding, 0–2 each). (§7) |
+
+**Model selection (why Qwen3-8B).** The base model was chosen deliberately over Qwen2.5 and
+Llama-3: Qwen3 posts stronger reasoning/math scores; its **Instruct** variant avoids untrained
+chat-token issues; it is fully supported by the Unsloth fine-tuning toolkit; at **8B** it fits the
+36 GB M3 Max after 4-bit quantization (so inference can run locally with no API); and it has a
+**vision sibling, Qwen3-VL-8B**, which made the AnomSeer-style vision approach possible with the
+same toolchain. (Full rationale: the architecture-research doc.)
 
 **Metrics used (and why):**
 - **Precision / Recall / F1** — standard detection metrics. Precision = of the windows we flagged,
@@ -218,35 +219,56 @@ How to read it, in order:
    **0.254**; adding the *same* few-shot examples barely moves it (**0.239**) — so the gap is **not**
    a prompting-asymmetry artifact. Unlike the base it does *not* over-flag (P≈R≈0.3, near the base
    rate), so it sits ~at chance. **A far stronger general model, prompted two ways, cannot beat the
-   dumb baseline here:** ten normalized values with no channel history simply do not carry the
-   signal. (Most sampled anomalies are *subtle deviations* — invisible from 10 numbers alone.)
+   dumb baseline here.** *Why?* Each window is presented as ~10 normalized numbers plus a mission and
+   channel name. The discriminating information — the **signal** — is whether that little sequence is
+   abnormal *for that specific channel*, and that requires **channel history**: knowing what is
+   normal for, say, `Mission1/channel_41` (its usual range, rhythm, and noise). A reading of 0.6 may
+   be perfectly normal on one channel and a clear fault on another; with no history you cannot tell.
+   The frontier has never seen this channel, so 10 context-free numbers carry almost no signal —
+   especially for the dominant *subtle-deviation* anomalies, which look nearly normal in 10 numbers.
+   The fine-tune, by contrast, **learned each channel's normal from 21,000 training windows**, which
+   is exactly the prior the frontier lacks. (Two ways to give a frontier that context — retrieval/RAG
+   over channel history, or fine-tuning a frontier model — were not tried here; see §10.)
 5. **The honest headline.** The **fine-tuned model is the only approach in the LLM family that
    beats the always-anomaly baseline with a balanced precision/recall** — the lone real detector
    among them. On top of detection it delivers output compliance, reliable structured advice, and
    3× lower latency. **What fine-tuning bought is the mission/channel-specific priors that no prompt
    over 10 normalized values can supply** — exactly the localized capability the brief targeted.
 
-> The earlier (Phase-5) version of this analysis listed "no base-vs-fine-tuned comparison" as the
-> *single biggest gap*. This table is that gap, closed — and reframed so it survives a skeptic.
+**Scope note.** These controls isolate the *text* model — the base and frontier were run through the
+text harness on the numeric windows. An equivalent base/frontier control for the *vision* detector
+(e.g. an un-fine-tuned Qwen3-VL on the same PNGs) was not run, because the controls were built before
+the vision model existed. It is a cheap, listed next step (§10) that would complete the symmetry.
 
 ---
 
 ## 6. Result B — The detection bake-off (who is the best *detector*?)
 
-### 6.1 The LSTM is the strongest detector
+### 6.1 The detectors, side by side
 
-After the Phase-7 full sweep (58 channels, contiguous timelines, no cherry-picking):
+All four detectors, ranked by F1 (LSTM after the Phase-7 full 58-channel sweep, no cherry-picking):
 
-- **LSTM:** F1 **0.552**, precision **0.785**, CEF0.5 **0.684**, **Affinity-F1 0.649**.
-- **Text LLM:** F1 0.453, precision 0.360, recall 0.609.
-- **Isolation Forest (floor):** F1 0.188 — the non-temporal method drowns in false positives, as
-  the literature predicts (it ignores the order of time entirely).
+| Detector | Precision | Recall | F1 | CEF0.5 | Character |
+| --- | --- | --- | --- | --- | --- |
+| **LSTM** | **0.785** | 0.451 | **0.552** | **0.684** | best overall; balanced, high precision |
+| **Vision LLM** (Qwen3-VL) | **0.769** | 0.325 | 0.457 | **0.604** | precision-oriented; rarely false-alarms |
+| **Text LLM** (Qwen3-8B) | 0.360 | 0.609 | 0.453 | 0.392 | recall-oriented; over-flags |
+| Isolation Forest | 0.127 | 0.459 | 0.188 | 0.149 | non-temporal floor; drowns in false positives |
 
-The LSTM is roughly **2.2× more precise** than the direct text LLM and wins F1 and the
-precision-weighted CEF0.5 decisively. The text LLM's only detection edge is **recall** (0.609 vs
-0.451) — it catches more true anomalies, but at the cost of a flood of false alarms. **This matches
-the AnomLLM literature:** direct LLM time-series detection trades precision for recall and is not
-yet competitive with a tuned sequence model on a clean, channel-specific benchmark.
+Two things stand out. **(1) The LSTM is the strongest detector** — highest F1, highest CEF0.5, and a
+genuine interval-aware Affinity-F1 of **0.649** (§6.2). It is ~2.2× more precise than the text LLM
+and wins decisively on the precision-weighted score. **This matches the AnomLLM literature:** direct
+LLM time-series detection trades precision for recall and is not yet competitive with a tuned
+sequence model. **(2) The two LLM modalities are mirror images** — the vision model is
+precision-oriented (P 0.769, almost never false-alarms) and the text model is recall-oriented
+(R 0.609, catches more but over-flags) at nearly identical F1. The vision model in fact posts the
+**best CEF0.5 of any LLM here (0.604)** and is detailed in §6.3.
+
+**Is the LSTM already "best possible"?** The *method* is industry standard (Telemanom), but our
+*implementation* is a solid baseline with clear headroom: we used a flat μ+3σ threshold, not
+Telemanom's **pruned dynamic error thresholding** (the official "Telemanom-ESA-Pruned" reportedly
+reaches ~0.97 event-wise CEF on Mission 1 under the ESA-ADB protocol). Per-channel threshold tuning,
+attention/bidirectional layers, longer context, and channel ensembling are all untried levers (§10).
 
 **Reading the text-LLM confusion matrix** (n=4,500): TP 684, FP 1,214, FN 439, TN ≈ 2,161,
 accuracy 0.632, 27 unparsed. The model is *over-eager* — it raises 1,898 flags against 1,123 true
@@ -258,9 +280,11 @@ behind a high-precision detector, it is useful.
 
 ### 6.2 Why the honest LSTM number is *lower* than before — and why that's the point
 
-Phase 2 scored the LSTM on a hand-picked 3-channel subset with per-channel tuned thresholds and
-reported F1 0.663. Phase 7 ran **all 58 Mission-1 target channels** and the honest macro-F1 fell to
-**0.552**. We *kept the lower number*. Two things this fixed:
+Phase 2 scored the LSTM on a hand-picked 3-channel smoke subset with per-channel tuned thresholds
+and reported F1 0.663. Phase 7 ran **all 58 Mission-1 target channels** and the honest macro-F1 fell
+to **0.552**. We *kept the lower number* — the master table (§2) and §6.1 report only the 58-channel
+0.552; the 0.663 smoke figure appears **only here**, to make the correction visible rather than
+quietly swapping numbers. Two things the full sweep fixed:
 
 - **Like-for-like eval units.** The LSTM now faces a full, heterogeneous channel set (no
   cherry-picking), bringing it closer to the LLM's full-distribution test.
@@ -288,6 +312,14 @@ The practical implication: the two LLM modalities **fail differently** (one trig
 conservative), which makes them attractive for an ensemble — e.g. require *both* to fire before
 escalating, or use vision as a low-false-alarm cross-check on the text model's flags.
 
+Two further consequences worth stating. **(a) The advisor can sit on the vision detector too.**
+Because the vision model is high-precision (0.769), `vision detector → text advisor` is a legitimate
+alternative to `LSTM → advisor` — the same hybrid pattern, with an all-LLM front end where false
+alarms are especially costly. **(b) The vision detector likely has headroom.** It converged very
+fast on a 2-class task (eval loss 0.0089) and its weak point is recall (0.325); more and more varied training
+data, a larger VL backbone, or more epochs *could* lift recall — untested, and listed in §10. Even
+as-is, its precision makes it worth considering wherever a near-zero false-alarm rate matters.
+
 ---
 
 ## 7. Result C — Is the advice any good? (semantic grading)
@@ -297,9 +329,21 @@ None of the classical baselines can do this at all. Phase 5 established that **9
 fine-tune's flags carry structured `DIAGNOSIS / ADVICE / ACTION` text. Phase 9 asked the sharper
 question: **is that advice correct?**
 
-A frozen seed-42 sample of **120** of the model's anomaly predictions (preserving the real TP:FP
-ratio) was graded on a transparent, *verifiable* rubric — correctness / actionability / grounding,
-0–2 each (total 0–6):
+A frozen seed-42 sample of **120** of the model's anomaly predictions — preserving the real **TP:FP
+ratio** (true-positive to false-positive flags; the model's ~0.36 precision means roughly 43 correct
+flags to 77 false alarms, and the sample keeps that ratio so the grade reflects the true false-alarm
+rate rather than a cleaned-up set) — was graded on a transparent, *verifiable* rubric: correctness /
+actionability / grounding, 0–2 each (total 0–6).
+
+**How the grading worked (and why it is not circular).** The grader (the Claude session model) did
+**not** score against its own world knowledge, nor did it simply diff against the Phase-1.5 advice
+labels (it could not — the stored predictions lack the keys to join to those labels). It scored
+against **the window's own data and the ground-truth anomaly label**: *grounding* = does the named
+channel match the input window and is the stated magnitude consistent with the actual values;
+*correctness* = ground-truth-gated, so advice written about a truly-nominal window (a false alarm)
+scores 0 by construction. This is why "just use the frontier model instead" does not follow from
+Phase 9: judging finished advice **with the answer key in hand** is a far easier task than *producing*
+detections cold — and as a detector the same frontier sat at chance (§5).
 
 | Subset | n | Correctness | Actionability | Grounding | Mean /6 | High-quality |
 |--------|---|-------------|---------------|-----------|---------|--------------|
@@ -308,9 +352,11 @@ ratio) was graded on a transparent, *verifiable* rubric — correctness / action
 | False positives (false alarms) | 77 | 0.00 | 0.53 | 0.53 | 1.06 | 0% |
 
 - **When the model is right to flag, its advice is genuinely good:** mean **5.58/6**, 95%
-  high-quality, **100% grounded** (correct channel — 119/120 named the right channel; only 3/120
-  mislabelled the subsystem — and a magnitude consistent with the window), 100% carrying a
-  severity-appropriate action.
+  high-quality, with **near-perfect grounding (1.86/2)** — 119/120 named the correct *channel* (the
+  specific sensor stream, e.g. `Mission1/channel_41`) and a magnitude consistent with the window;
+  3/120 mislabelled the *subsystem* (the functional group the channel belongs to — power, thermal,
+  attitude, etc.). So even on the rare miss it usually points at the right sensor; what slips is the
+  higher-level category. Actionability was 1.93/2 (a severity-appropriate recommended action).
 - **Advice quality is gated by detection precision.** On false alarms (77 of 120 — the model's
   precision is ~0.36) the advice is built on a false premise, so correctness is **0.00/2** by
   construction; the model fabricates a confident "persistent anomaly" narrative on a truly-nominal
@@ -319,6 +365,22 @@ ratio) was graded on a transparent, *verifiable* rubric — correctness / action
   high-precision detector** (the LSTM flags at precision ≈0.79), not as the standalone detector.
   Its diagnostic writing is strong — but only as trustworthy as whatever decided to call the
   anomaly.
+
+**"95% high-quality" is good, but not yet mission-critical-grade.** For a *lives-depend-on-it*
+system, 95%-when-correct (graded by an LLM on n=120, against **synthetic** Phase-1.5 advice labels)
+is a strong showcase result, not a deployment guarantee. The highest-leverage steps to close that
+gap, roughly in order of impact:
+1. **Replace the synthetic advice labels with human-SME-written advice.** The current ceiling is the
+   templated, statistic-derived Phase-1.5 labels; real fault-engineer advice (with true root causes)
+   is the single biggest lever on correctness.
+2. **Ground the advisor in real references (RAG).** Give it the channel's spec sheet / fault catalog
+   so it cites documented root causes and corrective procedures instead of pattern templates.
+3. **Put it behind a high-precision detector** (the Hybrid) so it is rarely asked to explain a false
+   alarm in the first place — directly fixes the precision-gating above.
+4. **Add calibrated confidence / abstention** so it can say "uncertain" instead of confidently
+   fabricating on a borderline window.
+5. **A bigger/stronger advisor backbone and more epochs** *if* resources allow — and a **larger,
+   human-validated advice grade** to replace the n=120 LLM-judge sample with tighter confidence.
 
 ---
 
@@ -342,79 +404,139 @@ Why this is the right design, not just a convenient one:
 
 - **Detection belongs to the cheap, high-precision LSTM.** You cannot run an 8B model on every
   window: the text LLM costs **2.77 s/window** on M3 Max Metal; at telemetry scale that is a
-  non-starter for first-pass screening. The LSTM scores in sub-milliseconds. (This is a
-  systems-level point an interviewer will probe.)
+  non-starter for first-pass screening. The LSTM scores in sub-milliseconds.
 - **Explanation belongs to the LLM, invoked only on flags.** The expensive model runs ~1/N of the
   time and supplies the one capability the detector lacks — and §7 shows that *on the windows a
   high-precision detector flags*, the advice is 95% high-quality.
 - **The Hybrid strictly dominates either component alone for the stated business need:** it inherits
   the LSTM's detection (F1 0.552, P 0.785) *and* adds reliable, grounded advice — the exact
-  "anomaly + end-user advice, no external vendor" capability the brief defined.
+  "anomaly + end-user advice, no external vendor" capability this project targets.
 - **The vision model is the optional third leg:** modality-independent, precision-oriented, useful
   as an ensemble cross-check where false alarms are especially costly.
 
 The deeper lesson — and the most transferable finding — is **where the signal lives**. A frontier
 model with vastly more general capability than Qwen3-8B *cannot* detect these anomalies from the
-prompt alone (§5). The fine-tune can, because the fine-tune *learned the mission- and
-channel-specific priors* — what "normal" looks like for *this* channel on *this* spacecraft. That
-is the precise thing fine-tuning is for, and the precise thing the brief wanted demonstrated:
-adapting an open model to a localized, mission-specific task that no amount of prompting an API can
+prompt alone (§5). The fine-tune can, because it *learned the mission- and channel-specific priors* —
+what "normal" looks like for *this* channel on *this* spacecraft. That is precisely what fine-tuning
+is for: adapting an open model to a localized, mission-specific task that prompting an API cannot
 replicate.
+
+One honest qualifier on that claim: we compared a *fine-tuned* open model against a *prompted*
+frontier — not a *fine-tuned* frontier. The cleanest "could you just adapt a hosted model instead?"
+test would be to **fine-tune a frontier model** (GPT-4o/Gemini expose tuning APIs; Claude does not
+publicly) or to give a frontier the missing channel history via **retrieval (RAG)**. Neither was
+run; both are listed in §10. Note the trade-off: fine-tuning or RAG-ing a *hosted* model re-introduces
+the exact vendor dependency, data-egress, cost, and latency that an owned on-prem model avoids — so
+even if a fine-tuned frontier matched the accuracy, the sovereign 8B would still win on the
+deployment constraints that motivated the project.
 
 ---
 
-## 9. Honest limitations (state these before an interviewer does)
+## 9. Limitations
 
-The four largest Phase-5 gaps are now **closed** (base-vs-fine-tuned → §5; full LSTM → §6.2; vision
-detector → §6.3; semantic advice grading → §7). The residual limitations after all nine phases:
+The four largest gaps identified mid-project are now **closed** (base-vs-fine-tuned → §5; full LSTM →
+§6.2; vision detector → §6.3; semantic advice grading → §7). The residual limitations after all nine
+phases — each with *why it stands* and what it would take to close:
 
 1. **Eval-unit asymmetry is reduced but not eliminated.** The LSTM is macro-averaged over 58
    contiguous Mission-1 channels; the LLM is micro-averaged over 4,500 shuffled cross-mission
-   windows. Phase 7 narrowed this materially (3 → 58 channels, honest thresholds), but a *fully*
-   like-for-like rematch would score both on one identical contiguous per-channel stream.
-2. **The frontier control is a sample (n=150), not the full set,** and is fed only the same
-   context-free 10-value input the fine-tune saw. It is a fair *sanity check* (and a deliberately
-   hard one), not a full benchmark of what a frontier model could do with richer context.
-3. **Advice labels are synthetic.** The Phase-1.5 gold advice was generated in-session (statistic-
-   derived), not written by spacecraft SMEs. Phase 9 grades the model's advice against window
-   context + ground truth (which needs no gold join), but a human-expert validation of both the
-   labels and the model output remains future work.
-4. **Advice grading is a 120-window sample,** judged by an LLM rubric (the Claude session model),
-   not a human SME panel. The TP:FP ratio was preserved to avoid bias, but confidence intervals are
-   wide; the stored advice is also truncated at 300 chars (clipping the trailing ACTION line).
+   windows. *Why it stands:* Phase 7 already moved the LSTM from 3 → 58 channels under the project's
+   time budget, which narrowed the gap materially; a *fully* like-for-like rematch needs a new
+   evaluation harness that scores both models on one identical, contiguous per-channel stream (~1–2
+   days of work, §10).
+2. **The frontier control is a sample (n=150) on context-free input.** It is fed the same ~10
+   normalized values the fine-tune saw, with no channel history. *Why it stands:* this was the free,
+   *controlled* comparison — deliberately holding the input identical so only the model varies; it is
+   a hard sanity check, not a best-effort frontier benchmark. *To give a frontier a fair shot in the
+   real world* you would add channel history via **retrieval (RAG)**, a longer raw window, or channel
+   metadata — listed in §10.
+3. **Advice labels are synthetic.** The Phase-1.5 advice was generated in-session (statistic-derived
+   templates), not written by spacecraft subject-matter experts (SMEs). Phase 9 grades the model's
+   advice against window data + the ground-truth label (so it needs no synthetic-label join), but
+   human-expert validation of both the labels and the output remains future work — and is the top
+   lever toward mission-critical advice (§7).
+4. **Advice grading is a 120-flag, LLM-judged sample.** Judged by the Claude session model on a
+   transparent rubric, not a human SME panel; the TP:FP ratio (true-positive to false-positive flags)
+   was preserved to keep the false-alarm rate realistic, but confidence intervals are wide. The stored
+   advice was also **truncated at 300 characters** — *why:* to keep the 4,500-row results file
+   manageable during the eval; this clips only the trailing ACTION line. *Does it change any
+   comparison?* No — the ANOMALY/NOMINAL verdict is at the start of the response and the same clip
+   applied to base and frontier, so detection numbers are unaffected; only advice-grading
+   *completeness* (the ACTION line) is. Re-running advice grading uncapped is a small next step (§10).
 5. **The Hybrid's detection score is inherited, not independently measured** — by construction it
    equals the LSTM's. Only its advice layer is genuinely new, and it was not benchmarked against an
    alternative advice generator.
-6. **Single fine-tune, no hyperparameter sweep.** r=16/α=16/3-epoch were sensible defaults; no
-   ablation over LoRA rank, epochs, prompt format, or window/resample cadence was run.
-7. **No detection-tuned LLM variant or P-R curve.** The deployed model was the *advice* SFT used
-   *also* as a detector at a single operating point; a detection-specific SFT or a calibrated
-   decision threshold could shift its precision/recall and was not explored.
-8. **Vision model has no advice head,** and converged very fast (eval loss 0.0089 on a 2-class
-   task), so its generalization to unseen missions is untested.
-9. **Resampling to 1-hour cadence is lossy** — sub-hour transient anomalies may be averaged away;
-   no sweep over cadence was run.
-10. **Mission scope.** The LSTM sweep covers Mission-1 target channels; cross-mission generalization
-    (train on one mission, test on another) is untested.
+6. **Single fine-tune, no hyperparameter sweep.** r=16 / α=16 / 3-epoch were sensible defaults.
+   *Why it stands:* a showcase ran one good configuration rather than a grid. The knobs most likely to
+   matter: **LoRA rank** (8/16/32 — capacity), **epochs** (2/3/5 — under/overfitting), **learning
+   rate**, and **prompt format**. A small grid is ~1 day of cloud (~$5–15), §10.
+7. **No detection-tuned LLM variant or precision–recall curve.** The deployed model was the *advice*
+   **SFT** (Supervised Fine-Tuning — training on input→output pairs) used *also* as a detector at a
+   single operating point. *Two untried ideas:* a **detection-only SFT** (a model trained purely to
+   emit ANOMALY/NOMINAL — it *might* calibrate precision/recall differently, but this is a hypothesis,
+   not a claim) and a **calibrated decision threshold** (taking a continuous anomaly score and
+   choosing a cutoff that trades recall for precision, i.e. moving along a P–R curve instead of
+   reporting one point). Neither was explored; both are in §10.
+8. **Vision model has no advice head, and "converged very fast."** Its validation loss dropped to
+   0.0089 on an easy 2-class (ANOMALY/NOMINAL) task — meaning it fit the *training* distribution very
+   easily. Low in-distribution validation loss does **not** guarantee it generalizes to a *new mission
+   it never trained on*; that (overfitting risk) is untested.
+9. **Resampling to 1-hour cadence is lossy.** Raw telemetry is sampled every few seconds/minutes; we
+   averaged it onto a 1-hour grid to make 29 GB tractable. An anomaly lasting **less than an hour** can
+   be averaged into its neighbours and disappear. We did not try other cadences (5-min / 15-min), so
+   the signal cost of the 1-hour choice is unmeasured — a cadence sweep is in §10.
+10. **Mission scope.** The LSTM sweep covers Mission-1 target channels; **cross-mission generalization**
+    — train on one mission, test on a different spacecraft the model never saw — is untested (§10).
 
 ---
 
-## 10. Recommended next steps (priority order)
+## 10. Recommended next steps
 
-1. **Ship the Hybrid as the reference design** — it is the architecture the numbers support and the
-   one the business needs.
-2. **Fully level the detection field:** evaluate LSTM *and* LLM on one identical contiguous
-   per-channel stream so Affinity-F1 is comparable across both and the eval-unit asymmetry vanishes.
-3. **Tune the LLM's operating point:** calibrate a decision threshold / prompt to trade recall for
-   precision; report a P-R curve instead of a single point — this is the cheapest way to make the
-   standalone text LLM more deployable.
-4. **Widen the advice grade:** larger sample (or full-set), plus a human-SME spot-check, and store
-   the full untruncated ACTION line.
-5. **Ensemble the two LLM modalities** (recall-oriented text + precision-oriented vision) and
-   measure whether "both must fire" beats either alone.
-6. **Add an advice head to the vision model**, and run a small **LoRA ablation** (rank / epochs /
-   prompt format) to confirm the fine-tune is near its ceiling.
-7. **Cross-mission generalization test** and a **resample-cadence sweep**.
+Prioritized, each with a rough **effort** and **expected impact**. (These are mirrored as a proposed
+hardening phase in the implementation plan.)
+
+1. **Ship the Hybrid as the reference design.** *Effort: low* (packaging, not new modeling).
+   *Impact: high.* It is the architecture the numbers support. **Who needs it:** operators of
+   mission-critical monitoring systems — spacecraft FDIR, but equally industrial/SCADA telemetry or
+   any high-availability infrastructure — that (a) must run an **on-prem / sovereign** model (data
+   cannot leave the boundary, no external-API dependency), and (b) where **false alarms are costly**
+   (alert fatigue in a staffed control room). For that profile, "cheap high-precision detector → LLM
+   advisor" is the deployable shape.
+2. **Toward mission-critical advice (highest-value quality work).** *Effort: high* (needs human
+   experts). *Impact: high.* Replace the synthetic Phase-1.5 labels with **human-SME-written advice**,
+   add **RAG grounding** (channel spec sheets / fault catalogs), and run a **larger, human-validated
+   advice grade** to replace the n=120 LLM-judge sample. This is the real path from "95% when correct"
+   to deployment-grade.
+3. **Fully level the detection field.** *Effort: ~1–2 days* (build a contiguous-stream eval harness;
+   re-score LSTM and LLM on one identical per-channel timeline so Affinity-F1 is comparable).
+   *Impact: medium–high.* **Is the report meaningful without it?** Yes — Phase 7 already made the
+   comparison far more honest and the result matches the literature. But doing it converts a
+   "believable upper bound on the LSTM's edge" into a settled like-for-like number, which is *more*
+   authoritative.
+4. **Complete the skeptic table for vision.** *Effort: low* (~half a day — run an un-fine-tuned
+   Qwen3-VL zero-shot on the 2,000 test PNGs, optionally a frontier-VL too). *Impact: medium.* Closes
+   the text-only scope gap noted in §5 so the "did fine-tuning help?" story covers both modalities.
+5. **Calibrate the LLM's operating point + try a detection-only SFT.** *Effort: low–medium.*
+   *Impact: medium.* Sweep a decision threshold to report a P–R curve instead of one point (cheapest
+   way to make the standalone text LLM more deployable); separately, train a detection-only SFT to see
+   if it shifts precision/recall.
+6. **Ensemble the two LLM modalities.** *Effort: ~2–3 days* (no new training — just score-combination
+   over existing per-window outputs). *Impact: medium–high.* Combine the recall-oriented text model
+   and the precision-oriented vision model: "**both must fire**" → very high precision; "**either
+   fires**" → very high recall. Because the two fail differently (§6.3), this is a promising,
+   low-cost win.
+7. **Fine-tune / RAG a frontier model — the true "own vs. adapt" comparison.** *Effort: medium.*
+   *Impact: medium.* We compared a *fine-tuned* open model to a *prompted* frontier; fine-tuning a
+   frontier (GPT-4o/Gemini tuning APIs; Claude has none public) or giving it channel history via RAG
+   would test whether you even need a custom 8B. **Caveat:** doing so re-introduces the vendor
+   dependency, data-egress, cost, and latency the sovereign model exists to avoid.
+8. **Hyperparameter sweep + vision improvements + generalization tests.** *Effort: medium.*
+   *Impact: medium.* A small **LoRA ablation** (rank / epochs / prompt format; ~1 day, ~$5–15) to
+   confirm the fine-tune is near its ceiling; an **advice head** and larger backbone for the vision
+   model; a **cross-mission generalization test** (train on one mission, test on a spacecraft the
+   model never saw — the real test of whether it generalizes); and a **resample-cadence sweep**
+   (re-run ETL at 5-min / 15-min / 1-hour to find the best signal-vs-tractability trade-off, since the
+   current 1-hour grid can average away sub-hour anomalies).
 
 ---
 
@@ -429,27 +551,29 @@ detector → §6.3; semantic advice grading → §7). The residual limitations a
 | Cost-effective local/cloud split | ✅ | ETL + inference local on M3 Max; training on rented GPUs for **~$3.33 total** |
 | *Beyond DoD:* did-fine-tuning-help, vision modality, semantic advice grade | ✅ | Phases 6–9 |
 
-Every box is checked, and — more important for a senior signal — **the inconvenient findings (LLM
-loses the detection bake-off; few-shot's F1 is a mirage; advice is precision-gated) are reported
-honestly rather than hidden.** The brief asked the agent to *validate* and *explain*; surfacing
-correct-but-inconvenient results is the point.
+Every box is checked — and the inconvenient findings (**the LLM loses the detection bake-off; the
+few-shot base's F1 is a mirage; advice quality is precision-gated**) are reported plainly rather than
+hidden. Surfacing correct-but-inconvenient results is the whole point of an empirical bake-off.
 
 ---
 
-## 12. One-paragraph takeaway
+## 12. Bottom line
 
 On real ESA satellite telemetry, a classical LSTM with per-channel error thresholding remains the
 stronger *detector* (precision 0.785, F1 0.552, CEF0.5 0.684) than a QLoRA-fine-tuned Qwen3-8B used
 as a direct detector (precision 0.360, F1 0.453) — the LLM buys recall at a steep precision cost and
-is far too slow (2.77 s/window) to screen every window anyway. But among the LLM family the
-fine-tune is the **only** approach that beats a trivial always-anomaly baseline with a balanced
-precision/recall trade-off, while a frontier model prompted two ways sits at chance — proving the
-fine-tune learned mission-specific priors that no prompt over 10 normalized values can supply. And
-where the LLM uniquely earns its place — diagnostic advice — it is **95% high-quality when the flag
-is correct**, but only then. The correct, empirically-grounded architecture is therefore the
-**hybrid**: a cheap high-precision detector that triggers an LLM advisor — exactly the localized,
-open-source, no-vendor system the original brief set out to validate. The headline is not "LLMs win"
-or "LLMs lose"; it is *"here is the measured trade-off, and here is the design it dictates."*
+is far too slow (2.77 s/window) to screen every window anyway. The *vision* fine-tune (Qwen3-VL,
+precision 0.769, CEF0.5 0.604) is its precision-oriented mirror and the best LLM detector on the
+cost-of-false-alarm metric — a useful third, modality-independent signal. But among the LLM family
+the text fine-tune is the **only** approach that beats a trivial always-anomaly baseline with a
+balanced precision/recall trade-off, while a frontier model prompted two ways sits at chance —
+proving the fine-tune learned mission-specific priors that no prompt over 10 normalized values can
+supply. And where the LLM uniquely earns its place — diagnostic advice — it is **95% high-quality
+when the flag is correct** (strong, though not yet mission-critical-grade), but only then. The
+correct, empirically-grounded architecture is therefore the **hybrid**: a cheap high-precision
+detector that triggers an LLM advisor — exactly the localized, open-source, no-vendor system this
+project set out to validate. The headline is not "LLMs win" or "LLMs lose"; it is *"here is the
+measured trade-off, and here is the design it dictates."*
 
 ---
 
@@ -459,16 +583,5 @@ Every phase has a `make` target and a paired `validate-*` target encoding its su
 full LLM eval is durable (`--checkpoint-every N`, `--resume`, atomic writes). Published artifacts:
 fine-tuned text GGUF — `dyrtyData/star-pipeline-qwen3-8b-advice-gguf`; vision adapter —
 `dyrtyData/star-pipeline-qwen3-vl-8b-detection` (both on Hugging Face). Raw ESA-AD (~29 GB) is not
-redistributed; `make download` fetches it.
-
-## Appendix B — The deviation trail
-
-The implementation log records **38 numbered deviations (D1–D38)** from the original plan — corrupt
-downloads, a completely wrong data-loader assumption (ESA-AD ships per-channel pickles, not the
-monolithic files the plan assumed), a FAT32 4 GB single-file wall that forced the GGUF onto local
-SSD, a trans-Atlantic SSH bottleneck solved via the Hugging Face CDN, a TRL-0.24 API rewrite, three
-latent bugs in never-run vision code, and the eval-durability saga (a multi-hour job that died to
-output buffering once and to machine sleep once before being properly daemonized). These are
-preserved deliberately: *how* the result was reached is part of the showcase. See the
-[implementation log](../implement/2026-06-12-star-pipeline-log.md) and the
-[plain-language walkthrough](2026-06-14-plain-language-walkthrough.md) for the narrative.
+redistributed; `make download` fetches it. The implementation log records the full engineering trail
+(38 numbered deviations) for anyone who wants the blow-by-blow.
