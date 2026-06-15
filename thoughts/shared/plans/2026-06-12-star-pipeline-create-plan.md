@@ -2822,17 +2822,48 @@ shared set where every window has all three signals:
 3. Compare the fused frontier against each single model's point; document whether it Pareto-improves.
 
 **Success criteria:**
-- [ ] **Vision continuous score captured** → `results/inference_vision_scored.json` + a vision PR curve
+- [x] **Vision continuous score captured** → `results/inference_vision_scored.json` + a vision PR curve
   (`results/vision_pr_curve.json`, AUC-PR + calibrated point); §6.4 notes both modalities' curves.
-- [ ] A fused per-window score over the shared set, from ≥2 models (3 incl. LSTM ideal).
-- [ ] `results/ensemble_pr_curve.json` + an ensemble row in `comparison_metrics.json`/report.
-- [ ] Either a fused operating point that beats the best single model on F1 **and** CEF0.5 (Pareto
-  win), or a documented explanation of why fusion didn't help on this data.
-- [ ] Analysis doc §6.3/§10 updated with the ensemble result.
+  **DONE** — 2,000 PNGs scored on a Vast.ai A6000 (~$0.3); AUC-PR 0.586, calibration lifts CEF0.5
+  0.604→0.649. Scored argmax (P 0.758/R 0.349) matches the deployed vision model → faithful score.
+- [x] A fused per-window score over the shared set, from ≥2 models (3 incl. LSTM ideal). **DONE** —
+  text+vision over all 2,000 windows AND text+vision+LSTM over the 1,378 Mission-1 subset.
+- [x] `results/ensemble_pr_curve.json` + an ensemble row in `comparison_metrics.json`/report. **DONE** —
+  two ensemble rows render; `make eval-all` reports 13 approaches; `validate-eval` passes.
+- [x] Either a fused operating point that beats the best single model on F1 **and** CEF0.5 (Pareto
+  win), or a documented explanation of why fusion didn't help on this data. **DONE — Pareto win.**
+  3-model fused CEF0.5-optimal **P 0.922 / R 0.486 / F1 0.636 / CEF0.5 0.781** (AUC-PR 0.756) beats
+  every single model's own best operating point on the same windows (text 0.731, vision 0.666, LSTM
+  0.479). text+vision alone: CEF0.5 0.725 (> text 0.683, vision 0.649).
+- [x] Analysis doc §6.3/§10 updated with the ensemble result.
 
 **Effort:** ~2–3 days (the alignment is the fiddly part); local, no/low cloud (one short vision-score
 run). **Risk:** low–medium. **Independent of teardown** *if* the vision-score run is done while PNGs
 still exist — so run it before Phase 10, or keep the PNGs.
+
+> **✅ Phase 14 COMPLETE (2026-06-15).** Done on `main` (Phases 11/12/13 already merged → no shared-merge
+> conflict). Code: `eval_vision.py --score`, generalized `pr_curve.py`, `train_lstm.py
+> --dump-window-scores`, new `src/inference/ensemble.py`, `evaluate.py` ensemble rows, Makefile targets.
+> Key findings & deviations (full detail in the implementation log "Phase 14" section):
+> - **Clean Pareto win** because the modalities make *independent* errors. The 3-model fusion on the
+>   1,378-window Mission-1 subset (where all three signals exist) hits **CEF0.5 0.781 / AUC-PR 0.756**;
+>   text+vision over all 2,000 windows hits CEF0.5 0.725 / AUC-PR 0.703 — both beat every single
+>   model's *own* best point on the same windows.
+> - **D46** — LSTM continuous score via a new `--dump-window-scores` (dense per-window error to a
+>   SEPARATE gitignored file; `--reuse-models`, ~6 min, canonical `baseline_results.json` untouched).
+>   Map verified exact: `(mission, channel, start_idx) → i = start_idx // stride`.
+> - **D47** — **OOF k-fold cross-validated stacking** instead of the plan's "fit LR on the val split":
+>   text & vision were scored on TEST only, so OOF stacking avoids train-on-test leakage without a
+>   second cloud val-scoring run. Standard, defensible substitute.
+> - **D48** — vision score run on **Vast.ai A6000** (proven Phase-8/12 runbook, ~$0.3), NOT the plan's
+>   "try local MPS first": `transformers`/`peft`/`mlx_vlm` not installed locally + CUDA-only bnb base +
+>   uncertain Qwen3-VL MPS support, and the user supplied the key. Instance destroyed (billing stopped).
+> - **D49** — LSTM kept at **Mission1 scope** (user didn't pick an option → took the recommendation):
+>   two variants (full text+vision + 3-model M1 subset) rather than training M2/M3 from scratch (~3 h,
+>   M3 categorical/noisy) for no headline gain.
+> - **No change needed to the rest of the plan.** Phase 14 only adds rows. **Teardown (Phase 10) is now
+>   fully unblocked** — Phases 11–14 all done; raw data / PNGs no longer needed. Teardown stays LAST +
+>   user-confirmed (irreversible kaggle-token rotation + raw deletion).
 
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -2848,10 +2879,11 @@ for any re-download. Both are torn down together as the final step.
 **Note:** Phase 7 needs the raw data on `DUAL DRIVE` — do not delete it until Phase 7 is done.
 
 **Preconditions (all must be true before teardown):**
-- [ ] Phases 5–9 complete and results committed (Phase 8 vision is optional — note if skipped).
-- [ ] **Any of the optional Phases 11–14 you intend to run are done** — Phases 11 (LSTM), 12 (vision
+- [x] Phases 5–9 complete and results committed (Phase 8 vision is optional — note if skipped). **Done.**
+- [x] **Any of the optional Phases 11–14 you intend to run are done** — Phases 11 (LSTM), 12 (vision
   base control), and 14's vision-score run need the raw data / PNGs that this teardown deletes.
-  Phase 13 is independent; Phase 14 depends on Phase 13.
+  Phase 13 is independent; Phase 14 depends on Phase 13. **ALL OF 11–14 ARE COMPLETE (2026-06-15)** →
+  raw data / PNGs are no longer needed; teardown is unblocked (still LAST + user-confirmed).
 - [ ] Final models exported (GGUF) and stored on `DUAL DRIVE` and/or pushed to their cloud home.
 - [ ] No open question that could require re-running the ETL from raw.
 

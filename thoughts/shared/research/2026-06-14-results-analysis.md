@@ -33,14 +33,17 @@ and few-shot), and a deliberately dumb "flag everything" control.
 
 Three findings carry the project:
 
-1. **As a pure detector, the tuned LSTM wins** (F1 0.553, precision 0.837, the best
+1. **As a pure single detector, the tuned LSTM wins** (F1 0.553, precision 0.837, the best
    precision-weighted CEF0.5 0.705, and a genuine interval-aware Affinity-F1 0.673, after the
    Phase-11 operating-point calibration — see §6.1). The two
    fine-tuned LLM detectors land below it and are *mirror images* of one another — the **vision**
    model (Qwen3-VL reading rendered plots) is precision-oriented (P 0.769, and the best
    false-alarm-aware CEF0.5 of any LLM here, 0.604), while the **text** model is recall-oriented
    (R 0.609, over-flags). Neither beats the LSTM at detection — consistent with the published
-   literature.
+   literature. **But because the three detectors make *independent* errors, fusing their continuous
+   scores beats all of them** (Phase 14, §6.3): a leakage-free stacker over the shared window set
+   reaches **CEF0.5 0.781 / AUC-PR 0.756** (3-model, P 0.922 / R 0.486) — a Pareto win over every
+   single model's own best operating point, and the strongest detection result in the project.
 2. **Fine-tuning is nonetheless justified, and the proof survives a skeptic.** Read against a
    *trivial always-anomaly baseline* (F1 0.399 for free on this 25%-positive set), the fine-tuned
    LLM is the **only LLM-family approach that clears that line with a balanced precision/recall
@@ -351,7 +354,31 @@ conservative), which makes them attractive for an ensemble. Hard rules — requi
 precision) or *either* (high recall) — are just the two extremes; **fusing their continuous scores**
 (ideally with the LSTM's score as a third input) via a small learned combiner can trace a whole
 precision–recall frontier that improves on *both* corners at once, because the modalities' errors are
-independent. This is specced as Plan Phase 14 (it builds on the calibrated scores from §10 #6).
+independent.
+
+> **✅ Confirmed by Phase 14 (score-level fusion) — and it is a Pareto win.** Each detector's
+> *continuous* per-window score was captured (text & vision = verdict-token logprob; LSTM =
+> reconstruction error) and fused with a leakage-free **out-of-fold k-fold logistic stacker** over a
+> shared window set. Aligning the modalities was the work: the **2,000 windows with PNGs** are exactly
+> the text-scored windows by `index` (verified, 0 mismatches), and the LSTM maps in via
+> `(mission, channel, start_idx) → start_idx // stride` (verified exact on the 1h/stride-16 grid;
+> Mission-1 only). Results on the shared set, each model compared against its *own* best operating
+> point computed on the same windows:
+>
+> | Fusion | Windows | Fused AUC-PR | Fused CEF0.5-optimal | Beats single-best CEF0.5 |
+> |---|---|---|---|---|
+> | **text + vision** | 2,000 | **0.703** | P 0.810 / R 0.511 / F1 0.627 / **CEF0.5 0.725** | text 0.683, vision 0.649 ✅ |
+> | **text + vision + LSTM** | 1,378 (M1) | **0.756** | P 0.922 / R 0.486 / F1 0.636 / **CEF0.5 0.781** | text 0.731, vision 0.666, LSTM 0.479 ✅ |
+>
+> Both fused points **dominate every single model on both AUC-PR and CEF0.5** on the shared set — the
+> independent-errors intuition holds. A **2-of-3 vote** gives a balanced P 0.724 / R 0.600 / F1 0.656,
+> and the **disagreement→review** framing (route the 747-of-1,378 windows where the three disagree to
+> an operator; alarm only on agreement) is the deployable read. ⚠️ These numbers are on the shared
+> 2,000/1,378-window set, **not** the 4,500-window / 58-channel master-table rows, so they are not
+> directly comparable to §2/§6.1 (the master-table LSTM CEF0.5 0.705 is its semi-supervised threshold
+> over *all* Mission-1 windows; here the LSTM error is ranked on the harder balanced subsample). Full
+> detail: `results/ensemble_pr_curve.{json,png}`, `src/inference/ensemble.py`; deviations D46–D49 in
+> the implementation log.
 
 Two further consequences worth stating. **(a) The advisor can sit on the vision detector too.**
 Because the vision model is high-precision (0.769), `vision detector → text advisor` is a legitimate
@@ -395,6 +422,15 @@ not a capacity one** — the same lesson as the LSTM's z-calibration in Phase 11
 therefore still not indicated; the threshold (and turning off sampling) was the right lever. The
 continuous score also unlocks **Phase 14** (score-level fusion), which needs soft scores rather than
 hard verdicts.
+
+> **Vision modality calibrated too (Phase 14 Step 0) — the symmetry is now closed.** The same
+> verdict-token-logprob scoring was applied to the **vision** detector over the 2,000 test PNGs
+> (`results/vision_pr_curve.{json,png}`). Vision **AUC-PR = 0.586** (floor 0.251); the as-deployed
+> greedy point is P 0.769 / R 0.325 / CEF0.5 0.604, and sweeping the threshold down to 0.380 reaches a
+> **CEF0.5-optimal P 0.728 / R 0.453 / F1 0.558 / CEF0.5 0.649** — vision has no "turn off sampling"
+> win (it already decoded greedily), so the threshold sweep is the only knob, and it buys recall
+> (0.325 → 0.453) at a modest precision cost. Both modalities now have a published PR curve; the
+> vision score is also the fusion input for §6.3's ensemble.
 
 > **Operating-point note for §2 / §6.1.** The master table keeps the text LLM at its *as-deployed*
 > point (P 0.360 / R 0.609 — the advice-SFT model decoded as actually shipped) for honesty about what
@@ -622,15 +658,18 @@ concrete, self-contained next phases (Phases 11–14) in the implementation plan
    the auxiliary advice task likely *helps* rather than hurts the shared representation, so removing it
    is unlikely to improve precision and would cost a capability. The calibrated continuous score is also
    the input Phase 14 (#7) fuses.
-7. **Ensemble the detectors via score-level fusion** (Plan Phase 14, depends on #6). *Effort: ~2–3
-   days* (no new training — fuse the continuous scores). *Impact: medium–high.* "Both must fire" (AND
-   → high precision) and "either fires" (OR → high recall) are only the two *endpoints*. The richer
-   move is to **fuse the continuous anomaly scores** (text + vision + the LSTM error score) with a
-   small learned **stacker** (logistic regression on a validation split) and sweep one threshold — a
-   whole precision–recall frontier. Because the modalities make *independent* errors (§6.3), the fused
-   frontier can **Pareto-dominate** any single model (higher F1/CEF0.5 at matched recall), not merely
-   interpolate. A 2-of-3 majority vote and a "disagreement → human review" tier are deployable
-   variants. Requires scoring all models on one shared window set (the fiddly part).
+7. **Ensemble the detectors via score-level fusion** (Plan Phase 14, depends on #6). ✅ **DONE
+   (2026-06-15).** The continuous scores (text + vision verdict-token logprobs, LSTM reconstruction
+   error) were fused with a leakage-free **out-of-fold logistic stacker** over a shared window set
+   (D47: OOF k-fold instead of a held-out val split, since text/vision were scored on TEST only). It
+   **Pareto-dominates** as predicted: on the 1,378-window Mission-1 subset (all three signals) the
+   fused CEF0.5-optimal point is **P 0.922 / R 0.486 / F1 0.636 / CEF0.5 0.781 / AUC-PR 0.756**,
+   beating every single model's own best point on the same windows (text 0.731, vision 0.666, LSTM
+   0.479); text+vision over all 2,000 windows reaches CEF0.5 0.725 / AUC-PR 0.703. A **2-of-3 vote**
+   (P 0.724 / R 0.600 / F1 0.656) and a **disagreement → human-review** tier are the deployable
+   variants. The fiddly part was alignment: the 2,000 PNG windows == the text-scored windows by
+   `index`, and the LSTM maps via `(mission, channel, start_idx) → start_idx // stride` (M1 only). See
+   §6.3, `results/ensemble_pr_curve.{json,png}`, `src/inference/ensemble.py`.
 8. **Fine-tune / RAG a frontier model — the true "own vs. adapt" comparison.** *Effort: medium.*
    *Impact: medium.* We compared a *fine-tuned* open model to a *prompted* frontier; fine-tuning a
    frontier (GPT-4o/Gemini tuning APIs; Claude has none public) or giving it channel history via RAG

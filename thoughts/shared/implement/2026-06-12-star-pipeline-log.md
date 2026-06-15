@@ -1399,3 +1399,113 @@ so the two merge cleanly.
 - **Teardown (Phase 10)** precondition unaffected — Phase 13 never touches raw data.
 - **Files added (all trackable):** `results/inference_test_scored.json`, `results/llm_pr_curve.json`,
   `results/llm_pr_curve.png`; code: `src/inference/pr_curve.py`, edits to `src/inference/test_local_gguf.py`.
+
+---
+
+## Phase 14: Ensemble the detectors via score-level fusion — COMPLETE (2026-06-15)
+
+**Goal (plan §Phase 14):** fuse the three detectors' CONTINUOUS per-window scores so the result
+improves on *both* precision and recall instead of sitting at one corner. Depends on Phase 13 (it
+needs soft scores, not hard verdicts). Folds in the vision calibration as Step 0.
+
+**Outcome — a clean Pareto win.** On the shared evaluation windows, the fused score beats every
+single model's *own* best operating point (computed on the same windows) on both AUC-PR and CEF0.5:
+- **text+vision (2,000 PNG windows):** fused AUC-PR **0.703**, CEF0.5-optimal **P 0.810 / R 0.511 /
+  F1 0.627 / CEF0.5 0.725** — vs single-best text (CEF0.5 0.683) and vision (0.649).
+- **text+vision+LSTM (1,378 Mission-1 subset, all three signals):** fused AUC-PR **0.756**,
+  CEF0.5-optimal **P 0.922 / R 0.486 / F1 0.636 / CEF0.5 0.781** — vs single-best text (0.731),
+  vision (0.666), LSTM-as-continuous-error (0.479). Both fused points dominate because the
+  modalities make *independent* errors (numeric text vs. rendered image vs. reconstruction).
+
+### Step 0 — vision continuous score + vision PR curve (the one GPU run)
+- **Decision (D48): cloud over local MPS.** The plan's latest note said "try free local MPS first."
+  But `transformers`/`peft`/`mlx_vlm` are NOT installed in the local venv, the fine-tune's base is a
+  CUDA-only bnb-4bit build (MPS would need the bf16 base ~16 GB + uncertain Qwen3-VL MPS op support),
+  and the user supplied the `VASTAI_API_KEY` — so the proven Phase-8/12 A6000 runbook was the
+  pragmatic, ~$0.3 choice. Local MPS was not attempted.
+- **eval_vision.py `--score`** (new): mirror of `test_local_gguf.py --score` for the VL model. Reads
+  the first generated token's logits (`generate(max_new_tokens=1, output_scores=True,
+  return_dict_in_generate=True)`) and softmaxes the ANOMALY-vs-NOMINAL verdict tokens
+  (ANOMALY=1093, NOMINAL=45) → a continuous score in (0,1). **No sampling bias** — `eval_vision`
+  already decodes greedily, so this just exposes the confidence the hard argmax was already taking.
+- **Cloud run:** Vast.ai **instance 41097936**, 1× **RTX A6000 46 GB**, Delaware US, **$0.371/hr**,
+  image `pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel`; onstart folded in the recurring **torchvision
+  0.25 fix** (Phase-8 D33 / Phase-12 D39) — `pip install unsloth unsloth_zoo huggingface_hub pillow
+  && pip install torchvision==0.25.0 --index-url https://download.pytorch.org/whl/cu128`. Direct SSH
+  `root@38.29.145.10:40918`, key `~/.ssh/vast_star` (the proxy `ssh7.vast.ai` gave publickey-denied;
+  direct worked — same as Phase 12). Upload via tar-stream (no rsync in image): `src/` + 2,000 test
+  PNGs (47 MB) + `test_metadata.jsonl`. Fine-tuned adapter pulled from HF (public). Scored 2,000 at
+  **~0.37 s/sample (~14 min)**, detached (`setsid nohup`), `--resume`/`--checkpoint-every 250`.
+- **Sanity check passed:** the scored argmax (**P 0.758 / R 0.349**) matches the deployed hard-verdict
+  vision model (P 0.769 / R 0.325) — the continuous score is faithful. scp'd back; **instance
+  DESTROYED** (0 instances, billing stopped; total ≈ $0.3).
+- **Vision PR curve** (`make vision-pr-curve`, reusing the generalized `pr_curve.py`): **AUC-PR
+  0.586**; calibration lifts CEF0.5 **0.604 → 0.649** (P 0.728 / R 0.453 at thr 0.380). This closes
+  the text/vision reporting symmetry — both modalities now have a curve (§6.4).
+
+### Step 1 — the alignment (the fiddly part the plan warned about)
+- **Shared window set = the 2,000 windows with PNGs.** Verified empirically: vision scored `index` i
+  == text scored `index` i == test-split line i (all 2,000 match on mission/channel/is_anomaly, 0
+  mismatches). So text↔vision align by `index` with zero ambiguity.
+- **LSTM map = `(mission, channel, start_idx)` → `i = start_idx // stride`.** Verified empirically:
+  *every* Mission-1 test-anomaly `start_idx` lands in the LSTM's `gt_starts` grid (the ETL and the
+  LSTM share the same 1h-resampled, stride-16 windowing). The test-split metadata carries `start_idx`,
+  so the map is exact. Mission2/3 have no LSTM model → those 622 windows have no LSTM signal.
+- **LSTM continuous score (D46): a separate dense dump, not a re-train.** The canonical
+  `baseline_results.json` stores only the *thresholded* `pred_starts` — no continuous error. Added
+  `train_lstm.py --dump-window-scores` (writes the dense per-window reconstruction error to a SEPARATE
+  `results/lstm/window_scores.json`, stripped from the metrics file). Regenerated via `--reuse-models`
+  (load the 58 saved M1 models, recompute errors, **~6 min**, NOT a 95-min retrain). Canonical
+  `baseline_results.json` confirmed byte-unchanged. The dump (~9 MB) + its throwaway metrics file are
+  **gitignored** (cheap to regenerate — unlike the hours-long inference results, which stay tracked).
+
+### Step 2 — fusion (`src/inference/ensemble.py`, new)
+- **D47 — leakage control deviates from the plan's "fit LR on the val split".** Text & vision were
+  scored on TEST only (a second, cloud val-scoring run was not worth ~$0.3 + an hour), so to avoid
+  train-on-test leakage the learned stacker uses **out-of-fold K-fold cross-validated stacking** (fit
+  logistic regression on k-1 folds, predict the held-out fold, concatenate the OOF predictions — no
+  window is scored by a model trained on it). Threshold then swept over the OOF fused scores. This is
+  a standard, defensible substitute and is documented in the script + analysis §6.3.
+- **D49 — LSTM scope kept at Mission1 (per the recommendation; user did not select an option).** The
+  ensemble reports TWO variants rather than forcing a 3-model fusion over all 2,000 windows: (1)
+  text+vision over all 2,000, and (2) text+vision+LSTM over the 1,378 M1 windows where all three
+  exist — the *fairest* head-to-head test of "does fusion beat the best single detector?". Training
+  LSTM on M2 (100 ch) + M3 (24 ch, categorical/noisy reconstruction) from scratch (~3 h) was deemed
+  scope-creep for no headline gain, since the M1 subset already delivers the Pareto-win evidence.
+- Also reported as sanity baselines (no fitting): **weighted-sum** of z-normalized scores (tracks the
+  stacker — CEF0.5 0.725 / 0.786), **2-of-N vote** (2-of-3 → P 0.724 / R 0.600 / F1 0.656, a genuine
+  majority with 3 models), **OR/AND endpoints**, and the **disagreement→review** bucket size (487 of
+  2,000 for text+vision; 747 of 1,378 for the 3-model set) for the deployable "route to operator" framing.
+- Learned stacker weights (full-fit, for transparency): text+vision `[1.02, 0.76]`; text+vision+LSTM
+  `[1.19, 0.82, 0.62]` — text weighted highest, but every modality earns positive weight.
+
+### Validation & integration
+- `evaluate.py` gained `load_ensemble_results()` (reads `results/ensemble_metrics.json`, graceful if
+  absent) + the two fused rows + a methodology note flagging that ensemble rows use a DIFFERENT eval
+  unit (2,000 / 1,378 shared windows, NOT the 4,500-window / 58-channel rows) so the CEF0.5 0.781 is
+  not naively compared against the master-table LSTM 0.705. `make eval-all` now reports **13
+  approaches**; `make validate-eval` passes; `make lint` clean.
+- Ensemble is the **top F1 (0.636) and top CEF0.5 (0.781)** in the master comparison.
+
+### Deviations summary (Phase 14)
+- **D46** — LSTM continuous score via a separate `--dump-window-scores` file + `--reuse-models`
+  (no retrain, canonical metrics untouched, dump gitignored).
+- **D47** — OOF k-fold cross-validated stacking instead of the plan's "fit on val split" (no second
+  cloud run; leakage-free).
+- **D48** — vision score on Vast.ai A6000 (proven runbook) rather than the plan's "try local MPS
+  first" (libs not installed locally + MPS uncertainty + user supplied the key).
+- **D49** — LSTM kept at Mission1 scope → two ensemble variants (full text+vision + 3-model M1 subset)
+  instead of training M2/M3 from scratch.
+
+### Impact on the rest of the plan
+- **No changes needed to other phases.** The shared-merge concern is moot — all Phase-14 work was done
+  on `main` (Phases 11/12/13 already merged), so there were no parallel `evaluate.py` edits to collide
+  with. Phase 14 only *adds* loaders/rows.
+- **Phase 10 (teardown)** is now unblocked: Phases 11, 12, 13, 14 are all complete, so the raw data /
+  PNGs are no longer needed. Teardown remains LAST and **user-confirmed** (the kaggle-token rotation
+  and raw-data deletion are irreversible). The PNGs + raw stay until the user OKs teardown.
+- **Files added (all trackable):** `results/inference_vision_scored.json`,
+  `results/vision_pr_curve.{json,png}`, `results/ensemble_pr_curve.{json,png}`,
+  `results/ensemble_metrics.json`; code: `src/inference/ensemble.py`, edits to `eval_vision.py`,
+  `pr_curve.py`, `train_lstm.py`, `evaluate.py`, `Makefile`, `.gitignore`. The LSTM dense dump
+  (`results/lstm/window_scores.json`, `baseline_results_scoredump.json`) is gitignored.
