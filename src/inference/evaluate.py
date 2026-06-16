@@ -32,6 +32,8 @@ BASE_FILE = RESULTS_DIR / "inference_base.json"  # Phase 6: un-fine-tuned base c
 BASE_FS_FILE = RESULTS_DIR / "inference_base_fewshot.json"  # Phase 6: base + few-shot prompting
 FRONTIER_FILE = RESULTS_DIR / "inference_frontier_sample.json"  # Phase 6: frontier zero-shot
 FRONTIER_FS_FILE = RESULTS_DIR / "inference_frontier_fewshot.json"  # Phase 6: frontier few-shot
+FRONTIER_RAG_FILE = RESULTS_DIR / "inference_frontier_rag.json"  # Phase 15: frontier + RAG
+BASE_RAG_FILE = RESULTS_DIR / "inference_base_rag.json"  # Phase 15: base Qwen3-8B + RAG
 VISION_FILE = RESULTS_DIR / "inference_vision.json"  # Phase 8: Qwen3-VL detector on PNG plots
 VISION_BASE_FILE = RESULTS_DIR / "inference_vision_base.json"  # Phase 12: un-fine-tuned VL control
 ENSEMBLE_FILE = RESULTS_DIR / "ensemble_metrics.json"  # Phase 14: score-level fusion rows
@@ -43,6 +45,8 @@ BASE_APPROACH = "Base Qwen3-8B (zero-shot)"
 BASE_FS_APPROACH = "Base Qwen3-8B (few-shot, no fine-tune)"
 FRONTIER_APPROACH = "Frontier zero-shot (Claude, n=150 sample)"
 FRONTIER_FS_APPROACH = "Frontier few-shot (Claude, n=150 sample)"
+FRONTIER_RAG_APPROACH = "Frontier + RAG (Claude, n=150 sample)"
+BASE_RAG_APPROACH = "Base Qwen3-8B + RAG"
 TRIVIAL_APPROACH = "Always-anomaly (trivial baseline)"
 VISION_APPROACH = "LLM Detection (vision, Qwen3-VL)"
 VISION_BASE_APPROACH = "LLM detection (vision, base zero-shot)"
@@ -294,6 +298,25 @@ def load_frontier_fewshot_results() -> dict:
     prompting-asymmetry artifact. (It is not -- few-shot barely moves the frontier.)
     """
     return _summarize_detection(FRONTIER_FS_FILE, FRONTIER_FS_APPROACH, with_affinity=False)
+
+
+def load_frontier_rag_results() -> dict:
+    """Load Phase-15 frontier + RAG results (Claude with retrieved training context).
+
+    The true 'own vs. adapt' comparison: give the frontier the same channel-specific
+    history the fine-tune learned implicitly. Tests whether RAG closes the gap.
+    """
+    return _summarize_detection(FRONTIER_RAG_FILE, FRONTIER_RAG_APPROACH, with_affinity=False)
+
+
+def load_base_rag_results() -> dict:
+    """Load Phase-15 base Qwen3-8B + RAG results (un-fine-tuned with retrieved context).
+
+    Apples-to-apples with the fine-tuned text LLM: both see the same 21k training windows
+    (fine-tune burned into weights, RAG retrieved per-window). Tests whether RAG
+    substitutes for fine-tuning.
+    """
+    return _summarize_detection(BASE_RAG_FILE, BASE_RAG_APPROACH, with_affinity=False)
 
 
 def trivial_always_anomaly() -> dict:
@@ -837,12 +860,26 @@ def main() -> None:
     vision_base = load_vision_base_results()  # Phase 12: un-fine-tuned VL zero-shot control
     ensemble = load_ensemble_results()  # Phase 14: score-level fusion rows (may be empty)
 
+    # Phase-15 RAG controls: tests whether RAG closes the gap vs fine-tuning
+    frontier_rag = load_frontier_rag_results()  # Phase 15: frontier + RAG
+    base_rag = load_base_rag_results()  # Phase 15: base Qwen3-8B + RAG
+
     # Report order: baselines, fine-tuned text LLM, vision LLM (+ its base control), text base
-    # controls, frontier, ensemble (fusion), hybrid.
+    # controls, frontier, RAG variants, ensemble (fusion), hybrid.
     results = [iso, lstm, llm]
     results += [
         r
-        for r in (vision, vision_base, base, base_fs, frontier, frontier_fs, trivial)
+        for r in (
+            vision,
+            vision_base,
+            base,
+            base_fs,
+            frontier,
+            frontier_fs,
+            frontier_rag,
+            base_rag,
+            trivial,
+        )
         if "error" not in r
     ]
     results += [r for r in ensemble if "error" not in r]

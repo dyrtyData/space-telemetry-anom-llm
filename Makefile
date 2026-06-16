@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble
+.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble build-rag-index frontier-rag-prompts frontier-rag-assemble eval-base-rag
 
 PYTHON := python3
 VENV := .venv
@@ -195,6 +195,28 @@ vision-pr-curve:
 
 ensemble:
 	$(PY) src/inference/ensemble.py
+
+# Phase 15: RAG + Frontier/Base comparison -- tests whether RAG closes the gap vs fine-tuning.
+# build-rag-index builds per-channel FAISS indices from training data (one-time, ~5-10 min).
+# frontier-rag-prompts generates RAG-augmented prompts for manual classification.
+# frontier-rag-assemble joins classifications to ground truth.
+# eval-base-rag runs the un-fine-tuned base with RAG context (~4-6 hours for 4,500 windows).
+RAG_K ?= 5
+build-rag-index:
+	$(PIP) install ".[rag]"
+	$(PY) src/inference/build_rag_index.py --train data/splits/train.jsonl --out data/rag/
+
+frontier-rag-prompts:
+	$(PY) src/inference/eval_frontier_rag.py --sample data/frontier/frontier_sample.jsonl \
+		--k $(RAG_K) --prompts-only --out data/frontier/frontier_rag_prompts.jsonl
+
+frontier-rag-assemble:
+	$(PY) src/inference/eval_frontier_rag.py --sample data/frontier/frontier_sample.jsonl \
+		--k $(RAG_K) --assemble results/frontier_rag_classifications.json \
+		--out results/inference_frontier_rag.json
+
+eval-base-rag:
+	$(PY) src/inference/eval_base_rag.py --k $(RAG_K) --limit $(LIMIT) --resume --checkpoint-every 250
 
 # Evaluation -- Phase 5: unified comparison report across all approaches.
 # Phase 6 adds Base + Frontier rows automatically when their result files are present.

@@ -27,6 +27,10 @@ dev = [
 lstm = [
     "keras>=3.0.0",
 ]
+rag = [
+    "faiss-cpu>=1.7.0",
+    "sentence-transformers>=2.2.0",
+]
 
 [build-system]
 requires = ["hatchling"]
