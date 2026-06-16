@@ -1,0 +1,1022 @@
+{
+  "summary": {
+    "approach": "Base Qwen3-8B + RAG (k=5)",
+    "model": "Qwen3-8B base (Q4_K_M) + RAG (k=5)",
+    "n_samples": 100,
+    "accuracy": 0.7,
+    "precision": 0.4474,
+    "recall": 0.6538,
+    "f1": 0.5312,
+    "tp": 17,
+    "fp": 21,
+    "fn": 9,
+    "tn": 53,
+    "unknown_responses": 0,
+    "avg_time_s": 2.039,
+    "k": 5,
+    "partial": false,
+    "note": "Base Qwen3-8B (un-fine-tuned) with RAG: k=5 retrieved training neighbors per window. Tests whether RAG substitutes for fine-tuning."
+  },
+  "results": [
+    {
+      "index": 0,
+      "mission": "ESA-Mission1",
+      "channel": "channel_74",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.181
+    },
+    {
+      "index": 1,
+      "mission": "ESA-Mission1",
+      "channel": "channel_42",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.029
+    },
+    {
+      "index": 2,
+      "mission": "ESA-Mission2",
+      "channel": "channel_23",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.031
+    },
+    {
+      "index": 3,
+      "mission": "ESA-Mission3",
+      "channel": "channel_8",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 2.03
+    },
+    {
+      "index": 4,
+      "mission": "ESA-Mission2",
+      "channel": "channel_98",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 2.053
+    },
+    {
+      "index": 5,
+      "mission": "ESA-Mission1",
+      "channel": "channel_28",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.976
+    },
+    {
+      "index": 6,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.022
+    },
+    {
+      "index": 7,
+      "mission": "ESA-Mission2",
+      "channel": "channel_18",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 2.104
+    },
+    {
+      "index": 8,
+      "mission": "ESA-Mission1",
+      "channel": "channel_66",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 2.021
+    },
+    {
+      "index": 9,
+      "mission": "ESA-Mission1",
+      "channel": "channel_51",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.711
+    },
+    {
+      "index": 10,
+      "mission": "ESA-Mission1",
+      "channel": "channel_23",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.746
+    },
+    {
+      "index": 11,
+      "mission": "ESA-Mission1",
+      "channel": "channel_18",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.803
+    },
+    {
+      "index": 12,
+      "mission": "ESA-Mission2",
+      "channel": "channel_74",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.688
+    },
+    {
+      "index": 13,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 2.764
+    },
+    {
+      "index": 14,
+      "mission": "ESA-Mission1",
+      "channel": "channel_22",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.02
+    },
+    {
+      "index": 15,
+      "mission": "ESA-Mission1",
+      "channel": "channel_48",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.949
+    },
+    {
+      "index": 16,
+      "mission": "ESA-Mission2",
+      "channel": "channel_20",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 2.035
+    },
+    {
+      "index": 17,
+      "mission": "ESA-Mission2",
+      "channel": "channel_23",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.973
+    },
+    {
+      "index": 18,
+      "mission": "ESA-Mission2",
+      "channel": "channel_23",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.886
+    },
+    {
+      "index": 19,
+      "mission": "ESA-Mission1",
+      "channel": "channel_31",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 2.029
+    },
+    {
+      "index": 20,
+      "mission": "ESA-Mission1",
+      "channel": "channel_49",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.958
+    },
+    {
+      "index": 21,
+      "mission": "ESA-Mission1",
+      "channel": "channel_47",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.004
+    },
+    {
+      "index": 22,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.98
+    },
+    {
+      "index": 23,
+      "mission": "ESA-Mission2",
+      "channel": "channel_83",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.935
+    },
+    {
+      "index": 24,
+      "mission": "ESA-Mission2",
+      "channel": "channel_16",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.932
+    },
+    {
+      "index": 25,
+      "mission": "ESA-Mission3",
+      "channel": "channel_7",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.946
+    },
+    {
+      "index": 26,
+      "mission": "ESA-Mission3",
+      "channel": "channel_37",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.915
+    },
+    {
+      "index": 27,
+      "mission": "ESA-Mission1",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.908
+    },
+    {
+      "index": 28,
+      "mission": "ESA-Mission1",
+      "channel": "channel_48",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.893
+    },
+    {
+      "index": 29,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.895
+    },
+    {
+      "index": 30,
+      "mission": "ESA-Mission3",
+      "channel": "channel_15",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.899
+    },
+    {
+      "index": 31,
+      "mission": "ESA-Mission1",
+      "channel": "channel_61",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.94
+    },
+    {
+      "index": 32,
+      "mission": "ESA-Mission1",
+      "channel": "channel_65",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.887
+    },
+    {
+      "index": 33,
+      "mission": "ESA-Mission2",
+      "channel": "channel_9",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.989
+    },
+    {
+      "index": 34,
+      "mission": "ESA-Mission1",
+      "channel": "channel_44",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.986
+    },
+    {
+      "index": 35,
+      "mission": "ESA-Mission3",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.958
+    },
+    {
+      "index": 36,
+      "mission": "ESA-Mission2",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY\n\nThe sequence contains a value of 0.0883, which is significantly higher than the typical range of values in the historical examples (which ranged from approximately -0.01 to 0.04). This spike indicates anomalous behavior.",
+      "elapsed_s": 3.83
+    },
+    {
+      "index": 37,
+      "mission": "ESA-Mission1",
+      "channel": "channel_14",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.937
+    },
+    {
+      "index": 38,
+      "mission": "ESA-Mission1",
+      "channel": "channel_32",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.96
+    },
+    {
+      "index": 39,
+      "mission": "ESA-Mission1",
+      "channel": "channel_38",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.851
+    },
+    {
+      "index": 40,
+      "mission": "ESA-Mission2",
+      "channel": "channel_27",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.994
+    },
+    {
+      "index": 41,
+      "mission": "ESA-Mission1",
+      "channel": "channel_30",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.858
+    },
+    {
+      "index": 42,
+      "mission": "ESA-Mission1",
+      "channel": "channel_38",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.87
+    },
+    {
+      "index": 43,
+      "mission": "ESA-Mission3",
+      "channel": "channel_43",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.857
+    },
+    {
+      "index": 44,
+      "mission": "ESA-Mission1",
+      "channel": "channel_23",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.87
+    },
+    {
+      "index": 45,
+      "mission": "ESA-Mission3",
+      "channel": "channel_19",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.861
+    },
+    {
+      "index": 46,
+      "mission": "ESA-Mission3",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.876
+    },
+    {
+      "index": 47,
+      "mission": "ESA-Mission1",
+      "channel": "channel_36",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.838
+    },
+    {
+      "index": 48,
+      "mission": "ESA-Mission3",
+      "channel": "channel_31",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.934
+    },
+    {
+      "index": 49,
+      "mission": "ESA-Mission1",
+      "channel": "channel_66",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.833
+    },
+    {
+      "index": 50,
+      "mission": "ESA-Mission1",
+      "channel": "channel_40",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.94
+    },
+    {
+      "index": 51,
+      "mission": "ESA-Mission2",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY\n\nThe sequence shows a sudden drop from -0.5880 to -0.4293, followed by further decreases to -0.3721, which deviates significantly from the typical gradual changes seen in the nominal examples. This abrupt and extreme deviation indicates anomalous behavior.",
+      "elapsed_s": 4.095
+    },
+    {
+      "index": 52,
+      "mission": "ESA-Mission1",
+      "channel": "channel_35",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.902
+    },
+    {
+      "index": 53,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.86
+    },
+    {
+      "index": 54,
+      "mission": "ESA-Mission1",
+      "channel": "channel_42",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.865
+    },
+    {
+      "index": 55,
+      "mission": "ESA-Mission1",
+      "channel": "channel_43",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.9
+    },
+    {
+      "index": 56,
+      "mission": "ESA-Mission1",
+      "channel": "channel_50",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.959
+    },
+    {
+      "index": 57,
+      "mission": "ESA-Mission1",
+      "channel": "channel_16",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.869
+    },
+    {
+      "index": 58,
+      "mission": "ESA-Mission2",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.849
+    },
+    {
+      "index": 59,
+      "mission": "ESA-Mission1",
+      "channel": "channel_50",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.926
+    },
+    {
+      "index": 60,
+      "mission": "ESA-Mission3",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.87
+    },
+    {
+      "index": 61,
+      "mission": "ESA-Mission1",
+      "channel": "channel_28",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.856
+    },
+    {
+      "index": 62,
+      "mission": "ESA-Mission2",
+      "channel": "channel_13",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.942
+    },
+    {
+      "index": 63,
+      "mission": "ESA-Mission1",
+      "channel": "channel_32",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.943
+    },
+    {
+      "index": 64,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.854
+    },
+    {
+      "index": 65,
+      "mission": "ESA-Mission3",
+      "channel": "channel_38",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.854
+    },
+    {
+      "index": 66,
+      "mission": "ESA-Mission1",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.898
+    },
+    {
+      "index": 67,
+      "mission": "ESA-Mission1",
+      "channel": "channel_63",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.977
+    },
+    {
+      "index": 68,
+      "mission": "ESA-Mission2",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.986
+    },
+    {
+      "index": 69,
+      "mission": "ESA-Mission1",
+      "channel": "channel_24",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.978
+    },
+    {
+      "index": 70,
+      "mission": "ESA-Mission1",
+      "channel": "channel_36",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.879
+    },
+    {
+      "index": 71,
+      "mission": "ESA-Mission2",
+      "channel": "channel_11",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 2.026
+    },
+    {
+      "index": 72,
+      "mission": "ESA-Mission2",
+      "channel": "channel_90",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.886
+    },
+    {
+      "index": 73,
+      "mission": "ESA-Mission1",
+      "channel": "channel_57",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY\n\nThe sequence shows a gradual decrease followed by a sharp drop and erratic fluctuations, deviating from the stable, gradual trends observed in the nominal examples. The presence of sudden drops and irregular patterns indicates anomalous behavior.",
+      "elapsed_s": 3.453
+    },
+    {
+      "index": 74,
+      "mission": "ESA-Mission1",
+      "channel": "channel_34",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.929
+    },
+    {
+      "index": 75,
+      "mission": "ESA-Mission1",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.9
+    },
+    {
+      "index": 76,
+      "mission": "ESA-Mission2",
+      "channel": "channel_91",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.924
+    },
+    {
+      "index": 77,
+      "mission": "ESA-Mission1",
+      "channel": "channel_61",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.899
+    },
+    {
+      "index": 78,
+      "mission": "ESA-Mission2",
+      "channel": "channel_19",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.921
+    },
+    {
+      "index": 79,
+      "mission": "ESA-Mission1",
+      "channel": "channel_71",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.912
+    },
+    {
+      "index": 80,
+      "mission": "ESA-Mission2",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.021
+    },
+    {
+      "index": 81,
+      "mission": "ESA-Mission2",
+      "channel": "channel_11",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.993
+    },
+    {
+      "index": 82,
+      "mission": "ESA-Mission1",
+      "channel": "channel_59",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.97
+    },
+    {
+      "index": 83,
+      "mission": "ESA-Mission1",
+      "channel": "channel_44",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.946
+    },
+    {
+      "index": 84,
+      "mission": "ESA-Mission1",
+      "channel": "channel_63",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.908
+    },
+    {
+      "index": 85,
+      "mission": "ESA-Mission3",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.929
+    },
+    {
+      "index": 86,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.959
+    },
+    {
+      "index": 87,
+      "mission": "ESA-Mission1",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.915
+    },
+    {
+      "index": 88,
+      "mission": "ESA-Mission1",
+      "channel": "channel_75",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.935
+    },
+    {
+      "index": 89,
+      "mission": "ESA-Mission1",
+      "channel": "channel_18",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.931
+    },
+    {
+      "index": 90,
+      "mission": "ESA-Mission1",
+      "channel": "channel_46",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.926
+    },
+    {
+      "index": 91,
+      "mission": "ESA-Mission1",
+      "channel": "channel_24",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.929
+    },
+    {
+      "index": 92,
+      "mission": "ESA-Mission1",
+      "channel": "channel_21",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 1.974
+    },
+    {
+      "index": 93,
+      "mission": "ESA-Mission1",
+      "channel": "channel_28",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.965
+    },
+    {
+      "index": 94,
+      "mission": "ESA-Mission1",
+      "channel": "channel_42",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 1.976
+    },
+    {
+      "index": 95,
+      "mission": "ESA-Mission1",
+      "channel": "channel_18",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 2.005
+    },
+    {
+      "index": 96,
+      "mission": "ESA-Mission1",
+      "channel": "channel_42",
+      "is_anomaly": false,
+      "predicted": "ANOMALY",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nANOMALY",
+      "elapsed_s": 2.051
+    },
+    {
+      "index": 97,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.027
+    },
+    {
+      "index": 98,
+      "mission": "ESA-Mission1",
+      "channel": "channel_42",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.013
+    },
+    {
+      "index": 99,
+      "mission": "ESA-Mission1",
+      "channel": "channel_16",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "<think>\n\n</think>\n\nNOMINAL",
+      "elapsed_s": 2.074
+    }
+  ]
+}

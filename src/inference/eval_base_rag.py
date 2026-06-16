@@ -57,26 +57,26 @@ def build_rag_prompt(
     context = format_rag_context(neighbors, mission, channel, include_labels=True)
 
     n_neighbors = len(neighbors)
-    prompt = f"""You are a spacecraft telemetry analyst. Below are {n_neighbors} historical \
-windows from channel {channel} that are similar to the current window, along with their \
-ground-truth labels:
+    prompt = f"""Below are {n_neighbors} historical windows from channel {channel} that are \
+similar to the current window, along with their ground-truth labels:
 
 {context}
 
 Now classify this new window:
 {instruction}
 
-Respond with exactly: ANOMALY or NOMINAL
-Do not explain. Just the verdict."""
+Answer with exactly one word: ANOMALY or NOMINAL"""
     return prompt
 
 
-def format_chatml_prompt(user_message: str) -> str:
+def format_chatml_prompt(user_message: str, no_think: bool = True) -> str:
     """Format as ChatML for the model."""
     system_prompt = (
         "You are a spacecraft telemetry analyst. Analyze telemetry sequences "
         "and identify anomalies. Answer concisely."
     )
+    if no_think:
+        system_prompt += " /no_think"
     return (
         f"<|im_start|>system\n{system_prompt}<|im_end|>\n"
         f"<|im_start|>user\n{user_message}<|im_end|>\n"
@@ -113,14 +113,17 @@ def load_test_data(limit: int = 0) -> list[dict]:
 def parse_verdict(response: str) -> str:
     """Parse model response for ANOMALY/NOMINAL verdict."""
     text = response.strip().upper()
-    if text.startswith("<THINK>") or "<THINK>" in text:
+
+    if "<THINK>" in text:
         end = text.rfind("</THINK>")
         if end != -1:
             text = text[end + 8 :].strip()
+        else:
+            text = text[text.rfind("<THINK>") + 7 :].strip()
 
-    if "ANOMALY" in text[:50]:
+    if "ANOMALY" in text:
         return "ANOMALY"
-    elif "NOMINAL" in text[:50]:
+    elif "NOMINAL" in text:
         return "NOMINAL"
     else:
         return "UNKNOWN"
@@ -239,9 +242,9 @@ def run_eval(
         start_time = time.time()
         output = llm(
             chatml,
-            max_tokens=50,
+            max_tokens=200,
             temperature=0.0,
-            stop=["<|im_end|>", "\n\n"],
+            stop=["<|im_end|>"],
         )
         elapsed = time.time() - start_time
 
