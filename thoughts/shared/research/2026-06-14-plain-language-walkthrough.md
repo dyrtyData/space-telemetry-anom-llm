@@ -402,7 +402,7 @@ open-source, no-external-API system that both detects (better than any single mo
 with a cost profile that works in production. (Simpler variants: just `LSTM → advisor` if you want
 the cheapest thing that works, or `vision → advisor` where false alarms are especially costly.)
 
-### 7g. The RAG alternative: retrieval instead of training (Phase 15)
+### 7g. RAG changes everything (Phase 15)
 
 We said the frontier failed because it lacked **channel history** — the knowledge of what's normal for
 each sensor. Fine-tuning bakes that knowledge into the model's weights. But there's another way: **give
@@ -414,36 +414,57 @@ windows *from that channel*, along with their labels ("ANOMALY" or "NOMINAL"). W
 prompt as context: "here are 5 similar past windows and what they turned out to be — now classify this
 one."
 
-**The results are striking:**
+**The results are striking — and they change everything:**
 
 | Model | Without context | With RAG (k=5) |
 |-------|-----------------|----------------|
 | Frontier (Claude) | F1 0.254 (chance) | **F1 0.825, precision 1.000** |
 | Base Qwen3-8B | F1 0.000 (won't answer) | **F1 0.531** |
-| Fine-tuned Qwen3-8B | F1 0.453 | — |
+| Fine-tuned Qwen3-8B | F1 0.453 | — (loses to Base+RAG) |
 
-- The frontier goes from chance to **the best detector in the entire project** once given context.
-  Perfect precision — it made zero false alarms on the 150-window sample.
-- Even the un-fine-tuned base with RAG (0.531) **beats the fine-tuned model** (0.453).
+- **Frontier+RAG (0.825)** is the best detector in the entire project. Perfect precision — zero false
+  alarms. This is the ceiling we should aim for.
+- **Base+RAG (0.531) beats fine-tuning (0.453)** — and it's *also* sovereign (no API needed). The base
+  model + a local FAISS index, no training required.
 
-**What this means:**
+**This changes the recommendation:**
 
-1. **The diagnosis was correct.** The frontier wasn't incapable — it was missing information. Give it
-   the channel's history and it knows exactly what to do.
-2. **Retrieval substitutes for training** for this task. Both approaches use the same 21k training
-   windows; one encodes them in weights, the other retrieves them at runtime. For detection, retrieval
-   works as well or better.
-3. **Trade-offs remain.** RAG requires a retrieval index and (for the frontier) an API call per window.
-   If you need to own the model, run offline, or avoid per-call costs, fine-tuning is still the right
-   choice. If you're okay with an API and want to skip training, RAG works.
+For detection, **retrieval beats training**. And crucially, **Base+RAG is fully sovereign** — it runs
+locally with no API, just like the fine-tune. So the "fine-tune for sovereign deployment" advice from
+earlier is **outdated**. For detection:
 
-**So which should you use?**
-- **Fine-tuning** if: you need a sovereign/offline model, want to avoid vendor lock-in, or are
-  processing high-volume streams where API costs add up.
-- **RAG** if: you're okay with API calls, want to avoid training entirely, or want the best possible
-  detection (Frontier+RAG is the top performer).
+| Approach | Detection F1 | Sovereign? | Requires training? |
+|----------|--------------|------------|-------------------|
+| Frontier+RAG | **0.825** | ❌ (API) | ❌ |
+| Base+RAG | **0.531** | ✅ | ❌ |
+| Fine-tuned | 0.453 | ✅ | ✅ |
 
-Both beat the naive prompt; they're just different ways to give the model the context it needs.
+**So what's fine-tuning still good for?**
+
+1. **The advice layer.** Base+RAG only produces detection (ANOMALY/NOMINAL). It can't write the
+   structured `DIAGNOSIS / ADVICE / ACTION` that the fine-tune learned. For a system that needs to
+   *explain* the anomaly, you still need the fine-tune.
+2. **The ensemble.** The fused 3-model detector (precision 0.922) is the strongest overall, but it
+   uses the fine-tuned text and vision models.
+
+**The new recommended design:**
+```
+window → Base+RAG (detection, no training) → fine-tuned LLM (advice on flags only)
+```
+
+Use RAG for detection (it's better and cheaper), use fine-tuning for advice (RAG can't do this). This
+is simpler than the original design and requires training only for the advice component.
+
+**What about the gap to Frontier+RAG (0.825)?**
+
+That's the ceiling. Base+RAG gets you to 0.531; Frontier+RAG gets you to 0.825. Closing that gap
+without an API is the big open problem. Options:
+- Fine-tune + RAG combined (maybe additive?)
+- A larger base model (13B, 70B) + RAG
+- Accept 0.531 and route uncertain cases to human review
+
+**The takeaway:** For detection, **retrieval beats training**. Fine-tuning earns its place for
+*explanation*, not detection.
 
 ---
 
@@ -467,22 +488,26 @@ Both beat the naive prompt; they're just different ways to give the model the co
 
 If asked *"what does this contribute?"*, say:
 
-> It takes the field's open-source **gold-standard pieces** — the **ESA-ADB** benchmark and its
-> evaluation metrics, NASA's **Telemanom** LSTM method, and the **AnomLLM/AnomSeer/Time-LLM** line
-> of LLM-based detection — and runs them as a **single, honest, like-for-like bake-off on real ESA
-> telemetry**, across three input modalities (numbers-as-text, numbers-as-image, classical
-> features). It then answers the question most fine-tuning demos dodge — *"did the fine-tuning
-> actually help, or could you have just prompted an API?"* — with a comparison framed against a
-> trivial baseline so the answer survives a skeptic. The transferable findings: (1) no *single* LLM
-> out-detects a tuned LSTM, matching the literature; (2) but a fine-tuned 8B beats both a few-shot
-> base and a frontier model, because it learned localized priors prompting can't supply; (3) an LLM
-> detector's "over-flagging" can be a *calibration* artifact — reading its confidence properly, not
-> changing the model, recovers most of the gap; (4) fusing detectors that make *independent* errors
-> beats every one of them; and (5) LLM "explainability" is only as good as the detector feeding it —
-> which is why the deployable design is a fused detector plus an LLM advisor.
+> It takes the field's open-source **gold-standard pieces** — the **ESA-ADB** benchmark, NASA's
+> **Telemanom** LSTM, and the **AnomLLM/AnomSeer** LLM-detection lines — and runs them as a
+> **single, honest bake-off on real ESA telemetry**. It then answers the question most fine-tuning
+> demos dodge — *"did the fine-tuning actually help?"* — and discovers something surprising:
+> **retrieval beats training for detection**.
+>
+> The transferable findings:
+> 1. **RAG > fine-tuning for detection.** Base+RAG (F1 0.531) beats fine-tuned (0.453), and it's
+>    also sovereign (no API). Frontier+RAG (0.825) sets the ceiling.
+> 2. **Fine-tuning earns its place for explanation, not detection.** The advice layer — structured
+>    `DIAGNOSIS / ADVICE / ACTION` — requires the fine-tune; RAG can't produce it.
+> 3. **The over-flagging was a calibration artifact** — reading the fine-tune's confidence properly
+>    lifts precision 0.360 → 0.838.
+> 4. **Fusing detectors beats every single one** — the ensemble (P 0.922) remains the strongest
+>    overall, but requires the fine-tuned models.
+> 5. **The recommended architecture changes**: for sovereign detection, use Base+RAG (no training);
+>    invoke the fine-tune only for advice on flagged windows.
 
-It's not a new algorithm; it's a **rigorous applied result with an honest headline** — the kind of
-engineering maturity that matters in mission-critical work.
+It's not a new algorithm; it's a **rigorous applied result with an honest headline** — including the
+uncomfortable finding that fine-tuning lost to retrieval for the detection task it was built for.
 
 ---
 
@@ -509,15 +534,16 @@ vision LLM, and the LSTM. Because the three make independent mistakes, the fusio
 precision 0.922, the best false-alarm-aware score in the project (§7e). Measured on the windows where
 all three have a score (a fair head-to-head).
 
-**Q: Then why fine-tune at all — why not just prompt Claude/GPT?**
-A: We tested exactly that. A frontier model prompted zero- *and* few-shot scored *below* the dumb
-baseline on this input — **but not because it's incapable**. The problem was missing *context*: the
-model had no idea what's normal for each channel. When we gave it that context via RAG (k=5 retrieved
-training neighbors), it jumped to F1 0.825 — the best detector in the project. So the choice is:
-- **Fine-tune** if you need to own the model, run offline, or avoid per-call API costs.
-- **RAG** if you're okay with an API and want to skip training.
-Both work; fine-tuning still gave us a model we *own*, that runs locally with no API, at 3× the speed —
-which was the project's stated goal.
+**Q: So why fine-tune at all — why not just use RAG?**
+A: For **detection**, you're right — RAG is better. Base+RAG (F1 0.531) beats fine-tuning (0.453), and
+it's also sovereign (local GGUF + local FAISS, no API). The only reasons to fine-tune are:
+1. **The advice layer.** RAG produces detection only (ANOMALY/NOMINAL). It can't generate the
+   structured `DIAGNOSIS / ADVICE / ACTION` that the fine-tune learned. If you need explanation, you
+   need the fine-tune.
+2. **The ensemble.** The fused 3-model detector (P 0.922) remains the strongest overall, but it
+   requires the fine-tuned models.
+So fine-tuning earns its place for *explanation*, not detection. The recommended design is now:
+`Base+RAG → fine-tuned advisor`.
 
 **Q: Your few-shot base got F1 0.420, almost matching your 0.453. Doesn't that undermine the
 fine-tune?**

@@ -5,12 +5,12 @@
 
 Built on the **ESA Anomaly Dataset (ESA-AD)**, this project runs a like-for-like **bake-off of 15
 approaches** to the same task: fine-tuned LLMs (Qwen3-8B text, Qwen3-VL-8B vision), classical
-baselines (LSTM, Isolation Forest), un-fine-tuned bases, a frontier model (with and without RAG), a
-trivial baseline, and a **learned ensemble** that fuses the detectors' confidence scores. It reports
-the result honestly: **no single LLM beats the tuned LSTM**, but the over-flagging is a calibration
-artifact, **fusing all three detectors beats every one of them**, and **RAG validates why fine-tuning
-works** (and offers an alternative for API-tolerant deployments). The architecture the data recommends
-is an ensemble detector feeding an LLM advisor.
+baselines (LSTM, Isolation Forest), un-fine-tuned bases with and without RAG, a frontier model with
+and without RAG, a trivial baseline, and a **learned ensemble** that fuses the detectors' confidence
+scores. The headline finding: **retrieval beats training for detection**. Base+RAG (F1 0.531) beats
+fine-tuning (0.453) while requiring no training — and it's fully sovereign (local GGUF + local FAISS).
+Frontier+RAG (F1 0.825) sets the ceiling. Fine-tuning earns its place for the **advice layer**, which
+RAG cannot produce.
 
 📄 **Full analysis:** [`thoughts/shared/research/2026-06-14-results-analysis.md`](thoughts/shared/research/2026-06-14-results-analysis.md)
 🎓 **Learn it from scratch (plain-language):** [`thoughts/shared/research/2026-06-14-plain-language-walkthrough.md`](thoughts/shared/research/2026-06-14-plain-language-walkthrough.md)
@@ -54,23 +54,19 @@ context-free models lacked. Base+RAG beats fine-tuning; Frontier+RAG is the best
 but reintroduces API dependence.
 
 **The honest headline (five sentences):**
-1. **Among single detectors, the tuned LSTM wins** (F1 0.553, precision 0.837, best CEF0.5, real
-   Affinity-F1 0.673); the two fine-tuned LLMs are precision/recall mirror images and neither
-   out-detects it alone — matching the published literature.
-2. **But the over-flagging is a red herring:** read the text LLM's confidence properly and its
-   precision more than doubles (0.360 → 0.838), and because the three detectors make *independent*
-   errors, **a leakage-free stacked ensemble beats all of them** (precision 0.922, CEF0.5 0.781).
-3. **Fine-tuning is justified and survives a skeptic:** against the trivial *always-anomaly* baseline
-   (free F1 0.399), the fine-tuned LLM is the **only owned-model approach** that clears it with a
-   *balanced* precision/recall. (For vision: fine-tuning lifts precision 0.310 → 0.769.)
-4. **RAG validates *why* fine-tuning works — and offers an alternative.** The frontier's failure was a
-   *context* problem: give it channel history via retrieval and it jumps to F1 0.825 (the best single
-   detector). Even Base+RAG (0.531) beats fine-tuning (0.453). For API-tolerant deployments, RAG is a
-   viable path; for sovereign/offline deployments, fine-tuning remains the right choice.
-5. The LLM's unique value is **advice**: graded **95% high-quality when the flag is correct** (strong
-   for a showcase, not yet mission-critical-grade) — but gated by detection precision. So the design
-   the data recommends is a **fused high-precision detector feeding an LLM advisor**, with a cheap LSTM
-   first-pass to keep it affordable.
+1. **For detection, retrieval beats training.** Base+RAG (F1 0.531) beats fine-tuning (0.453) — and
+   it's also sovereign (local GGUF + local FAISS, no API). This inverts the original thesis: for
+   detection, fine-tuning is not the best approach.
+2. **Frontier+RAG (F1 0.825, P 1.000) sets the ceiling** — the target sovereign approaches should aim
+   for. The gap from 0.531 to 0.825 shows model capability still matters once context is supplied.
+3. **The ensemble (P 0.922) remains the strongest overall detector**, but it requires fine-tuned
+   models. For maximum precision when training cost is acceptable, this is still the design.
+4. **Fine-tuning earns its place for the advice layer, not detection.** The structured
+   `DIAGNOSIS / ADVICE / ACTION` requires the fine-tune; Base+RAG produces detection only. Advice is
+   graded **95% high-quality when the flag is correct**.
+5. **The revised architecture:** `Base+RAG or LSTM (detection, no training) → fine-tuned LLM (advice
+   on flags)`. Use retrieval for detection (better, cheaper), fine-tuning for explanation (the one
+   thing RAG can't do).
 
 ---
 
@@ -103,12 +99,12 @@ gold-standard pieces as one honest bake-off on real ESA data:
 | **Time-LLM** (ICLR 2024) | Informed the **windowing/patching** ETL. |
 
 **Contribution:** a like-for-like comparison across *four model families* and *three input modalities*
-(plus a learned fusion of them), a defensible answer to *"did the fine-tuning actually help?"* framed
-against a trivial baseline, and three transferable detection findings: (1) an LLM detector's apparent
-**over-flagging can be a calibration artifact** (reading its confidence properly recovers most of the
-precision); (2) **fusing detectors that make independent errors Pareto-beats every one of them**; and
-(3) **RAG validates why fine-tuning works** — the frontier's failure was missing context, not missing
-capability, and retrieval substitutes for training when context is the missing signal.
+(plus a learned fusion of them), a defensible answer to *"did the fine-tuning actually help?"* —
+and an uncomfortable finding: **for detection, retrieval beats training**. The transferable findings:
+(1) **Base+RAG > fine-tuning for detection** (0.531 vs 0.453), and it's also sovereign; (2) an LLM
+detector's **over-flagging can be a calibration artifact**; (3) **fusing detectors Pareto-beats every
+one of them**; (4) fine-tuning's value shifts to the **advice layer** (the one thing RAG can't do);
+and (5) **Frontier+RAG (0.825) sets the ceiling** sovereign approaches should aim for.
 
 ---
 

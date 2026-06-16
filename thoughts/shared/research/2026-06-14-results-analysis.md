@@ -54,15 +54,15 @@ Five findings carry the project:
    even expose the lesson from opposite ends: for text, fine-tuning's headline win is *output
    compliance* (the base can't produce a verdict at all); for vision, the base already complies, so
    the win is *learned discrimination* — precision 0.310 → 0.769 (§5).
-4. **RAG validates *why* the frontier failed — and offers an alternative path.** The frontier's chance
+4. **RAG changes everything — retrieval beats training for detection.** The frontier's chance
    performance wasn't a capability limit; it was missing *channel context*. Giving it that context via
    **retrieval-augmented generation (RAG)** — k=5 labeled neighbors from the training windows —
    transforms it: **Frontier+RAG F1 0.825** (vs zero-shot 0.254), with **perfect precision** (1.000).
-   Even the un-fine-tuned base improves: **Base+RAG F1 0.531** beats the fine-tune (0.453). This
-   confirms the hypothesis from §5: the discriminating signal lives in channel history, and either
-   *learning* it (fine-tuning) or *retrieving* it (RAG) unlocks detection. RAG is an alternative
-   adaptation path — though it trades the fine-tune's ownership/latency/cost advantages for API
-   dependence (§6.5).
+   Even the un-fine-tuned base improves: **Base+RAG F1 0.531** beats the fine-tune (0.453). Crucially,
+   **Base+RAG is also sovereign** — the local GGUF + a local FAISS index, no API required. This means
+   for detection in a sovereign deployment, **RAG is the better approach** — simpler (no training) and
+   more accurate. Fine-tuning's value shifts to the **advice layer**, which Base+RAG cannot produce.
+   Frontier+RAG (0.825) sets the ceiling sovereign approaches should aim for (§6.5).
 5. **The LLM's unique value is the advice layer — and it is good when it should be.** When the model
    correctly flags an anomaly, its diagnostic advice averages **5.58/6 and is 95% high-quality**,
    naming the right channel with a window-consistent magnitude. But advice quality is *gated by
@@ -276,12 +276,14 @@ How to read it, in order:
    **RAG** — retrieving k=5 labeled training neighbors for the channel — transforms it: F1 jumps from
    0.254 to **0.825**, with **perfect precision** (1.000). The same treatment lifts the un-fine-tuned
    base from 0.000 to **0.531** — actually *beating* the fine-tune (0.453). This confirms the
-   diagnosis: the frontier's failure was a *context* problem, not a capability one. It also reveals an
-   alternative adaptation path: **retrieval can substitute for fine-tuning** when channel history is
-   the missing signal. The trade-off: RAG requires a retrieval index and (for the frontier) an API call
-   per window, reintroducing the vendor dependency the owned model avoids. For offline/sovereign
-   deployments, the fine-tune remains the right choice; for API-tolerant contexts where avoiding
-   training is worth the cost, RAG is a viable alternative (§6.5).
+   diagnosis: the frontier's failure was a *context* problem, not a capability one.
+
+   **The implication is significant: for detection, retrieval beats training.** And importantly,
+   **Base+RAG is also sovereign** — it runs the local GGUF with a local FAISS index, no API needed. So
+   the "fine-tune for sovereign deployment" framing from §5 is outdated: for detection alone, Base+RAG
+   is both simpler (no training) and better (0.531 vs 0.453). Fine-tuning's remaining value is the
+   **advice layer**, which Base+RAG cannot produce. Frontier+RAG (0.825) sets the ceiling — the target
+   that sovereign approaches should aim for. See §6.5 for the updated recommendation.
 5. **The vision modality tells the same lesson from the opposite end.** Running the *un-fine-tuned*
    Qwen3-VL-8B base through the identical PNG harness, it is **fully format-compliant (100% parseable,
    0 UNKNOWN)** — a chat-VL simply answers the ANOMALY/NOMINAL question — *unlike* the text base, which
@@ -434,7 +436,7 @@ but no "turn off sampling" win, since it already decoded greedily.)
 The master table (§2) keeps the LLMs at their *as-deployed* points for honesty about what was measured
 end-to-end; this section is the deployment knob.
 
-### 6.5 RAG as an alternative to fine-tuning (Phase 15)
+### 6.5 RAG changes the recommendation (Phase 15)
 
 The frontier's chance-level performance (§5) was diagnosed as a *context* problem: the model had the
 capability to detect, but the prompt lacked the channel history needed to apply it. Phase 15 tests
@@ -452,29 +454,39 @@ approach burned it into weights, the other retrieves it at runtime.
 |-------|-------------|----------------|------|
 | Frontier (Claude) | F1 0.254 (chance) | **F1 0.825, P 1.000** | +0.571 |
 | Base Qwen3-8B | F1 0.000 (non-compliant) | **F1 0.531** | +0.531 |
-| Fine-tuned Qwen3-8B | F1 0.453 | — | (baseline) |
+| Fine-tuned Qwen3-8B | F1 0.453 | — | (loses to Base+RAG) |
 
-**Interpretation:**
+**The headline: for detection, retrieval beats training.**
 
-1. **The frontier's failure was context, not capability.** Given channel history, it massively
-   outperforms every other approach — including the fine-tune (0.825 vs 0.453). Its perfect precision
-   (no false positives in the 150-window sample) shows it is genuinely understanding the task, not
-   guessing.
-2. **Retrieval substitutes for training.** The un-fine-tuned base + RAG (F1 0.531) beats the
-   fine-tuned model (0.453). This suggests that for this task, *what* the model knows matters less than
-   *whether it has the relevant context at inference time*. Both approaches use the same 21k training
-   windows; one encodes them in weights, the other retrieves them dynamically.
-3. **Trade-offs remain.** RAG requires a retrieval index (~50 MB of FAISS files) and, for the frontier,
-   an API call per window — reintroducing the vendor dependency, latency, and cost the owned model
-   avoids. For offline/sovereign deployments or high-volume streams, the fine-tune's constant-time,
-   no-API inference is the right choice. For low-volume or API-tolerant contexts, RAG offers a path
-   that avoids training entirely.
+1. **Frontier+RAG (0.825) sets the ceiling.** Given channel history, it massively outperforms every
+   other approach — including the fine-tune (0.825 vs 0.453). Its perfect precision (no false positives
+   in the 150-window sample) shows genuine understanding, not guessing. This is the target sovereign
+   approaches should aim for — but it requires an API.
+2. **Base+RAG (0.531) is the new sovereign recommendation for detection.** It beats the fine-tune
+   (0.453) while being simpler — no training required, just a FAISS index (~50 MB). And crucially,
+   **Base+RAG is fully sovereign**: the local GGUF + local retrieval, no API needed.
+3. **Fine-tuning's value shifts to the advice layer.** Base+RAG produces detection only; it cannot
+   emit the structured `DIAGNOSIS / ADVICE / ACTION` that the fine-tune learned. For a system that
+   needs both detection and advice, the recommended architecture becomes:
+   ```
+   window → Base+RAG or LSTM (detection) → fine-tuned LLM (advice on flags)
+   ```
+   This inverts the original design: fine-tuning is now for *explanation*, not detection.
 
-**What this means for the project's thesis.** The project set out to demonstrate fine-tuning as the
-path to an owned, localized model. Phase 15 validates the *diagnosis* behind that choice (channel
-context is the missing signal) while revealing an *alternative* (retrieval). The fine-tune remains the
-right answer for the stated deployment constraints (no external API, sovereign model, low latency);
-RAG is the right answer when those constraints don't apply. Both beat the naive prompt.
+**Updated recommendation for sovereign deployment:**
+
+| Need | Recommended approach |
+|------|---------------------|
+| Detection only | **Base+RAG** (F1 0.531, no training, fully sovereign) |
+| Detection + advice | Base+RAG → fine-tuned advisor (detection from RAG, advice from fine-tune) |
+| Best detection (complex) | Ensemble (P 0.922) — but requires fine-tuned models anyway |
+| Target to aim for | Frontier+RAG (F1 0.825, P 1.000) — the ceiling |
+
+**What this means for the project's thesis.** The project set out to demonstrate fine-tuning. Phase 15
+reveals that for *detection*, fine-tuning is not the best approach — retrieval is simpler and better.
+Fine-tuning's value is now the **advice layer** (the unique capability RAG cannot provide) and as a
+component of the ensemble (which remains the strongest overall detector). Future work should focus on
+closing the gap: improving fine-tuning to match RAG for detection, or adding advice generation to RAG.
 
 ---
 
@@ -539,48 +551,61 @@ result, not a deployment guarantee. The highest-leverage steps to close that gap
 
 ## 8. Analysis & discussion — the architecture the data recommends
 
-Putting §5–§7 together yields a single, empirically-supported recommendation: a **two-stage hybrid
-whose detector is a score-fused ensemble**, with a cheap first-pass to keep it affordable.
+Putting §5–§7 together, and incorporating the RAG findings from §6.5, yields a **revised
+recommendation**: for sovereign deployment, **RAG beats fine-tuning for detection**, while
+fine-tuning remains essential for the advice layer.
 
 ```
                           ┌─────────────────── per-window cost ───────────────────┐
-telemetry window ──► LSTM detector ──flag──► ensemble confirm ──confirm──► LLM advisor ──► operator
-                     (sub-ms, P 0.837)        (text+vision+LSTM            (Qwen3-8B, structured
-                      cheap first-pass         stacker, P 0.922)            DIAGNOSIS/ADVICE/ACTION,
-                                               cuts false alarms            95% HQ on real flags)
+telemetry window ──► Base+RAG or LSTM ──flag──► fine-tuned LLM advisor ──► operator
+                     (detection, no training     (Qwen3-8B, structured
+                      required, F1 0.531/0.553)   DIAGNOSIS/ADVICE/ACTION,
+                                                  95% HQ on real flags)
 ```
 
-Why this is the right design, not just a convenient one:
+**The simpler, no-training design:** Use Base+RAG (or the LSTM) for detection; invoke the fine-tuned
+LLM only for advice on flagged windows. This avoids the cloud training cost entirely for the detection
+component while preserving the advice capability that only the fine-tune can provide.
 
-- **Detection is strongest as a fusion, cheapest as the LSTM — so cascade them.** The fused ensemble
-  is the most precise detector (P 0.922, CEF0.5 0.781, §6.3), but it runs three models per window. The
-  LSTM alone is nearly as precise (0.837), sub-millisecond, and free — so use it as the **first-pass
-  screen** and invoke the LLM-bearing ensemble only on the windows it flags. You get the ensemble's
-  precision where it matters without paying LLM latency on every window (the text LLM is 2.77 s/window
-  generated, ~0.7 s scored). Where compute is ample, score the full ensemble on every window directly.
-- **Explanation belongs to the LLM, invoked only on confirmed flags.** §7 shows that *on the windows a
-  high-precision detector flags*, the advice is 95% high-quality. The expensive model runs ~1/N of the
-  time and supplies the one capability the detectors lack.
-- **This hybrid strictly dominates any single component for the stated business need:** it inherits the
-  ensemble's detection (the best in the project) *and* adds reliable, grounded advice — the exact
-  "anomaly + end-user advice, no external vendor" capability this project targets. (The simpler
-  `LSTM → advisor` design is the low-cost variant; the all-LLM `vision → advisor` is the variant for
-  contexts where a near-zero false-alarm rate dominates.)
+**The maximum-precision design (requires fine-tuning):**
+```
+window ──► LSTM first-pass ──► ensemble confirm (text+vision+LSTM) ──► fine-tuned advisor
+           (sub-ms, P 0.837)    (P 0.922, requires fine-tuned models)
+```
 
-The deeper, most transferable lesson is **where the signal lives — and how to read it**. A frontier
-model with vastly more general capability than Qwen3-8B *cannot* detect these anomalies from the
-prompt alone (§5): the fine-tune can, because it *learned the mission- and channel-specific priors*
-that no prompt over 10 normalized values can supply. And the fine-tune's apparent weakness as a
-detector was largely a *reading* problem — its raw sampled verdict was miscalibrated, and a tuned
-threshold on its own confidence score recovers most of the gap (§6.4). Localization plus calibration,
-not raw model size, is what turns a general model into a deployable mission-specific detector.
+The ensemble remains the strongest overall detector (P 0.922), but it requires the fine-tuned text and
+vision models — so for contexts where every percentage point of precision matters and training cost is
+acceptable, this is still the design.
 
-One honest qualifier: we compared a *fine-tuned* open model against a *prompted* frontier — not a
-*fine-tuned* frontier. The cleanest "could you just adapt a hosted model instead?" test would be to
-fine-tune a frontier (GPT-4o/Gemini expose tuning APIs; Claude does not publicly) or to give one the
-missing channel history via RAG (§10). The trade-off: doing so re-introduces the vendor dependency,
-data-egress, cost, and latency that an owned on-prem model avoids — so even a fine-tuned frontier that
-matched the accuracy would still lose on the deployment constraints that motivated the project.
+**Why RAG changes the recommendation:**
+
+- **For detection, retrieval beats training.** Base+RAG (F1 0.531) > fine-tuned text (0.453). The
+  signal lives in channel history; retrieving it at runtime is more effective than encoding it in
+  weights.
+- **Base+RAG is fully sovereign.** Local GGUF + local FAISS index, no API. The "fine-tune for
+  sovereign deployment" framing from earlier phases is superseded.
+- **Fine-tuning's remaining value is the advice layer.** The structured `DIAGNOSIS / ADVICE / ACTION`
+  that the fine-tune produces is the one capability RAG cannot provide. This is now the primary
+  justification for fine-tuning, not detection.
+- **Frontier+RAG (F1 0.825, P 1.000) is the ceiling.** This is where sovereign approaches should aim.
+  It shows the gap: a local 8B + RAG reaches 0.531, a frontier + RAG reaches 0.825. Closing that gap
+  is the core challenge for future work (§10).
+
+**The deeper lesson: context > capability > training.** A frontier model with vastly more general
+capability than Qwen3-8B *cannot* detect from the prompt alone (§5), but *can* with RAG (§6.5). A
+fine-tuned 8B *can* detect without RAG, but an un-fine-tuned 8B *with* RAG does better. The
+discriminating signal is channel history; the question is how to supply it:
+
+| Approach | Detection F1 | Sovereign? | Requires training? |
+|----------|--------------|------------|-------------------|
+| Frontier+RAG | **0.825** | ❌ (API) | ❌ |
+| Base+RAG | **0.531** | ✅ | ❌ |
+| Fine-tuned | 0.453 | ✅ | ✅ |
+| Base few-shot | 0.420 | ✅ | ❌ |
+
+For sovereign detection, **Base+RAG is the recommended approach** — better than fine-tuning, no
+training required. Fine-tuning is justified for the **advice layer** and for the **ensemble** (where
+the fine-tuned models contribute to the highest-precision detector).
 
 ---
 
@@ -646,41 +671,40 @@ Stated up front, each with *why it stands* and what it would take to close:
 
 ## 10. Open next steps
 
-The detection-and-evaluation hardening (LSTM calibration, the vision skeptic-table control, text-LLM
-calibration, and the fused ensemble) is **done** and folded into §5–§8 above. What remains, prioritized
-with rough **effort** and **expected impact**:
+RAG changes the priority order. The core finding — **Base+RAG (0.531) beats fine-tuned (0.453) for
+detection** — means the highest-value work is now closing that gap and extending RAG's success to
+advice.
 
-1. **Ship the hybrid as the reference design.** *Effort: low* (packaging). *Impact: high.* The
-   architecture the numbers support — a fused (or LSTM-first-pass) high-precision detector feeding the
-   LLM advisor. **Who needs it:** operators of mission-critical monitoring systems — spacecraft FDIR,
-   but equally industrial/SCADA telemetry or any high-availability infrastructure — that must run an
-   **on-prem / sovereign** model (no data egress, no external-API dependency) and where **false alarms
-   are costly**.
-2. **Toward mission-critical advice (highest-value quality work).** *Effort: high* (needs human
-   experts). *Impact: high.* Human-SME-written advice labels + **RAG grounding** (channel spec sheets /
-   fault catalogs) + a larger, human-validated advice grade — the real path from "95% when correct" to
-   deployment-grade (§7).
-3. **Common-unit re-score + extend the LSTM to all missions.** *Effort: ~1–2 days + ~3 h training.*
-   *Impact: medium–high.* Score every approach (including a 3-model ensemble) on one identical
-   contiguous stream so all rows are directly comparable, and train Mission-2/3 LSTMs so the fusion and
-   the single-detector comparison cover all missions, not just Mission 1 (§9 #1–#3).
-4. **~~Fine-tune / RAG a frontier model~~ — DONE (Phase 15).** RAG tested; Frontier+RAG F1 0.825
-   (vs 0.254 zero-shot), Base+RAG F1 0.531 (beats fine-tune 0.453). **Finding:** retrieval substitutes
-   for training when channel context is the missing signal. The fine-tune remains right for sovereign /
-   offline / low-latency deployments; RAG is the alternative for API-tolerant contexts. Fine-tuning a
-   frontier (GPT-4o/Gemini APIs) is the remaining untested cell — useful only if you want the frontier's
-   capability *and* offline/sovereign deployment, a rare combination.
-5. **Push the detectors further.** *Effort: medium.* *Impact: medium–high.* LSTM levers left untried —
-   attention/bidirectional layers, longer context, channel ensembling; a small **LoRA ablation** to
-   confirm the text fine-tune is near its ceiling. **Highest-potential single lever: scale the vision
-   training from 2,000 to 21,000 PNGs** (~1–2 h PNG generation + ~$1–2 cloud training) — the vision
-   model already hits P 0.769 with 10× less data than the text model, so scaling may push it toward
-   the best single detector and strengthen the ensemble. A vision **advice head** could also add the
-   explanation capability the current vision detector lacks.
-6. **Robustness sweeps.** *Effort: medium.* *Impact: medium.* A **cross-mission generalization test**
-   (train on one mission, test on a never-seen spacecraft) and a **resample-cadence sweep** (5-min /
-   15-min / 1-hour) to find the best signal-vs-tractability trade-off, since the 1-hour grid can
-   average away sub-hour anomalies (§9 #9).
+1. **Close the gap: improve fine-tuning to match RAG.** *Effort: medium.* *Impact: high.* The fine-tune
+   loses to Base+RAG by 0.078 F1. Potential levers:
+   - **Fine-tune + RAG combined** — the fine-tune learned *something*; adding RAG context might be
+     additive. This is the most promising single experiment.
+   - **LoRA ablation** — r=16/α=16/3-epoch were untuned defaults; a small sweep might find a better
+     configuration.
+   - **Detection-only SFT** — remove the advice task to let the model focus on detection (though §6.4
+     suggests calibration, not capacity, was the issue).
+   - **Longer context / more training data** — the fine-tune saw each window once; RAG retrieves k=5
+     relevant neighbors. More data exposure might help.
+2. **Add advice capability to RAG.** *Effort: medium.* *Impact: high.* Base+RAG produces detection
+   only. Could retrieved examples include their advice text? Or could a separate advice-only fine-tune
+   (cheaper, detection-free) explain RAG-detected flags? This would eliminate the need for a detection
+   fine-tune entirely.
+3. **Aim for Frontier+RAG (0.825) — the ceiling.** *Effort: high.* *Impact: high.* The gap from
+   Base+RAG (0.531) to Frontier+RAG (0.825) is 0.294 F1 — a larger gap than fine-tune vs Base+RAG. This
+   suggests **model capability still matters** once context is supplied. Options:
+   - Fine-tune a **larger open model** (13B, 70B) and add RAG — combine training with retrieval.
+   - Fine-tune a **frontier** (GPT-4o/Gemini APIs expose tuning) for sovereign deployment with
+     frontier-level capability — but this is expensive and rare-use-case.
+   - Accept the 0.531 ceiling for sovereign 8B models and route uncertain cases to human review.
+4. **Ship the revised hybrid.** *Effort: low.* *Impact: high.* The architecture is now:
+   `Base+RAG or LSTM → fine-tuned advisor`. Package this as the reference design. Detection is
+   sovereign and training-free; advice requires the fine-tune.
+5. **Toward mission-critical advice.** *Effort: high.* *Impact: high.* Human-SME-written advice labels
+   + RAG grounding (channel spec sheets / fault catalogs) + a larger, human-validated advice grade —
+   the path from "95% when correct" to deployment-grade.
+6. **Robustness sweeps.** *Effort: medium.* *Impact: medium.* Cross-mission generalization (train on
+   one mission, test on another), resample-cadence sweep (5-min / 15-min / 1-hour), and **RAG k-sweep**
+   (does k=10 or k=3 do better than k=5?).
 
 ---
 
@@ -703,30 +727,39 @@ than hidden. Surfacing correct-but-inconvenient results is the whole point of an
 
 ## 12. Bottom line
 
-On real ESA satellite telemetry, no single LLM beats a tuned classical LSTM at *detection* (LSTM
-F1 0.553, precision 0.837, CEF0.5 0.705) — direct LLM detection trades precision for recall, matching
-the literature. But three results reframe that:
+**RAG changes everything.** On real ESA satellite telemetry, **retrieval beats training for detection**:
 
-1. **The text LLM's apparent over-flagging is a calibration artifact** — a tuned threshold on its own
-   confidence score lifts precision 0.360 → 0.838.
-2. **Because the text, vision, and LSTM detectors make independent errors, a leakage-free stacked
-   ensemble beats all of them** (P 0.922, CEF0.5 0.781, AUC-PR 0.756 on the head-to-head set) — the
-   strongest detector in the project.
-3. **RAG validates *why* fine-tuning works — and offers an alternative.** The frontier's chance-level
-   performance was a *context* problem, not a capability one. Giving it channel history via retrieval
-   transforms it: Frontier+RAG F1 0.825 (vs 0.254 zero-shot), and even Base+RAG (0.531) beats the
-   fine-tune (0.453). Retrieval substitutes for training when context is the missing signal — though it
-   trades the fine-tune's ownership/latency advantages for API dependence.
+| Approach | F1 | Sovereign? | Training? |
+|----------|-----|-----------|-----------|
+| Frontier+RAG | **0.825** | ❌ | ❌ |
+| LSTM | 0.553 | ✅ | ✅ (cheap) |
+| **Base+RAG** | **0.531** | ✅ | ❌ |
+| Ensemble (3-model) | 0.636 (P 0.922) | ✅ | ✅ |
+| Fine-tuned text | 0.453 | ✅ | ✅ |
 
-Among the LLM family the fine-tune is still the **only *owned-model* approach that clears a trivial
-always-anomaly baseline** with a balanced precision/recall. (RAG with a frontier beats it, but
-reintroduces the vendor dependency the project's brief exists to avoid.) And where the LLM uniquely
-earns its place — diagnostic advice — it is **95% high-quality when the flag is correct** (strong,
-though not yet mission-critical-grade), but only then. The empirically-grounded architecture is
-therefore a **fused high-precision detector feeding an LLM advisor**, with a cheap LSTM first-pass —
-exactly the localized, open-source, no-vendor system this project set out to validate. The headline is
-not "LLMs win" or "LLMs lose"; it is *"here is the measured trade-off, and here is the design it
-dictates — whether via fine-tuning (for sovereign deployments) or RAG (for API-tolerant ones)."*
+**Base+RAG (0.531) beats fine-tuning (0.453)** while requiring no training — just a FAISS index over
+the same training windows. And it's fully sovereign: local GGUF + local retrieval, no API. This
+inverts the original project thesis: for detection, fine-tuning is not the best sovereign approach.
+
+**Frontier+RAG (0.825) sets the ceiling** — the target sovereign approaches should aim for. The gap
+from 0.531 to 0.825 shows that model capability still matters once context is supplied; closing it is
+the core challenge.
+
+**Fine-tuning's remaining value:**
+1. **The advice layer.** Base+RAG produces detection only; the structured `DIAGNOSIS / ADVICE / ACTION`
+   requires the fine-tune. This is now fine-tuning's primary justification.
+2. **The ensemble.** The fused 3-model detector (P 0.922) remains the strongest overall, but it
+   requires fine-tuned text and vision models.
+
+**The recommended architecture for sovereign deployment** is now:
+```
+window → Base+RAG or LSTM (detection, no training) → fine-tuned LLM (advice on flags)
+```
+
+The headline is not "fine-tuning wins" or "fine-tuning loses" — it's *"retrieval beats training for
+detection; fine-tuning earns its place for explanation."* The 0.825 ceiling (Frontier+RAG) shows
+where sovereign approaches still need to go; the 0.531 floor (Base+RAG) shows they can get surprisingly
+far without any training at all.
 
 ---
 
