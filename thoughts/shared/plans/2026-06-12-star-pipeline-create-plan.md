@@ -3077,8 +3077,9 @@ windows; the base + RAG sees k retrieved examples per window. Does RAG substitut
    d. Parse response.
 4. Checkpoint every 250 windows (same durability as Phase 5).
 
-**Time estimate:** ~10-15 hours (4,500 × 8-12 s/window due to longer context). Run overnight with
-`caffeinate` + checkpoint/resume.
+**Time estimate:** ~4-6 hours (4,500 × 3-5 s/window). The context is longer (k=5 examples) but
+output is short (just "ANOMALY"/"NOMINAL"), so faster than the 8.56s few-shot which generated full
+responses. Still use `caffeinate` + checkpoint/resume for durability.
 
 **Output:** `results/base_rag.json` with predictions for all 4,500 windows.
 
