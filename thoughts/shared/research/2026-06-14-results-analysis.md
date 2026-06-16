@@ -554,6 +554,12 @@ Stated up front, each with *why it stands* and what it would take to close:
    on an easy 2-class task — meaning it fit the *training* distribution easily; whether it generalizes
    to a *new mission it never trained on* is untested (overfitting risk). It also produces no advice
    by design.
+9. **The vision model trained on 10× less data than the text model.** The text LLM saw 21,000 training
+   windows; the vision LLM saw only **2,000 training PNGs** — yet achieved higher precision (0.769 vs
+   0.360 as-deployed). This data asymmetry may **understate the vision modality's potential**: scaling
+   the vision training to 21,000 PNGs could improve both precision and recall, potentially making it
+   the best single detector. The fast convergence (loss 0.0089) could indicate saturation *or*
+   insufficient diversity — only a scaled run would tell (§10).
 9. **Resampling to 1-hour cadence is lossy.** Raw telemetry is sampled every few seconds/minutes; we
    averaged it onto a 1-hour grid to make 29 GB tractable. An anomaly lasting **less than an hour** can
    be averaged into its neighbours and disappear. No other cadence (5-min/15-min) was tried, so the
@@ -589,10 +595,13 @@ with rough **effort** and **expected impact**:
    *Impact: medium.* Fine-tune a frontier (GPT-4o/Gemini tuning APIs) or give one channel history via
    RAG, to test whether a custom 8B is even needed. **Caveat:** doing so re-introduces the vendor
    dependency the sovereign model exists to avoid.
-5. **Push the detectors further.** *Effort: medium.* *Impact: medium.* LSTM levers left untried —
-   attention/bidirectional layers, longer context, channel ensembling; a vision **advice head** and
-   larger backbone to lift its recall; a small **LoRA ablation** to confirm the text fine-tune is near
-   its ceiling.
+5. **Push the detectors further.** *Effort: medium.* *Impact: medium–high.* LSTM levers left untried —
+   attention/bidirectional layers, longer context, channel ensembling; a small **LoRA ablation** to
+   confirm the text fine-tune is near its ceiling. **Highest-potential single lever: scale the vision
+   training from 2,000 to 21,000 PNGs** (~1–2 h PNG generation + ~$1–2 cloud training) — the vision
+   model already hits P 0.769 with 10× less data than the text model, so scaling may push it toward
+   the best single detector and strengthen the ensemble. A vision **advice head** could also add the
+   explanation capability the current vision detector lacks.
 6. **Robustness sweeps.** *Effort: medium.* *Impact: medium.* A **cross-mission generalization test**
    (train on one mission, test on a never-seen spacecraft) and a **resample-cadence sweep** (5-min /
    15-min / 1-hour) to find the best signal-vs-tractability trade-off, since the 1-hour grid can
