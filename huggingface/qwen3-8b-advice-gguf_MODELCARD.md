@@ -76,7 +76,9 @@ no external API required.
 **How to read these:** the fine-tune is the **only** LLM-family approach (vs un-fine-tuned base
 zero/few-shot and a frontier model) that beats a trivial *always-anomaly* baseline (F1 0.399) with a
 *balanced* precision/recall — i.e. it learned mission/channel-specific priors that prompting cannot
-supply. A classical LSTM still out-*detects* it (F1 0.552, P 0.785); this model's unique value is the
+supply. A classical LSTM still out-*detects* it as a single model (F1 0.553, P 0.837) — though
+reading this model's confidence properly calibrates its precision from 0.360 to 0.838, and a
+text+vision+LSTM ensemble beats every single detector (P 0.922). This model's unique value remains the
 advice layer. Full bake-off: see the project repo.
 
 ## Intended use & limitations

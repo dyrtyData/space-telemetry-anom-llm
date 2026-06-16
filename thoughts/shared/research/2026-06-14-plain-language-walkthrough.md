@@ -80,8 +80,10 @@ it looks at step 30 it hasn't forgotten step 1. This is why NASA's **Telemanom**
 for exactly this job. Our LSTM is an **autoencoder**: it learns to *reconstruct* normal telemetry.
 Trained only on the rhythm of normal data, it reconstructs normal windows well but *fails* to
 reconstruct anomalies (it's never seen that pattern). The size of that reconstruction failure (the
-"error") is the anomaly signal; if the error exceeds a **threshold** (we use *mean + 3 standard
-deviations*), we flag it. This is the single best **detector** in the whole project.
+"error") is the anomaly signal; if the error exceeds a **threshold**, we flag it. (How high to set
+that threshold is a knob we *tuned* — see §7d; we landed on *mean + 4 standard deviations*.) This is
+the strongest **single** detector in the project — though, as it turns out, *combining* all the
+detectors does better still (§7e).
 
 ---
 
@@ -158,6 +160,11 @@ From these:
   time, not one instant. This metric merges your flagged windows into time intervals and checks
   whether your intervals line up with the true ones. It only makes sense on a **continuous**
   timeline (see the "degenerate" note below).
+- **AUC-PR** = a *threshold-free* score. Most detectors don't just say yes/no — under the hood they
+  produce a *confidence* (how anomalous is this window?). AUC-PR measures how well that confidence
+  *ranks* real anomalies above normal windows, averaged over every possible cut-off. It answers "does
+  the model know what's anomalous?" separately from "did we pick a good alarm threshold?" — a
+  distinction that turns out to matter a lot here (§7d).
 
 **The trivial baseline trick (very important).** What score do you get by being *stupid* — flagging
 **every** window as anomalous? You catch 100% of anomalies (recall = 1.0) but your precision is just
@@ -212,47 +219,58 @@ work sessions over three days and hit plenty of real-world walls. Here's the arc
   resumable and observable before you trust it.* Result: text-LLM F1 0.453, with 99.6% of flags
   carrying structured advice.
 
-At this point the project "worked" — but a careful review found **four gaps** that an interviewer
-would immediately poke. **Phases 6–9 exist to close them.**
+At this point the project "worked" — but a careful review found **four gaps** a reviewer would
+immediately poke. **Phases 6–9 closed them, and Phases 11–14 then hardened the result.**
 
 - **Phase 6 — "Did the fine-tuning actually help?"** The cleanest proof is to run the *same model
   before fine-tuning* through the *exact same test harness*. We did — plus a few-shot version, plus
   a frontier model (Claude) as a sanity check, plus the trivial baseline. This is the heart of the
-  result (§7). It revealed the *real* story and even caught a fairness bug we fixed (the frontier
-  was first tested zero-shot while the base got few-shot examples — an apples-to-oranges
-  comparison; we re-ran the frontier few-shot too, **D31**).
+  result (§7). It even caught a fairness bug we fixed (the frontier was first tested zero-shot while
+  the base got few-shot examples — an apples-to-oranges comparison; we re-ran the frontier few-shot
+  too, **D31**).
 - **Phase 7 — Level the detection field.** The LSTM had only been scored on 3 hand-picked channels.
-  We ran it on **all 58** Mission-1 target channels. The honest F1 *dropped* from 0.663 to **0.552**
-  — and we kept the lower, honest number. Bonus: scoring continuous channel timelines made
-  Affinity-F1 *meaningful* (0.649) for the first time. (The run died once more — and `--resume`
-  recovered it for free, vindicating the Phase-5 hardening, **D38**.)
-- **Phase 8 — The vision detector.** Trained the Qwen3-VL model on PNG plots (originally planned,
-  never run). Rented a bigger A6000 GPU (~$0.40/hr) — and discovered the vision training code,
-  written back in Phase 3 but *never executed*, had three latent bugs (**D31** in the log). Once
-  fixed, it trained in ~65 min and scored F1 0.457 with high precision (0.769). Cost ~$1.
+  We ran it on **all 58** Mission-1 target channels — the honest F1 *dropped* (no more cherry-picking),
+  and scoring continuous channel timelines made Affinity-F1 *meaningful* for the first time. (The run
+  died once more — and `--resume` recovered it for free, vindicating the Phase-5 hardening, **D38**.)
+- **Phase 8 — The vision detector.** Trained the Qwen3-VL model on PNG plots. Rented a bigger A6000
+  GPU — and discovered the vision training code, written back in Phase 3 but *never executed*, had
+  three latent bugs. Once fixed, it trained in ~65 min and scored F1 0.457 with high precision (0.769).
 - **Phase 9 — Is the advice any good?** We'd only proven the advice had the right *shape* (99.6%
   structured). Phase 9 graded a 120-flag sample for *correctness* on a transparent rubric (§7).
 
-Total cloud spend across everything: **~$3.33.**
+Then four more phases turned a good showcase into a genuinely strong result:
+
+- **Phase 11 — Tune the LSTM.** Its alarm threshold had been left at an untuned default. Sweeping that
+  one knob (and discovering Telemanom's fancier "dynamic" thresholding actually *hurts* here — a clean
+  negative result) lifted the LSTM to its final P 0.837 / F1 0.553 (§7e).
+- **Phase 12 — The vision base control.** We ran the *un-fine-tuned* Qwen3-VL too, to finish the
+  "did fine-tuning help?" story for the picture model as well as the text one (§7b).
+- **Phase 13 — Calibrate the text LLM.** The big surprise: the text model's "over-flagging" was mostly
+  a *reading* error, not a model weakness — fixed by reading its confidence properly (§7e).
+- **Phase 14 — Combine the models.** Fuse the three detectors' confidences into one — and it beats
+  every single model (§7f).
+
+Total cloud spend across everything: **~$4.2.**
 
 ---
 
 ## 7. What the results actually mean (the part to internalize)
 
-### 7a. The detector contest: the LSTM wins
-On a fair, full-channel comparison the **LSTM is the best detector** (F1 0.552, precision 0.785,
-CEF0.5 0.684). The direct text-LLM detector loses on precision badly (0.360) — it flags 1,898
-windows when only 1,123 are truly anomalous, so ~2 of every 3 alarms are wrong. Its *one* edge is
-recall (it catches more), but at an unacceptable false-alarm cost for a control room. **This is the
-expected result** — it matches the published AnomLLM finding that LLMs trade precision for recall
-and don't beat tuned sequence models at detection yet. Reporting this honestly, rather than hiding a
-negative result, is the whole point of an empirical bake-off.
+### 7a. The detector contest: the LSTM wins (among single models)
+On a fair, full-channel comparison the **LSTM is the best *single* detector** (F1 0.553, precision
+0.837, CEF0.5 0.705). As deployed, the direct text-LLM detector looks much worse on precision (0.360)
+— it raised far more alarms than there were real anomalies. Its *one* edge is recall (it catches
+more). **This is the expected result** — it matches the published AnomLLM finding that LLMs trade
+precision for recall and don't beat tuned sequence models at detection. Reporting it honestly is the
+whole point of an empirical bake-off.
 
-The **vision LLM** (Qwen3-VL, reading the *plots*) is the interesting opposite: it's
-*precision-oriented* (0.769 precision — it almost never false-alarms) where the text LLM is
-*recall-oriented*, at nearly the same F1. So it actually has the **best false-alarm-aware score
-(CEF0.5 0.604) of any LLM here** — a genuinely useful third signal, especially as a low-false-alarm
-cross-check. It's a pure detector, though (no advice).
+Two twists make this more interesting than "classical beats LLM," though. **First**, the **vision LLM**
+(Qwen3-VL, reading the *plots*) is the precision-oriented opposite of the text model: 0.769 precision,
+it almost never false-alarms, so it has the best false-alarm-aware score (CEF0.5 0.604) of any single
+LLM. **Second** — and this is the headline of the whole detection story — the text LLM's "over-flagging"
+turns out to be a fixable *reading* error (§7d), and because the three detectors make *different*
+mistakes, **combining them beats every single one of them** (§7e). So the real winner isn't the LSTM
+alone — it's the LSTM, the text model, and the vision model *fused together*.
 
 ### 7b. But fine-tuning *did* help — and here's the airtight version
 Rank the LLM-family approaches against the **trivial always-anomaly line (F1 0.399)**:
@@ -286,8 +304,16 @@ Rank the LLM-family approaches against the **trivial always-anomaly line (F1 0.3
 
 The takeaway: **fine-tuning bought the mission/channel-specific knowledge that no prompt could
 supply.** That's the whole point of fine-tuning, and it's demonstrated, not asserted. Plus
-fine-tuning gave near-perfect output compliance, reliable structured advice, and 3× faster
-inference.
+fine-tuning gave near-perfect output compliance, reliable structured advice, and 3× faster inference.
+
+**The picture model tells the same story from the opposite end.** We also ran the *un-fine-tuned*
+Qwen3-VL base on the plots. Unlike the text base (which couldn't even produce a clean ANOMALY/NOMINAL
+answer), the picture base *answers* fine — it's 100% compliant — but it **can't tell anomalous plots
+from normal ones**: F1 0.350, *below* the dumb baseline. Fine-tuning then more than doubled its
+precision (0.310 → 0.769). So the two modalities expose the same lesson from opposite ends: for the
+**text** model, fine-tuning's headline win was *learning to follow the format*; for the **picture**
+model, it was *learning to actually discriminate*. Both wins come from the same thing — teaching the
+model what *this spacecraft's* data looks like.
 
 ### 7c. The advice is good — *when the flag is right*
 We graded 120 of the model's flags (correctness / actionability / grounding, 0–6):
@@ -325,14 +351,50 @@ in order:
    inventing a story on a borderline window.
 5. **A bigger advisor model + a larger, human-checked grade** if resources allow.
 
-### 7d. The recommended design: the Hybrid
+### 7d. The plot twist: the text model wasn't over-flagging — we were misreading it
+The text LLM's ugly precision (0.36) had two innocent causes, neither of them "the model is bad at
+detecting":
+1. **It was answering with randomness turned on.** We'd been decoding with "temperature" (a setting
+   that adds randomness so the model doesn't always pick its single most-likely answer). On a yes/no
+   verdict, that randomness flips some NOMINALs to ANOMALY by chance. Just turning it *off* lifted
+   precision from 0.36 to **0.53** — for free, same model.
+2. **We were reading only its yes/no, not its confidence.** Under the hood the model produces a
+   *confidence* that a window is anomalous. Instead of taking its bare yes/no, we read that confidence
+   and chose a sensible cut-off (only alarm when it's quite sure). Push the cut-off up and precision
+   reaches **0.84** — *more than double* the original, and now competitive with the LSTM.
+
+The lesson is worth internalizing: **the model wasn't a bad detector; we were reading its answer
+badly.** "Low precision" was a calibration problem (how we turned its output into an alarm), not a
+capability problem. (This is also why a "detection-only" retrain isn't worth it — the fix was the
+threshold, not the model.) And reading the *confidence* instead of the yes/no is exactly what makes
+the next step possible.
+
+### 7e. Combining the models beats all of them
+Three detectors, three *different* ways of being wrong: the text model over-flags, the picture model
+under-flags, the LSTM is precise on yet another basis. When detectors make **independent** mistakes,
+a smart combination can beat any one of them — the errors partly cancel. So we took each model's
+*confidence score* (§7d) and trained a tiny "judge" (a **stacker** — a small model that learns how
+much to trust each detector) to fuse them into one number.
+
+It works, and it's the strongest detection result in the project: fusing all three reaches **precision
+0.922** (and the best false-alarm-aware score, 0.781) — beating every single model. A simple
+**"2-out-of-3 agree"** vote also does well, and a deployable version is **"all agree → alarm; they
+disagree → ask a human."** *Honest caveat:* this was measured on the windows where all three models
+had a score (a fair head-to-head subset), so its number sits on a slightly different yardstick than
+the others — but on *identical* windows, the combination wins. (The three-model combo currently
+covers Mission 1 only, because we only ever trained the LSTM on Mission 1 — see "what next.")
+
+### 7f. The recommended design: a fused detector + the advisor
 ```
-window → [LSTM detector: cheap, precise, instant] → if it flags → [Qwen3-8B: writes the advice] → operator
+window → cheap LSTM screen → if it flags → fuse all 3 detectors (precise) → Qwen3-8B writes the advice → operator
 ```
-Cheap precise detection + expensive-but-only-when-needed explanation. It inherits the LSTM's strong
-detection *and* adds the advice the baselines can't produce. **This is the answer to the original
-question:** a localized, open-source, no-external-API system that both detects and advises, with a
-cost profile that works in production.
+Use each part where it's strongest: the **LSTM** is free and instant, so let it screen every window;
+on the few it flags, run the **fused ensemble** to cut false alarms to a minimum; then the **text LLM**
+turns the confirmed flag into a human-readable diagnosis. Cheap where it can be, precise where it
+matters, explainable at the end. **This is the answer to the original question:** a localized,
+open-source, no-external-API system that both detects (better than any single model) and advises —
+with a cost profile that works in production. (Simpler variants: just `LSTM → advisor` if you want
+the cheapest thing that works, or `vision → advisor` where false alarms are especially costly.)
 
 ---
 
@@ -362,11 +424,13 @@ If asked *"what does this contribute?"*, say:
 > telemetry**, across three input modalities (numbers-as-text, numbers-as-image, classical
 > features). It then answers the question most fine-tuning demos dodge — *"did the fine-tuning
 > actually help, or could you have just prompted an API?"* — with a comparison framed against a
-> trivial baseline so the answer survives a skeptic. The transferable findings: (1) on this data a
-> tuned LSTM still out-detects a fine-tuned LLM, matching the literature; (2) a fine-tuned 8B model
-> nonetheless beats both a few-shot base and a frontier model, because it learned localized priors
-> prompting can't supply; and (3) LLM "explainability" is only as good as the detector feeding it —
-> which is why the deployable design is the hybrid.
+> trivial baseline so the answer survives a skeptic. The transferable findings: (1) no *single* LLM
+> out-detects a tuned LSTM, matching the literature; (2) but a fine-tuned 8B beats both a few-shot
+> base and a frontier model, because it learned localized priors prompting can't supply; (3) an LLM
+> detector's "over-flagging" can be a *calibration* artifact — reading its confidence properly, not
+> changing the model, recovers most of the gap; (4) fusing detectors that make *independent* errors
+> beats every one of them; and (5) LLM "explainability" is only as good as the detector feeding it —
+> which is why the deployable design is a fused detector plus an LLM advisor.
 
 It's not a new algorithm; it's a **rigorous applied result with an honest headline** — the kind of
 engineering maturity that matters in mission-critical work.
@@ -376,10 +440,25 @@ engineering maturity that matters in mission-critical work.
 ## 10. FAQ
 
 **Q: Did the LLM beat the traditional baseline?**
-A: At *detection*, no — and that's the honest, expected result. The LSTM is more precise (0.785 vs
-0.360) and wins F1 and CEF0.5. The LLM's value is elsewhere: it's the only LLM-family approach that
-beats a trivial baseline with balanced precision/recall, and it adds high-quality advice the
-baselines can't. So the right design is the hybrid.
+A: No *single* LLM out-detects the tuned LSTM (LSTM F1 0.553 / precision 0.837) — the expected result,
+matching the literature. But two caveats matter: (a) the text LLM's precision looks far worse than it
+is — read its confidence properly and it jumps from 0.36 to 0.84 (§7d); and (b) the actual best
+detector is neither the LSTM nor any LLM alone, it's the three of them **fused** (precision 0.922,
+§7e). And the LLM uniquely adds high-quality advice the baselines can't. So the right design is a
+fused detector feeding the LLM advisor.
+
+**Q: A precision of 0.36 sounds hopeless for the text detector. Is it?**
+A: That 0.36 is an artifact of how we read the model, not the model's ability. It was decoded with
+randomness on (which flips some answers) and we took its bare yes/no instead of its confidence. Turn
+off the randomness and read the confidence with a sensible cut-off, and precision more than doubles to
+0.84 — competitive with the LSTM. The model knew what was anomalous; we were reading its answer badly
+(§7d).
+
+**Q: So what's the single best detector overall?**
+A: The **ensemble** — a small "judge" model that fuses the confidence scores of the text LLM, the
+vision LLM, and the LSTM. Because the three make independent mistakes, the fusion beats all of them:
+precision 0.922, the best false-alarm-aware score in the project (§7e). Measured on the windows where
+all three have a score (a fair head-to-head).
 
 **Q: Then why fine-tune at all — why not just prompt Claude/GPT?**
 A: We tested exactly that. A frontier model prompted zero- *and* few-shot scored *below* the dumb
@@ -394,9 +473,10 @@ above flag-everything. It's over-flagging, not detecting. The fine-tune hits a s
 *balanced* trade-off, plus reliable advice (99.6% vs 13%) and 3× lower latency.
 
 **Q: Isn't comparing a 3-channel LSTM to a 4,500-window LLM unfair?**
-A: It was, in Phase 5 — which is why Phase 7 re-ran the LSTM on all 58 channels. Its honest F1 fell
-from 0.663 to 0.552, and we kept the lower number. It still wins. Full like-for-like on one
-contiguous stream is the remaining refinement.
+A: It was early on — which is why we re-ran the LSTM on all 58 channels (its honest F1 fell, and we
+kept the lower number) and later tuned its threshold to its final precision of 0.837. It still leads
+the single detectors. Scoring everything on one identical continuous stream is the remaining
+refinement (the ensemble already does this on a fair shared subset).
 
 **Q: How do you know the advice is actually correct, not just well-formatted?**
 A: Phase 9 graded a sample on a transparent rubric. On correct flags it's 5.58/6 (95% high-quality,
@@ -429,25 +509,23 @@ multi-hour eval resumable/observable so a crash costs one checkpoint, not the wh
 too, but was quick to add.)
 
 **Q: What would you do next, and why?**
-A: In priority order, with the reasoning for each:
-- **Ship the hybrid (cheap detector → LLM advisor).** It's the design the numbers support; everything
+A: The detection-side hardening (tuning the LSTM, calibrating the text LLM, the vision control, and
+the fused ensemble) is already **done** — it's woven into §7. What remains, in priority order:
+- **Ship the hybrid (fused detector → LLM advisor).** It's the design the numbers support; everything
   else is refinement. *Low effort.*
 - **Improve the advice toward production-grade.** Replace the synthetic advice labels with
   **human-expert-written** advice and add **retrieval (RAG)** so the model cites real fault catalogs,
-  not templates — this is the biggest lever on whether the advice is trustworthy for mission-critical
-  use. *High effort, high impact.*
-- **Level the detection field fully.** Score the LSTM and the LLM on **one identical continuous
-  timeline** so the comparison is perfectly apples-to-apples (right now the LSTM is measured slightly
-  differently). The current result already matches the literature, but this makes it airtight.
-  *~1–2 days.*
-- **Calibrate the LLM's sensitivity.** Instead of one fixed cutoff, sweep it to draw a
-  precision/recall curve — the cheapest way to make the standalone LLM less trigger-happy. *Low.*
-- **Ensemble the text + vision models.** They make *opposite* mistakes (one over-flags, one is
-  over-cautious), so combining them — "flag only if both agree" for high precision, "if either fires"
-  for high recall — could beat either alone. *~2–3 days, no retraining.*
+  not templates — the biggest lever on whether the advice is trustworthy for mission-critical use.
+  *High effort, high impact.*
+- **Cover all missions and one common yardstick.** We only trained the LSTM on Mission 1, so the
+  three-model fusion is Mission-1-only; training the other missions' LSTMs and scoring everything on
+  one identical continuous stream would make every number directly comparable. *~1–2 days + a few
+  hours of training.*
 - **The true "own vs. rent" test:** fine-tune (or RAG) a frontier model and compare. We compared a
   fine-tuned *open* model to a *prompted* frontier; fine-tuning the frontier is the missing cell —
   with the caveat that it gives up the privacy/cost/latency advantages of owning the model. *Medium.*
+- **Robustness sweeps:** does it generalize to a spacecraft it never trained on, and does the 1-hour
+  averaging hide short anomalies? Both are untested. *Medium.*
 
 ---
 
@@ -497,11 +575,19 @@ A: In priority order, with the reasoning for each:
 - **F1** — balanced precision+recall score.
 - **CEF0.5** — precision-weighted F-score; the cost-of-false-alarm-aware metric.
 - **Affinity-F1** — interval-aware F-score for continuous streams.
+- **AUC-PR** — a threshold-free score of how well a model's *confidence* ranks anomalies above normal
+  windows (area under the precision-recall curve); separates "does it know?" from "did we pick a good
+  alarm cut-off?".
+- **Calibration** — turning a model's raw output into an alarm well: e.g. reading its confidence and
+  choosing a sensible cut-off, instead of taking its bare yes/no. Fixed the text LLM's apparent
+  over-flagging (§7d).
 - **Trivial / always-anomaly baseline** — flag everything; the "free" score every detector must
   beat (F1 ≈ 0.40 here).
-- **Hybrid** — the recommended design: cheap precise detector triggers an LLM advisor.
-- **Ensemble** — combining several models' outputs (e.g. requiring the text and vision detectors to
-  agree) to get higher precision or recall than either alone.
+- **Hybrid** — the recommended design: a high-precision detector triggers an LLM advisor.
+- **Ensemble / score fusion** — combining several detectors' *confidence scores* into one. Hard rules
+  ("both must agree", "either fires") are the crude version; a learned **stacker** does better.
+- **Stacker** — a small model (here a logistic regression) that learns how much to trust each
+  detector's score and fuses them into one — the engine of the winning ensemble (§7e).
 - **Telemanom** — NASA JPL's LSTM anomaly-detection method (our LSTM follows it).
 - **AnomLLM / AnomSeer / Time-LLM** — the research line on LLMs detecting time-series anomalies
   (text, vision, and patching approaches respectively).

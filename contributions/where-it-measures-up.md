@@ -17,7 +17,7 @@ window-level micro-averaging). Every official benchmark uses a **different proto
 | Scalar | CEF0.5 (from P/R) | event-wise CEF0.5 | **VUS-PR** |
 
 **Consequence:** the names match (CEF0.5, Affinity-F1) but the denominators don't. My CEF0.5 of
-0.684 (LSTM) is **not comparable** to an official event-wise CEF0.5, and balanced subsampling removes
+0.705 (LSTM) is **not comparable** to an official event-wise CEF0.5, and balanced subsampling removes
 the class imbalance that makes the real benchmark hard — a model that looks good on a balanced subset
 can collapse on the true rare-anomaly distribution. **To make any ranked claim, the method must be
 re-run under that benchmark's exact harness.** This is the single biggest robustness gap.
@@ -29,8 +29,9 @@ My text F1 **0.453** and vision F1 **0.457** land right inside the published LLM
 data:
 - Mistral zero-shot detector: F1 0.525; DeepSeek-V3 direct: 0.469; multimodal LLMs: ~0.45–0.53
   (range-/variate-wise); aerospace-synthetic best LLM ~0.47–0.61.
-- Consensus finding across all of them: **8B-scale LLMs lag a tuned LSTM/CNN by ~10–30% F1**, worse
-  on multivariate real data. My LSTM (0.552) > my LLM (0.453) **reproduces this exactly.**
+- Consensus finding across all of them: **8B-scale single LLMs lag a tuned LSTM/CNN by ~10–30% F1**,
+  worse on multivariate real data. My LSTM (F1 0.553) > my single LLMs (0.453/0.457) **reproduces this
+  exactly** — though my *ensemble* of all three (F1 0.636, P 0.922) shows fusion is the way past it.
 
 So the LLM result is a *faithful corroboration* of the literature on a new, hard, real dataset — a
 legitimate data point, but **not a number that "wins."**

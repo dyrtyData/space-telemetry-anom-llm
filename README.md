@@ -24,31 +24,44 @@ Mission-1 channels; vision: 2,000 rendered PNGs). **Read every row against the t
 | Approach | Precision | Recall | F1 | CEF0.5† | Detects? | Advises? | Cost |
 |---|---|---|---|---|---|---|---|
 | Isolation Forest | 0.127 | 0.459 | 0.188 | 0.149 | ✅ | ❌ | ~instant |
-| **LSTM baseline** (Telemanom-style, 58 ch) | **0.785** | 0.451 | **0.552** | **0.684** | ✅ | ❌ | ~instant |
-| LLM detection — **text** (Qwen3-8B QLoRA→GGUF) | 0.360 | **0.609** | 0.453 | 0.392 | ✅ | ✅ | 2.77 s/window |
+| **LSTM baseline** (Telemanom-style, 58 ch) | **0.837** | 0.432 | **0.553** | **0.705** | ✅ | ❌ | ~instant |
+| LLM detection — **text** (Qwen3-8B QLoRA→GGUF) | 0.360 ‡ | **0.609** | 0.453 | 0.392 | ✅ | ✅ | 2.77 s/window |
 | LLM detection — **vision** (Qwen3-VL-8B, PNG plots) | 0.769 | 0.325 | 0.457 | 0.604 | ✅ | ❌ | 0.86 s/window |
 | Base Qwen3-8B — zero-shot (no fine-tune) | 0 | 0 | 0 | 0 | ❌ | ❌ | — |
 | Base Qwen3-8B — few-shot (2-ex, no fine-tune) | 0.282 | 0.824 | 0.420 | 0.325 | ⚠️ over-flags | ⚠️ 13% | 8.56 s/window |
+| Base Qwen3-VL — zero-shot (no fine-tune) | 0.310 | 0.403 | 0.350 | 0.325 | ⚠️ ~chance | ❌ | — |
 | Frontier (Claude) — zero-shot | 0.308 | 0.216 | 0.254 | 0.284 | ⚠️ ~chance | ✅ | — |
 | Frontier (Claude) — few-shot | 0.200 | 0.297 | 0.239 | 0.214 | ⚠️ ~chance | ✅ | — |
 | **Always-anomaly (trivial baseline)** | 0.250 | 1.000 | 0.399 | 0.294 | ❌ | ❌ | free |
-| **Hybrid** (LSTM detect → LLM advise) | **0.785** | 0.451 | **0.552** | **0.684** | ✅ | ✅ | LLM only on flags |
+| **Ensemble** (text+vision+LSTM, stacked) ✦ | **0.922** | 0.486 | **0.636** | **0.781** | ✅ | ❌ | runs all 3 |
+| **Hybrid** (ensemble detect → LLM advise) | **0.922** | 0.486 | **0.636** | **0.781** | ✅ | ✅ | LLM on flags |
 
-† CEF0.5 = precision-weighted F-beta (β=0.5), the operationally relevant metric when false alarms
-are costly (the ESA-benchmark-aligned score).
+† CEF0.5 = precision-weighted F-beta (β=0.5), the operationally relevant metric when false alarms are
+costly (the ESA-benchmark-aligned score).
+‡ The text LLM's **as-deployed** point; reading its confidence properly (deterministic decode + a
+tuned threshold) lifts precision to **0.838** — the over-flagging is a calibration artifact, not a
+capacity limit.
+✦ The ensemble is scored on the **shared subset** where all three detectors have a score (1,378
+Mission-1 windows), **not** the 4,500-window / 58-channel basis above — so it is not a like-for-like
+swap; the claim is that on identical windows the fusion beats every single model.
 
-**The honest headline (three sentences):**
-1. As a pure **detector**, the tuned **LSTM wins** (F1 0.552, 2.2× the precision of the direct
-   text-LLM, best CEF0.5, real Affinity-F1 0.649) — the two fine-tuned LLMs are mirror images (the
-   **vision** model precision-oriented at P 0.769 with the best LLM CEF0.5; the **text** model
-   recall-oriented) but neither out-detects the LSTM, matching the published literature.
-2. Yet **fine-tuning is justified and survives a skeptic**: read against the trivial *always-anomaly*
-   baseline (free F1 0.399), the fine-tuned LLM is the **only** LLM-family approach that clears it
-   with a *balanced* precision/recall — a few-shot base "matches" its F1 only by over-flagging ~80%
-   of windows, and a frontier model prompted two ways sits **at chance** on this context-free input.
-3. The LLM's unique value is **advice**: graded **95% high-quality when the flag is correct** (strong
-   for a showcase, not yet mission-critical-grade) — but gated by detection precision — so the design
-   the data recommends is the **hybrid** (a cheap high-precision detector triggers an LLM advisor).
+**The honest headline (four sentences):**
+1. **Among single detectors, the tuned LSTM wins** (F1 0.553, precision 0.837, best CEF0.5, real
+   Affinity-F1 0.673); the two fine-tuned LLMs are precision/recall mirror images and neither
+   out-detects it alone — matching the published literature.
+2. **But the over-flagging is a red herring:** read the text LLM's confidence properly and its
+   precision more than doubles (0.360 → 0.838), and because the three detectors make *independent*
+   errors, **a leakage-free stacked ensemble beats all of them** (precision 0.922, CEF0.5 0.781) — the
+   strongest detection result here.
+3. **Fine-tuning is justified and survives a skeptic:** against the trivial *always-anomaly* baseline
+   (free F1 0.399), the fine-tuned LLM is the **only** LLM-family approach that clears it with a
+   *balanced* precision/recall — a few-shot base "matches" its F1 only by over-flagging, and a frontier
+   model prompted two ways sits **at chance**. (For vision the lesson flips: the base already complies
+   but can't discriminate; fine-tuning lifts its precision 0.310 → 0.769.)
+4. The LLM's unique value is **advice**: graded **95% high-quality when the flag is correct** (strong
+   for a showcase, not yet mission-critical-grade) — but gated by detection precision. So the design
+   the data recommends is a **fused high-precision detector feeding an LLM advisor**, with a cheap LSTM
+   first-pass to keep it affordable.
 
 ---
 
@@ -80,11 +93,12 @@ gold-standard pieces as one honest bake-off on real ESA data:
 | **AnomSeer** (ICLR 2026) | The **vision** approach (LLM reads rendered plots) — reproduced as the Qwen3-VL detector. |
 | **Time-LLM** (ICLR 2024) | Informed the **windowing/patching** ETL. |
 
-**Contribution:** a like-for-like comparison across *four model families* and *three input
-modalities*, plus a defensible answer to *"did the fine-tuning actually help?"* framed against a
-trivial baseline — with the transferable finding that **direct LLM detection is signal-limited on
-context-free input**, while a fine-tuned 8B model beats both a few-shot base and a frontier model by
-learning localized priors prompting can't supply.
+**Contribution:** a like-for-like comparison across *four model families* and *three input modalities*
+(plus a learned fusion of them), a defensible answer to *"did the fine-tuning actually help?"* framed
+against a trivial baseline, and two transferable detection findings: an LLM detector's apparent
+**over-flagging can be a calibration artifact** (reading its confidence properly, not changing the
+model, recovers most of the precision), and **fusing detectors that make independent errors
+Pareto-beats every one of them**.
 
 ---
 
@@ -116,30 +130,33 @@ learning localized priors prompting can't supply.
                                                             → results/comparison_report.md
 
   Recommended production design (the Hybrid):
-     window → LSTM detector (cheap, P=0.785) ──flag──► Qwen3-8B advisor → operator-ready alert
-              (optional: Qwen3-VL vision model as a low-false-alarm cross-check)
+     window → LSTM screen (cheap, P=0.837) ──flag──► fused ensemble confirm (P=0.922)
+              ──confirm──► Qwen3-8B advisor → operator-ready alert
 ```
 
 ---
 
-## The nine phases
+## The phases
 
 | Phase | Output |
 |---|---|
 | **1 — ETL** | ESA-AD → 30,000 windows (24.8% anomalous), split 21k/4.5k/4.5k, RevIN-normalized, 1h resample |
 | **1.5 — Advice labels** | 7,457 structured `DIAGNOSIS/ADVICE/ACTION` records (in-session, no API) |
-| **2 — Baselines** | LSTM (Telemanom-style) + Isolation Forest (3-channel smoke) |
+| **2 — Baselines** | LSTM (Telemanom-style) + Isolation Forest |
 | **3 — Fine-tune (cloud)** | Qwen3-8B QLoRA (r=16, α=16, lr 2e-4, 3 ep) on Vast.ai RTX 4090 → GGUF Q4_K_M, ~$2.30 |
 | **4 — Local inference** | GGUF on M3 Max via Metal; llama-cpp-python, all layers offloaded |
 | **5 — Evaluation** | Full 4,500-window LLM run (hardened/resumable); unified comparison report |
 | **6 — Did fine-tuning help?** | Base zero/few-shot, frontier zero/few-shot, trivial baseline — all on the identical harness |
-| **7 — Level the field** | LSTM expanded to all 58 channels; honest F1 0.552; real Affinity-F1 0.649 |
+| **7 — Level the field** | LSTM expanded to all 58 channels on contiguous timelines; real Affinity-F1 |
 | **8 — Vision detector** | Qwen3-VL-8B on PNG plots (AnomSeer-style), F1 0.457, P 0.769, ~$1 |
 | **9 — Advice grading** | 120-flag sample graded; 5.58/6 on true positives (95% high-quality) |
+| **11 — LSTM calibration** | Tuned the decision threshold → canonical LSTM P 0.837 / CEF0.5 0.705 (Telemanom dynamic thresholding tried, found unsuitable) |
+| **12 — Vision base control** | Un-fine-tuned Qwen3-VL zero-shot: F1 0.350 (below trivial) — completes the "did fine-tuning help?" table for vision |
+| **13 — Text-LLM calibration** | Continuous verdict score + PR curve (AUC-PR 0.678); the over-flagging is a calibration artifact (precision 0.360 → 0.838) |
+| **14 — Ensemble** | Leakage-free stacked fusion of text+vision+LSTM scores: **P 0.922 / CEF0.5 0.781** — the strongest detector |
 
-> Phases 6–9 were added specifically to close the four methodological gaps the Phase-5 review
-> flagged (no base-vs-fine-tuned comparison, 3-channel-only LSTM, vision detector unrun, advice
-> graded only for shape). See the [analysis doc](thoughts/shared/research/2026-06-14-results-analysis.md).
+See the [analysis doc](thoughts/shared/research/2026-06-14-results-analysis.md) for how each result
+was produced.
 
 ---
 
@@ -163,7 +180,7 @@ quality is widely criticized.
 |---|---|
 | Base models | `unsloth/Qwen3-8B` (text) · `unsloth/Qwen3-VL-8B` (vision) |
 | Fine-tuning | Unsloth + QLoRA (r=16, α=16, all-linear; text lr 2e-4 / 3 ep, vision lr 1e-4 / 2 ep) |
-| Training compute | Vast.ai — RTX 4090 (text) + A6000 (vision) — **~$3.33 total** |
+| Training compute | Vast.ai — RTX 4090 (text) + A6000 (vision, base control, vision scoring) — **~$4.2 total** |
 | Quantization / export | GGUF `Q4_K_M` (Unsloth dynamic) |
 | Local inference | `llama-cpp-python` with Metal GPU offload (M3 Max, 36 GB unified) |
 | Baselines | Keras 3 (torch backend) LSTM · scikit-learn Isolation Forest |
@@ -245,13 +262,13 @@ Makefile       every phase + a validate-* target encoding its success criteria
 ## Project journey & honest engineering log
 
 This repo keeps its full paper trail — including the dead ends — because *how* the result was reached
-is part of the showcase. The work ran across ~87 sessions over three days and logged **38 numbered
-deviations** (a wrong data-loader assumption, a FAT32 4 GB wall, a trans-Atlantic transfer
-bottleneck solved via the HF CDN, a TRL API rewrite, three latent bugs in never-run vision code, and
-a two-failure eval-durability saga).
+is part of the showcase. The work logged **49 numbered deviations** (a wrong data-loader assumption,
+a FAT32 4 GB wall, a trans-Atlantic transfer bottleneck solved via the HF CDN, a TRL API rewrite,
+three latent bugs in never-run vision code, a two-failure eval-durability saga, and Telemanom's
+dynamic thresholding turning out to be unsuitable here).
 
 - **Plan:** [`thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`](thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md)
-- **Implementation log (D1–D38):** [`thoughts/shared/implement/2026-06-12-star-pipeline-log.md`](thoughts/shared/implement/2026-06-12-star-pipeline-log.md)
+- **Implementation log (D1–D49):** [`thoughts/shared/implement/2026-06-12-star-pipeline-log.md`](thoughts/shared/implement/2026-06-12-star-pipeline-log.md)
 - **Results analysis:** [`thoughts/shared/research/2026-06-14-results-analysis.md`](thoughts/shared/research/2026-06-14-results-analysis.md)
 - **Plain-language walkthrough:** [`thoughts/shared/research/2026-06-14-plain-language-walkthrough.md`](thoughts/shared/research/2026-06-14-plain-language-walkthrough.md)
 
@@ -259,27 +276,26 @@ a two-failure eval-durability saga).
 
 ## Limitations
 
-This is a showcase, not a deployed system. The four largest Phase-5 gaps are now **closed** (base-vs-
-fine-tuned → Phase 6; full 58-channel LSTM → Phase 7; vision detector → Phase 8; semantic advice
-grading → Phase 9). Residual gaps, stated up front:
+This is a showcase, not a deployed system. Residual gaps, stated up front:
 
-1. **Eval-unit asymmetry reduced, not eliminated** — LSTM macro-averaged over 58 contiguous
-   channels; LLM micro-averaged over 4,500 shuffled cross-mission windows. A fully like-for-like
-   rematch would score both on one identical contiguous stream.
-2. **Frontier control is a sample (n=150)**, fed deliberately context-free input — a hard sanity
-   check, not a full frontier benchmark.
-3. **Advice labels are synthetic** (in-session generated), and the advice grade is a 120-window
-   LLM-judged sample, not a human-SME panel.
-4. **The Hybrid's detection score is inherited** (= the LSTM's by construction); only its advice
-   layer is new.
-5. **Single fine-tune, no hyperparameter sweep**, no detection-tuned LLM variant or P-R curve, and
-   the vision model has no advice head.
-6. **1-hour resampling is lossy** for sub-hour transients; cross-mission generalization untested.
+1. **The ensemble is on a different evaluation unit** than the single detectors — the shared windows
+   where all three have a score (1,378 Mission-1 windows), not the 4,500-window / 58-channel basis. Its
+   Pareto-win claim is *internal* (on identical windows it beats each component), not a like-for-like
+   master-table swap.
+2. **Mission scope.** The LSTM (and so the 3-model ensemble) covers Mission 1 only — the other
+   missions' LSTMs were never trained. The text LLM was evaluated across all three missions, a residual
+   coverage asymmetry; a fully like-for-like rematch would score everything on one contiguous stream.
+3. **Frontier control is a sample (n=150)**, fed deliberately context-free input — a hard sanity check,
+   not a best-effort frontier benchmark.
+4. **Advice labels are synthetic** (in-session generated), and the advice grade is a 120-flag
+   LLM-judged sample, not a human-SME panel — the top lever toward mission-critical advice.
+5. **The Hybrid's detection score is inherited** from its detector; only its advice layer is new.
+6. **Single fine-tune, no hyperparameter sweep**; the vision model has no advice head and converged
+   fast (generalization to a new mission untested); **1-hour resampling is lossy** for sub-hour
+   transients.
 
 Each has a concrete next step in the
-[analysis doc](thoughts/shared/research/2026-06-14-results-analysis.md#10-recommended-next-steps),
-and the highest-priority detection/eval items are specced as ready-to-run **Phases 11–14** in
-the [implementation plan](thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md).
+[analysis doc](thoughts/shared/research/2026-06-14-results-analysis.md#10-open-next-steps).
 
 ---
 
