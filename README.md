@@ -3,12 +3,13 @@
 > An end-to-end, **open-source** pipeline that **detects anomalies** in real satellite telemetry and
 > **generates human-readable diagnostic advice** — no external API vendor required.
 
-Built on the **ESA Anomaly Dataset (ESA-AD)**, this project runs a like-for-like **bake-off of ten
-approaches** to the same task and fine-tunes two open-source LLMs (Qwen3-8B text, Qwen3-VL-8B
-vision) with QLoRA. It deliberately pits the *research-frontier* "LLM does everything" idea against
-*classical* baselines **and** against the un-fine-tuned base model, a frontier model, and a trivial
-baseline — then reports the result honestly and lands on the architecture the data actually
-supports.
+Built on the **ESA Anomaly Dataset (ESA-AD)**, this project runs a like-for-like **bake-off of 13
+approaches** to the same task: fine-tuned LLMs (Qwen3-8B text, Qwen3-VL-8B vision), classical
+baselines (LSTM, Isolation Forest), un-fine-tuned bases, a frontier model, a trivial baseline, and a
+**learned ensemble** that fuses the detectors' confidence scores. It reports the result honestly:
+**no single LLM beats the tuned LSTM**, but the over-flagging is a calibration artifact, and **fusing
+all three detectors beats every one of them** — so the architecture the data recommends is an
+ensemble detector feeding an LLM advisor.
 
 📄 **Full analysis:** [`thoughts/shared/research/2026-06-14-results-analysis.md`](thoughts/shared/research/2026-06-14-results-analysis.md)
 🎓 **Learn it from scratch (plain-language):** [`thoughts/shared/research/2026-06-14-plain-language-walkthrough.md`](thoughts/shared/research/2026-06-14-plain-language-walkthrough.md)
@@ -115,19 +116,39 @@ Pareto-beats every one of them**.
                                        │
    ┌──────────────┬────────────────────┼─────────────────────┬───────────────┐
    ▼              ▼                    ▼                     ▼               ▼
- Phase 2        Phase 3            Phase 8              Phase 1.5         Phase 6
+ Phase 2        Phase 3            Phase 8              Phase 1.5         Phase 6/12
  Baselines      LLM fine-tune      Vision fine-tune     Advice labels     Controls
  (local)        (cloud RTX 4090)   (cloud A6000)        (in-session)      (base/frontier/
- • LSTM 58 ch   • Qwen3-8B QLoRA   • Qwen3-VL-8B QLoRA  • 7,457 records    trivial)
+ • LSTM 58 ch   • Qwen3-8B QLoRA   • Qwen3-VL-8B QLoRA  • 7,457 records    trivial + VL base)
  • Iso-Forest   • →GGUF Q4_K_M     • on PNG plots
         │              │                  │
-        │              ▼                  │
-        │       Phase 4 — Local Metal inference (M3 Max, llama-cpp-python)
-        │              │                  │
-        └──────────────┴──────────────────┴─────────────► Phase 5/7/9 — Unified evaluation
-                                                            P / R / F1 / CEF0.5 / Affinity-F1
-                                                            + semantic advice grading
-                                                            → results/comparison_report.md
+        ▼              ▼                  ▼
+   Phase 11       Phase 4            Phase 8 eval
+   LSTM calib.    Local Metal        vision scoring ─────────────────────┐
+   z=4.0 →        inference          (cloud A6000)                       │
+   P=0.837        (M3 Max)                                               │
+        │              │                  │                              │
+        │              ▼                  │                              │
+        │         Phase 13                │                              │
+        │         Text-LLM calib.         │                              │
+        │         PR curve, AUC 0.678     │                              │
+        │         P 0.360→0.838           │                              │
+        │              │                  │                              │
+        └──────────────┴──────────────────┴──────────────────────────────┤
+                                       │                                 │
+                                       ▼                                 │
+                        Phase 5/7/9 — Unified single-model evaluation    │
+                        P / R / F1 / CEF0.5 / Affinity-F1                │
+                        + semantic advice grading (120-flag sample)      │
+                                       │                                 │
+                                       ▼                                 │
+                        Phase 14 — Ensemble (score-level fusion) ◄───────┘
+                        leakage-free OOF stacker over continuous scores
+                        text + vision + LSTM → P 0.922, CEF0.5 0.781
+                        (the strongest detector)
+                                       │
+                                       ▼
+                              → results/comparison_report.md
 
   Recommended production design (the Hybrid):
      window → LSTM screen (cheap, P=0.837) ──flag──► fused ensemble confirm (P=0.922)
@@ -225,11 +246,22 @@ make eval-llm LIMIT=0 STAR_MODEL_DIR="/path/to/models"   # full 4,500-window run
 make validate-inference
 
 # 5–9. Unified comparison + controls + advice grading
-make eval-base eval-base-fewshot                     # Phase 6 base controls
+make eval-base eval-base-fewshot                     # Phase 6 text base controls
 make frontier-select frontier-assemble               # Phase 6 frontier control
 make eval-vision                                     # Phase 8 vision row
 make grade-advice-select grade-advice-assemble       # Phase 9 advice grade
 make eval-all && make validate-eval                  # → results/comparison_report.md
+
+# 11–14. Detection hardening (LSTM calib, vision base, text PR, ensemble)
+make tune-threshold ESA_DATA_DIR="/path/to/esa-ad"   # Phase 11: LSTM z-threshold sweep
+# Phase 12 (vision base control) was run on cloud A6000 — see scripts/cloud/
+make eval-llm --score ...                            # Phase 13: text-LLM scored output
+python src/inference/pr_curve.py --scored results/inference_test_scored.json \
+       --out results/llm_pr_curve.json               #   → PR curve + AUC-PR 0.678
+make lstm-window-scores ESA_DATA_DIR="/path/to/esa-ad"  # Phase 14: LSTM continuous scores
+make eval-vision-score                               # Phase 14: vision continuous scores
+make ensemble                                        # Phase 14: fused stacker → CEF0.5 0.781
+make eval-all                                        # regenerate comparison_report.md
 ```
 
 ### Durable long-running runs
