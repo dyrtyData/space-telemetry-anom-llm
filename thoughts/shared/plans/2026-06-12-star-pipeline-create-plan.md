@@ -3053,14 +3053,105 @@ make eval-all
 
 ---
 
+### Step 15.7 — Base text LLM + RAG (full 4,500 windows) [LOCAL]
+
+**Purpose:** Apples-to-apples comparison with the fine-tuned text LLM. The fine-tune saw 21k training
+windows; the base + RAG sees k retrieved examples per window. Does RAG substitute for fine-tuning?
+
+**Script:** `src/inference/eval_base_rag.py` (new, or extend existing)
+
+**Approach:**
+1. Download the **un-fine-tuned base GGUF** (not our fine-tune):
+   ```bash
+   # e.g., from Hugging Face
+   huggingface-cli download unsloth/Qwen3-8B-GGUF Qwen3-8B-Q4_K_M.gguf --local-dir models/base/
+   ```
+2. Load via `llama-cpp-python` with larger context for RAG:
+   ```python
+   llm = Llama(model_path="models/base/Qwen3-8B-Q4_K_M.gguf", n_ctx=4096, n_gpu_layers=-1)
+   ```
+3. For each of the **4,500 test windows**:
+   a. Retrieve k=5 similar training windows (same as Step 15.3).
+   b. Build RAG-augmented prompt (same template as Step 15.4).
+   c. Generate verdict.
+   d. Parse response.
+4. Checkpoint every 250 windows (same durability as Phase 5).
+
+**Time estimate:** ~10-15 hours (4,500 × 8-12 s/window due to longer context). Run overnight with
+`caffeinate` + checkpoint/resume.
+
+**Output:** `results/base_rag.json` with predictions for all 4,500 windows.
+
+**Comparison targets:**
+- Fine-tuned text LLM (F1 0.453, P 0.360) — same 4,500 windows
+- Base few-shot without RAG (F1 0.420, P 0.282) — only 500 windows, so not fully comparable
+- Always-anomaly baseline (F1 0.399)
+
+---
+
+### Step 15.8 — Base vision LLM + RAG (optional, multi-image) [LOCAL or CLOUD]
+
+**Purpose:** True vision-to-vision RAG — give the base VLM the same "what does normal look like for
+this channel?" context that the fine-tune learned. This is the only way to fairly RAG the vision
+modality; text descriptions would be a modality mismatch.
+
+**Prerequisites (extra work):**
+1. **Generate training PNGs** (~21k plots, ~1-2 hours):
+   ```bash
+   python src/etl/generate_plots.py --split train --out data/processed/plots/train/
+   ```
+2. **Build image embeddings** using CLIP:
+   ```bash
+   pip install open-clip-torch
+   python src/inference/build_vision_rag_index.py --plots data/processed/plots/train/ \
+       --out data/rag_vision/
+   ```
+
+**Approach:**
+1. For each test PNG, retrieve k=3 similar training PNGs (by CLIP embedding distance).
+2. Build a multi-image prompt showing the retrieved PNGs + the query PNG:
+   ```
+   Here are 3 similar historical plots from channel {channel} with their labels:
+   [IMAGE 1] → NOMINAL
+   [IMAGE 2] → NOMINAL  
+   [IMAGE 3] → ANOMALY
+   
+   Now classify this new plot:
+   [QUERY IMAGE]
+   
+   Answer: ANOMALY or NOMINAL
+   ```
+3. Call Qwen3-VL base (not fine-tuned) with multi-image input.
+4. Parse verdict.
+
+**Considerations:**
+- Qwen3-VL supports multi-image, but context length matters (~4 images max is safe).
+- Run on **cloud A6000** (same as Phase 8/12) if local MPS doesn't work.
+- Eval on **2,000 test PNGs** (same as Phase 8/12) for direct comparison.
+
+**Time estimate:** ~2-3 hours for PNG generation, ~1 hour for CLIP indexing, ~2-4 hours for eval.
+
+**Output:** `results/vision_base_rag.json`
+
+**Comparison targets:**
+- Fine-tuned vision LLM (F1 0.457, P 0.769)
+- Base vision zero-shot without RAG (F1 0.350, P 0.310)
+
+**Note:** This step is OPTIONAL — the text RAG (Steps 15.4-15.7) is the cleaner test. Vision RAG
+adds significant work for a less common use case. Do it if time permits or if the text RAG results
+are inconclusive.
+
+---
+
 ### Success Criteria
 
-- [ ] FAISS (or chosen store) installed and index built for all training channels.
+- [ ] FAISS installed and text index built for all training channels.
 - [ ] `retrieve_context()` returns k relevant neighbors with labels.
-- [ ] RAG-augmented frontier eval runs on the same 150-window sample as Phase 6.
-- [ ] Results persisted to `results/frontier_rag.json`.
-- [ ] `comparison_report.md` includes the new row.
-- [ ] Interpretation documented — does RAG close the gap or not?
+- [ ] **Frontier + RAG** eval runs on 150-window sample → `results/frontier_rag.json`.
+- [ ] **Base text + RAG** eval runs on full 4,500 windows → `results/base_rag.json`.
+- [ ] (Optional) **Base vision + RAG** eval runs on 2,000 PNGs → `results/vision_base_rag.json`.
+- [ ] `comparison_report.md` includes the new rows.
+- [ ] Interpretation documented — does RAG close the gap for text? For vision?
 
 ---
 
@@ -3092,9 +3183,12 @@ for any re-download. Both are torn down together as the final step.
   base control), and 14's vision-score run need the raw data / PNGs that this teardown deletes.
   Phase 13 is independent; Phase 14 depends on Phase 13. **ALL OF 11–14 ARE COMPLETE (2026-06-15)** →
   raw data / PNGs are no longer needed; teardown is unblocked (still LAST + user-confirmed).
-- [ ] **Phase 15 (RAG + Frontier) if you intend to run it** — needs the training JSONL to build the
-  RAG index. Does NOT need raw data or PNGs. Can run after teardown if `data/splits/train.jsonl` is
-  preserved (it is tracked in git, so this is fine).
+- [ ] **Phase 15 (RAG) if you intend to run it:**
+  - **Text RAG (Steps 15.1-15.7):** needs training JSONL only. Does NOT need raw data or PNGs. Can
+    run after teardown since `data/splits/train.jsonl` is tracked in git.
+  - **Vision RAG (Step 15.8, optional):** needs training PNGs, which must be generated from raw data
+    BEFORE teardown. If you want vision RAG, run `python src/etl/generate_plots.py --split train`
+    before deleting raw data.
 - [ ] Final models exported (GGUF) and stored on `DUAL DRIVE` and/or pushed to their cloud home.
 - [ ] No open question that could require re-running the ETL from raw.
 
