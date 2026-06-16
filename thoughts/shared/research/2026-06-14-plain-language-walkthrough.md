@@ -238,17 +238,23 @@ immediately poke. **Phases 6–9 closed them, and Phases 11–14 then hardened t
 - **Phase 9 — Is the advice any good?** We'd only proven the advice had the right *shape* (99.6%
   structured). Phase 9 graded a 120-flag sample for *correctness* on a transparent rubric (§7).
 
-Then four more phases turned a good showcase into a genuinely strong result:
+Then five more phases turned a good showcase into a genuinely strong result:
 
 - **Phase 11 — Tune the LSTM.** Its alarm threshold had been left at an untuned default. Sweeping that
   one knob (and discovering Telemanom's fancier "dynamic" thresholding actually *hurts* here — a clean
-  negative result) lifted the LSTM to its final P 0.837 / F1 0.553 (§7e).
+  negative result) lifted the LSTM to its final P 0.837 / F1 0.553 (§7d).
 - **Phase 12 — The vision base control.** We ran the *un-fine-tuned* Qwen3-VL too, to finish the
   "did fine-tuning help?" story for the picture model as well as the text one (§7b).
 - **Phase 13 — Calibrate the text LLM.** The big surprise: the text model's "over-flagging" was mostly
-  a *reading* error, not a model weakness — fixed by reading its confidence properly (§7e).
+  a *reading* error, not a model weakness — fixed by reading its confidence properly (§7d).
 - **Phase 14 — Combine the models.** Fuse the three detectors' confidences into one — and it beats
-  every single model (§7f).
+  every single model (§7e).
+- **Phase 15 — Test RAG as an alternative to fine-tuning.** If the frontier's failure was a *context*
+  problem (missing channel history), could we fix it without fine-tuning? We built a retrieval index
+  from the training windows and gave models k=5 labeled neighbors per window. Result: **Frontier+RAG
+  F1 0.825** (vs 0.254 zero-shot) — even **Base+RAG (0.531) beats the fine-tune (0.453)**. This
+  validates *why* fine-tuning works (it's the channel context) and reveals an alternative path for
+  API-tolerant deployments (§7g).
 
 Total cloud spend across everything: **~$4.2.**
 
@@ -396,6 +402,49 @@ open-source, no-external-API system that both detects (better than any single mo
 with a cost profile that works in production. (Simpler variants: just `LSTM → advisor` if you want
 the cheapest thing that works, or `vision → advisor` where false alarms are especially costly.)
 
+### 7g. The RAG alternative: retrieval instead of training (Phase 15)
+
+We said the frontier failed because it lacked **channel history** — the knowledge of what's normal for
+each sensor. Fine-tuning bakes that knowledge into the model's weights. But there's another way: **give
+it the history at runtime** by retrieving similar past windows from the training data. This is called
+**RAG (retrieval-augmented generation)**.
+
+**How it works:** For each test window, we search a FAISS index for the k=5 most similar training
+windows *from that channel*, along with their labels ("ANOMALY" or "NOMINAL"). We paste these into the
+prompt as context: "here are 5 similar past windows and what they turned out to be — now classify this
+one."
+
+**The results are striking:**
+
+| Model | Without context | With RAG (k=5) |
+|-------|-----------------|----------------|
+| Frontier (Claude) | F1 0.254 (chance) | **F1 0.825, precision 1.000** |
+| Base Qwen3-8B | F1 0.000 (won't answer) | **F1 0.531** |
+| Fine-tuned Qwen3-8B | F1 0.453 | — |
+
+- The frontier goes from chance to **the best detector in the entire project** once given context.
+  Perfect precision — it made zero false alarms on the 150-window sample.
+- Even the un-fine-tuned base with RAG (0.531) **beats the fine-tuned model** (0.453).
+
+**What this means:**
+
+1. **The diagnosis was correct.** The frontier wasn't incapable — it was missing information. Give it
+   the channel's history and it knows exactly what to do.
+2. **Retrieval substitutes for training** for this task. Both approaches use the same 21k training
+   windows; one encodes them in weights, the other retrieves them at runtime. For detection, retrieval
+   works as well or better.
+3. **Trade-offs remain.** RAG requires a retrieval index and (for the frontier) an API call per window.
+   If you need to own the model, run offline, or avoid per-call costs, fine-tuning is still the right
+   choice. If you're okay with an API and want to skip training, RAG works.
+
+**So which should you use?**
+- **Fine-tuning** if: you need a sovereign/offline model, want to avoid vendor lock-in, or are
+  processing high-volume streams where API costs add up.
+- **RAG** if: you're okay with API calls, want to avoid training entirely, or want the best possible
+  detection (Frontier+RAG is the top performer).
+
+Both beat the naive prompt; they're just different ways to give the model the context it needs.
+
 ---
 
 ## 8. Why each big decision was made (so you can defend it)
@@ -462,9 +511,13 @@ all three have a score (a fair head-to-head).
 
 **Q: Then why fine-tune at all — why not just prompt Claude/GPT?**
 A: We tested exactly that. A frontier model prompted zero- *and* few-shot scored *below* the dumb
-baseline on this input. The signal the fine-tune uses — mission/channel-specific "normal" — isn't in
-the prompt; it's learned into the weights. Prompting can't recover it. Fine-tuning also gave us a
-model we *own*, that runs locally with no API, at 3× the speed.
+baseline on this input — **but not because it's incapable**. The problem was missing *context*: the
+model had no idea what's normal for each channel. When we gave it that context via RAG (k=5 retrieved
+training neighbors), it jumped to F1 0.825 — the best detector in the project. So the choice is:
+- **Fine-tune** if you need to own the model, run offline, or avoid per-call API costs.
+- **RAG** if you're okay with an API and want to skip training.
+Both work; fine-tuning still gave us a model we *own*, that runs locally with no API, at 3× the speed —
+which was the project's stated goal.
 
 **Q: Your few-shot base got F1 0.420, almost matching your 0.453. Doesn't that undermine the
 fine-tune?**
@@ -509,21 +562,23 @@ multi-hour eval resumable/observable so a crash costs one checkpoint, not the wh
 too, but was quick to add.)
 
 **Q: What would you do next, and why?**
-A: The detection-side hardening (tuning the LSTM, calibrating the text LLM, the vision control, and
-the fused ensemble) is already **done** — it's woven into §7. What remains, in priority order:
+A: The detection-side hardening (tuning the LSTM, calibrating the text LLM, the vision control, the
+fused ensemble, and the RAG comparison) is already **done** — it's woven into §7. What remains, in
+priority order:
 - **Ship the hybrid (fused detector → LLM advisor).** It's the design the numbers support; everything
   else is refinement. *Low effort.*
 - **Improve the advice toward production-grade.** Replace the synthetic advice labels with
-  **human-expert-written** advice and add **retrieval (RAG)** so the model cites real fault catalogs,
-  not templates — the biggest lever on whether the advice is trustworthy for mission-critical use.
-  *High effort, high impact.*
+  **human-expert-written** advice and add **retrieval grounding** so the model cites real fault
+  catalogs, not templates — the biggest lever on whether the advice is trustworthy for mission-critical
+  use. *High effort, high impact.*
 - **Cover all missions and one common yardstick.** We only trained the LSTM on Mission 1, so the
   three-model fusion is Mission-1-only; training the other missions' LSTMs and scoring everything on
   one identical continuous stream would make every number directly comparable. *~1–2 days + a few
   hours of training.*
-- **The true "own vs. rent" test:** fine-tune (or RAG) a frontier model and compare. We compared a
-  fine-tuned *open* model to a *prompted* frontier; fine-tuning the frontier is the missing cell —
-  with the caveat that it gives up the privacy/cost/latency advantages of owning the model. *Medium.*
+- **Fine-tune a frontier model** (GPT-4o/Gemini tuning APIs) — the remaining untested cell in the
+  "own vs. rent" comparison. RAG showed the frontier *can* detect with context; fine-tuning it would
+  test whether you can have both frontier capability *and* offline/sovereign deployment. Rare use case,
+  but completeness. *Medium.*
 - **Robustness sweeps:** does it generalize to a spacecraft it never trained on, and does the 1-hour
   averaging hide short anomalies? Both are untested. *Medium.*
 

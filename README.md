@@ -3,13 +3,14 @@
 > An end-to-end, **open-source** pipeline that **detects anomalies** in real satellite telemetry and
 > **generates human-readable diagnostic advice** — no external API vendor required.
 
-Built on the **ESA Anomaly Dataset (ESA-AD)**, this project runs a like-for-like **bake-off of 13
+Built on the **ESA Anomaly Dataset (ESA-AD)**, this project runs a like-for-like **bake-off of 15
 approaches** to the same task: fine-tuned LLMs (Qwen3-8B text, Qwen3-VL-8B vision), classical
-baselines (LSTM, Isolation Forest), un-fine-tuned bases, a frontier model, a trivial baseline, and a
-**learned ensemble** that fuses the detectors' confidence scores. It reports the result honestly:
-**no single LLM beats the tuned LSTM**, but the over-flagging is a calibration artifact, and **fusing
-all three detectors beats every one of them** — so the architecture the data recommends is an
-ensemble detector feeding an LLM advisor.
+baselines (LSTM, Isolation Forest), un-fine-tuned bases, a frontier model (with and without RAG), a
+trivial baseline, and a **learned ensemble** that fuses the detectors' confidence scores. It reports
+the result honestly: **no single LLM beats the tuned LSTM**, but the over-flagging is a calibration
+artifact, **fusing all three detectors beats every one of them**, and **RAG validates why fine-tuning
+works** (and offers an alternative for API-tolerant deployments). The architecture the data recommends
+is an ensemble detector feeding an LLM advisor.
 
 📄 **Full analysis:** [`thoughts/shared/research/2026-06-14-results-analysis.md`](thoughts/shared/research/2026-06-14-results-analysis.md)
 🎓 **Learn it from scratch (plain-language):** [`thoughts/shared/research/2026-06-14-plain-language-walkthrough.md`](thoughts/shared/research/2026-06-14-plain-language-walkthrough.md)
@@ -30,9 +31,11 @@ Mission-1 channels; vision: 2,000 rendered PNGs). **Read every row against the t
 | LLM detection — **vision** (Qwen3-VL-8B, PNG plots) | 0.769 | 0.325 | 0.457 | 0.604 | ✅ | ❌ | 0.86 s/window |
 | Base Qwen3-8B — zero-shot (no fine-tune) | 0 | 0 | 0 | 0 | ❌ | ❌ | — |
 | Base Qwen3-8B — few-shot (2-ex, no fine-tune) | 0.282 | 0.824 | 0.420 | 0.325 | ⚠️ over-flags | ⚠️ 13% | 8.56 s/window |
+| **Base Qwen3-8B + RAG (k=5)** ⬥ | 0.447 | 0.654 | **0.531** | 0.478 | ✅ | ❌ | retrieval + LLM |
 | Base Qwen3-VL — zero-shot (no fine-tune) | 0.310 | 0.403 | 0.350 | 0.325 | ⚠️ ~chance | ❌ | — |
 | Frontier (Claude) — zero-shot | 0.308 | 0.216 | 0.254 | 0.284 | ⚠️ ~chance | ✅ | — |
 | Frontier (Claude) — few-shot | 0.200 | 0.297 | 0.239 | 0.214 | ⚠️ ~chance | ✅ | — |
+| **Frontier (Claude) + RAG (k=5)** ⬥ | **1.000** | 0.703 | **0.825** | **0.922** | ✅ | ✅ | retrieval + API |
 | **Always-anomaly (trivial baseline)** | 0.250 | 1.000 | 0.399 | 0.294 | ❌ | ❌ | free |
 | **Ensemble** (text+vision+LSTM, stacked) ✦ | **0.922** | 0.486 | **0.636** | **0.781** | ✅ | ❌ | runs all 3 |
 | **Hybrid** (ensemble detect → LLM advise) | **0.922** | 0.486 | **0.636** | **0.781** | ✅ | ✅ | LLM on flags |
@@ -45,21 +48,26 @@ capacity limit.
 ✦ The ensemble is scored on the **shared subset** where all three detectors have a score (1,378
 Mission-1 windows), **not** the 4,500-window / 58-channel basis above — so it is not a like-for-like
 swap; the claim is that on identical windows the fusion beats every single model.
+⬥ **RAG rows (Phase 15)** use the same frozen sample as the frontier control for apples-to-apples
+comparison. RAG retrieves k=5 labeled training neighbors per window, providing the channel history the
+context-free models lacked. Base+RAG beats fine-tuning; Frontier+RAG is the best detector overall —
+but reintroduces API dependence.
 
-**The honest headline (four sentences):**
+**The honest headline (five sentences):**
 1. **Among single detectors, the tuned LSTM wins** (F1 0.553, precision 0.837, best CEF0.5, real
    Affinity-F1 0.673); the two fine-tuned LLMs are precision/recall mirror images and neither
    out-detects it alone — matching the published literature.
 2. **But the over-flagging is a red herring:** read the text LLM's confidence properly and its
    precision more than doubles (0.360 → 0.838), and because the three detectors make *independent*
-   errors, **a leakage-free stacked ensemble beats all of them** (precision 0.922, CEF0.5 0.781) — the
-   strongest detection result here.
+   errors, **a leakage-free stacked ensemble beats all of them** (precision 0.922, CEF0.5 0.781).
 3. **Fine-tuning is justified and survives a skeptic:** against the trivial *always-anomaly* baseline
-   (free F1 0.399), the fine-tuned LLM is the **only** LLM-family approach that clears it with a
-   *balanced* precision/recall — a few-shot base "matches" its F1 only by over-flagging, and a frontier
-   model prompted two ways sits **at chance**. (For vision the lesson flips: the base already complies
-   but can't discriminate; fine-tuning lifts its precision 0.310 → 0.769.)
-4. The LLM's unique value is **advice**: graded **95% high-quality when the flag is correct** (strong
+   (free F1 0.399), the fine-tuned LLM is the **only owned-model approach** that clears it with a
+   *balanced* precision/recall. (For vision: fine-tuning lifts precision 0.310 → 0.769.)
+4. **RAG validates *why* fine-tuning works — and offers an alternative.** The frontier's failure was a
+   *context* problem: give it channel history via retrieval and it jumps to F1 0.825 (the best single
+   detector). Even Base+RAG (0.531) beats fine-tuning (0.453). For API-tolerant deployments, RAG is a
+   viable path; for sovereign/offline deployments, fine-tuning remains the right choice.
+5. The LLM's unique value is **advice**: graded **95% high-quality when the flag is correct** (strong
    for a showcase, not yet mission-critical-grade) — but gated by detection precision. So the design
    the data recommends is a **fused high-precision detector feeding an LLM advisor**, with a cheap LSTM
    first-pass to keep it affordable.
@@ -96,10 +104,11 @@ gold-standard pieces as one honest bake-off on real ESA data:
 
 **Contribution:** a like-for-like comparison across *four model families* and *three input modalities*
 (plus a learned fusion of them), a defensible answer to *"did the fine-tuning actually help?"* framed
-against a trivial baseline, and two transferable detection findings: an LLM detector's apparent
-**over-flagging can be a calibration artifact** (reading its confidence properly, not changing the
-model, recovers most of the precision), and **fusing detectors that make independent errors
-Pareto-beats every one of them**.
+against a trivial baseline, and three transferable detection findings: (1) an LLM detector's apparent
+**over-flagging can be a calibration artifact** (reading its confidence properly recovers most of the
+precision); (2) **fusing detectors that make independent errors Pareto-beats every one of them**; and
+(3) **RAG validates why fine-tuning works** — the frontier's failure was missing context, not missing
+capability, and retrieval substitutes for training when context is the missing signal.
 
 ---
 
@@ -174,7 +183,8 @@ Pareto-beats every one of them**.
 | **11 — LSTM calibration** | Tuned the decision threshold → canonical LSTM P 0.837 / CEF0.5 0.705 (Telemanom dynamic thresholding tried, found unsuitable) |
 | **12 — Vision base control** | Un-fine-tuned Qwen3-VL zero-shot: F1 0.350 (below trivial) — completes the "did fine-tuning help?" table for vision |
 | **13 — Text-LLM calibration** | Continuous verdict score + PR curve (AUC-PR 0.678); the over-flagging is a calibration artifact (precision 0.360 → 0.838) |
-| **14 — Ensemble** | Leakage-free stacked fusion of text+vision+LSTM scores: **P 0.922 / CEF0.5 0.781** — the strongest detector |
+| **14 — Ensemble** | Leakage-free stacked fusion of text+vision+LSTM scores: **P 0.922 / CEF0.5 0.781** |
+| **15 — RAG comparison** | Per-channel FAISS indices from 21k training windows; k=5 retrieval. **Frontier+RAG F1 0.825** (vs 0.254), **Base+RAG F1 0.531** (beats fine-tune 0.453). Validates the context hypothesis. |
 
 See the [analysis doc](thoughts/shared/research/2026-06-14-results-analysis.md) for how each result
 was produced.
@@ -261,6 +271,14 @@ python src/inference/pr_curve.py --scored results/inference_test_scored.json \
 make lstm-window-scores ESA_DATA_DIR="/path/to/esa-ad"  # Phase 14: LSTM continuous scores
 make eval-vision-score                               # Phase 14: vision continuous scores
 make ensemble                                        # Phase 14: fused stacker → CEF0.5 0.781
+
+# 15. RAG comparison (Phase 15)
+make build-rag-index                                 # Build per-channel FAISS indices
+make frontier-rag-prompts                            # Generate RAG-augmented prompts
+# ... classify prompts in-session ...
+make frontier-rag-assemble CLASSIFICATIONS=results/frontier_rag_classifications.json
+make eval-base-rag LIMIT=100                         # Base+RAG smoke test
+
 make eval-all                                        # regenerate comparison_report.md
 ```
 
@@ -294,10 +312,11 @@ Makefile       every phase + a validate-* target encoding its success criteria
 ## Project journey & honest engineering log
 
 This repo keeps its full paper trail — including the dead ends — because *how* the result was reached
-is part of the showcase. The work logged **49 numbered deviations** (a wrong data-loader assumption,
+is part of the showcase. The work logged **52 numbered deviations** (a wrong data-loader assumption,
 a FAT32 4 GB wall, a trans-Atlantic transfer bottleneck solved via the HF CDN, a TRL API rewrite,
-three latent bugs in never-run vision code, a two-failure eval-durability saga, and Telemanom's
-dynamic thresholding turning out to be unsuitable here).
+three latent bugs in never-run vision code, a two-failure eval-durability saga, Telemanom's dynamic
+thresholding turning out to be unsuitable here, and Qwen3's `/no_think` directive needed in the system
+prompt for RAG inference).
 
 - **Plan:** [`thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`](thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md)
 - **Implementation log (D1–D49):** [`thoughts/shared/implement/2026-06-12-star-pipeline-log.md`](thoughts/shared/implement/2026-06-12-star-pipeline-log.md)
@@ -317,8 +336,9 @@ This is a showcase, not a deployed system. Residual gaps, stated up front:
 2. **Mission scope.** The LSTM (and so the 3-model ensemble) covers Mission 1 only — the other
    missions' LSTMs were never trained. The text LLM was evaluated across all three missions, a residual
    coverage asymmetry; a fully like-for-like rematch would score everything on one contiguous stream.
-3. **Frontier control is a sample (n=150)**, fed deliberately context-free input — a hard sanity check,
-   not a best-effort frontier benchmark.
+3. **Frontier control is a sample (n=150)**, fed deliberately context-free input — but Phase 15 tested
+   **Frontier+RAG** on the same sample, which reached F1 0.825 with perfect precision, validating that
+   context, not capability, was the bottleneck.
 4. **Advice labels are synthetic** (in-session generated), and the advice grade is a 120-flag
    LLM-judged sample, not a human-SME panel — the top lever toward mission-critical advice.
 5. **The Hybrid's detection score is inherited** from its detector; only its advice layer is new.
