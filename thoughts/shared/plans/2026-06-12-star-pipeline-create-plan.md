@@ -3089,18 +3089,16 @@ windows; the base + RAG sees k retrieved examples per window. Does RAG substitut
 
 ---
 
-### Step 15.8 — Base vision LLM + RAG (optional, multi-image) [LOCAL or CLOUD]
+### Step 15.8 — Base vision LLM + RAG (multi-image) [CLOUD]
 
 **Purpose:** True vision-to-vision RAG — give the base VLM the same "what does normal look like for
-this channel?" context that the fine-tune learned. This is the only way to fairly RAG the vision
-modality; text descriptions would be a modality mismatch.
+this channel?" context that the fine-tune learned. This is a fair apples-to-apples test because
+**the fine-tune trained on the same 2,000 training PNGs** that RAG will retrieve from.
 
-**Prerequisites (extra work):**
-1. **Generate training PNGs** (~21k plots, ~1-2 hours):
-   ```bash
-   python src/etl/generate_plots.py --split train --out data/processed/plots/train/
-   ```
-2. **Build image embeddings** using CLIP:
+**Prerequisites:** Already satisfied — training PNGs exist at `data/processed/plots/train/` (2,000).
+
+**Setup:**
+1. **Build image embeddings** using CLIP (~10-15 min):
    ```bash
    pip install open-clip-torch
    python src/inference/build_vision_rag_index.py --plots data/processed/plots/train/ \
@@ -3126,20 +3124,17 @@ modality; text descriptions would be a modality mismatch.
 
 **Considerations:**
 - Qwen3-VL supports multi-image, but context length matters (~4 images max is safe).
-- Run on **cloud A6000** (same as Phase 8/12) if local MPS doesn't work.
+- Run on **cloud A6000** (same as Phase 8/12) — ~$0.3-0.5.
 - Eval on **2,000 test PNGs** (same as Phase 8/12) for direct comparison.
 
-**Time estimate:** ~2-3 hours for PNG generation, ~1 hour for CLIP indexing, ~2-4 hours for eval.
+**Time estimate:** ~15 min for CLIP indexing, ~2-3 hours for cloud eval.
 
 **Output:** `results/vision_base_rag.json`
 
-**Comparison targets:**
-- Fine-tuned vision LLM (F1 0.457, P 0.769)
+**Comparison (true apples-to-apples — same 2,000 training source):**
+- Fine-tuned vision LLM (F1 0.457, P 0.769) — learned from 2,000 training PNGs
+- Base vision + RAG — retrieves from 2,000 training PNGs
 - Base vision zero-shot without RAG (F1 0.350, P 0.310)
-
-**Note:** This step is OPTIONAL — the text RAG (Steps 15.4-15.7) is the cleaner test. Vision RAG
-adds significant work for a less common use case. Do it if time permits or if the text RAG results
-are inconclusive.
 
 ---
 
@@ -3186,9 +3181,8 @@ for any re-download. Both are torn down together as the final step.
 - [ ] **Phase 15 (RAG) if you intend to run it:**
   - **Text RAG (Steps 15.1-15.7):** needs training JSONL only. Does NOT need raw data or PNGs. Can
     run after teardown since `data/splits/train.jsonl` is tracked in git.
-  - **Vision RAG (Step 15.8, optional):** needs training PNGs, which must be generated from raw data
-    BEFORE teardown. If you want vision RAG, run `python src/etl/generate_plots.py --split train`
-    before deleting raw data.
+  - **Vision RAG (Step 15.8):** needs training PNGs, which **already exist** (2,000 in
+    `data/processed/plots/train/`). Same corpus the fine-tune trained on → true apples-to-apples.
 - [ ] Final models exported (GGUF) and stored on `DUAL DRIVE` and/or pushed to their cloud home.
 - [ ] No open question that could require re-running the ETL from raw.
 
