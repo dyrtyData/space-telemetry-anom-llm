@@ -2867,7 +2867,215 @@ still exist — so run it before Phase 10, or keep the PNGs.
 
 # ═══════════════════════════════════════════════════════════════════════════
 
-## Phase 10 — Teardown (run LAST — after any Phases 11–14 you choose to do; precondition Phases 1–9)
+## Phase 15 — RAG + Frontier: the true "own vs. adapt" comparison [FREE, LOCAL]
+
+# ═══════════════════════════════════════════════════════════════════════════
+
+### Overview
+
+The Phase-6 frontier control (Claude zero/few-shot) was deliberately **context-free**: it saw only
+~10 normalized values per window with no channel history, which is an intentionally hard test. The
+result was ~chance (F1 0.254). But a fair "could you just adapt a hosted model instead of
+fine-tuning?" test should give the frontier the **same information the fine-tune implicitly
+learned** — channel-specific history of what "normal" looks like.
+
+This phase builds a **RAG (retrieval-augmented generation) harness** that, for each test window,
+retrieves similar historical windows from the training set and injects them as context. The frontier
+then classifies with the benefit of that history. The comparison:
+
+| Condition | Context | Tests |
+|-----------|---------|-------|
+| Phase-6 frontier | 10 values only (context-free) | whether a general model can detect cold |
+| **Phase-15 frontier + RAG** | 10 values + k retrieved historical windows | whether context closes the gap |
+| Phase-3 fine-tune | 21,000 windows burned into weights | the localization baseline |
+
+**Hypothesis:** RAG will improve the frontier substantially over Phase 6, but likely not match the
+fine-tune — because RAG injects *examples* while fine-tuning injects *learned priors*. Either outcome
+is informative: if RAG matches the fine-tune, the advice shifts to "just use RAG"; if not, fine-tuning
+is justified even with context.
+
+**Effort:** ~1–2 days. **Cost:** FREE (local embeddings + Claude on Max plan via this session).
+**Preconditions:** Phase 5 complete (training JSONL exists), Phase 6 complete (frontier baseline
+exists for comparison).
+
+---
+
+### Step 15.1 — Choose and install the vector store
+
+**Options (pick one):**
+
+| Store | Pros | Cons | Install |
+|-------|------|------|---------|
+| **FAISS (recommended)** | Local-only, fast, simple, matches "no external API" theme | In-memory (fine for 21k windows) | `pip install faiss-cpu` |
+| **ChromaDB** | Local, persistent, slightly richer API | Heavier dependency | `pip install chromadb` |
+| **pgvector / Supabase** | Production-ready, SQL interface, free tier | Network/auth overhead, overkill for this | Supabase account + `pip install vecs` |
+
+**Recommendation:** FAISS. The index is small (~21k windows × 1536 dims × 4 bytes ≈ 130 MB), fits in
+RAM trivially, and avoids any external service.
+
+**Files:**
+- `requirements-rag.txt` (new): `faiss-cpu`, `sentence-transformers` (for embeddings)
+- OR add to existing `requirements-local.txt`
+
+---
+
+### Step 15.2 — Build the RAG index
+
+**Script:** `src/inference/build_rag_index.py` (new)
+
+**Logic:**
+1. Load the **training** split (`data/splits/train.jsonl`) — 21,000 windows.
+2. For each window, create an embedding of the **channel + normalized values** using a local
+   embedding model (e.g., `sentence-transformers/all-MiniLM-L6-v2` — fast, ~80 MB, runs on CPU).
+   - Text to embed: `"mission={m} channel={c} values={v}"` (same format the LLM sees).
+3. Build a per-channel FAISS index OR a single index with channel metadata attached.
+   - **Per-channel** (recommended): retrieve only from the same channel's history — mirrors what the
+     fine-tune learned (channel-specific priors). Store as `data/rag/{mission}_{channel}.faiss`.
+   - **Single index**: simpler but may retrieve cross-channel examples (less relevant).
+4. Persist the index(es) to disk.
+
+**Output:** `data/rag/` directory with FAISS index files + a manifest JSON.
+
+**Validation:**
+```bash
+# Index exists and is non-empty
+python -c "import faiss; idx = faiss.read_index('data/rag/Mission1_channel_41.faiss'); print(idx.ntotal)"
+```
+
+---
+
+### Step 15.3 — Implement the RAG retrieval harness
+
+**Script:** `src/inference/rag_retrieve.py` (new)
+
+**Function signature:**
+```python
+def retrieve_context(mission: str, channel: str, values: list[float], k: int = 5) -> list[dict]:
+    """
+    Retrieve the k most similar training windows for this (mission, channel).
+    Returns list of {values: [...], label: "ANOMALY"/"NOMINAL", distance: float}.
+    """
+```
+
+**Logic:**
+1. Load the appropriate per-channel FAISS index.
+2. Embed the query window (same embedding model as Step 15.2).
+3. Search for k nearest neighbors.
+4. Return the retrieved windows with their ground-truth labels (from the training JSONL).
+
+**Design choice — include labels in context?**
+- **Yes (recommended):** the retrieved windows come with their labels, so the prompt becomes
+  "here are 5 similar windows from this channel's history and whether they were anomalous; now
+  classify this new window." This is the information the fine-tune learned implicitly.
+- **No:** just show the values without labels (harder for the model, but tests pure pattern matching).
+
+---
+
+### Step 15.4 — Build the RAG-augmented frontier prompt
+
+**Script:** `src/inference/eval_frontier_rag.py` (new, or extend `select_frontier_sample.py`)
+
+**Prompt template:**
+```
+You are a spacecraft telemetry analyst. Below are {k} historical windows from channel {channel}
+that are similar to the current window, along with their ground-truth labels:
+
+{for each retrieved window:}
+- values={values} → {ANOMALY|NOMINAL}
+{end}
+
+Now classify this new window:
+mission={mission} channel={channel} values={current_values}
+
+Answer with exactly one word: ANOMALY or NOMINAL.
+```
+
+**Harness:**
+1. Load the same **150-window seed-42 sample** used in Phase 6 (for direct comparison).
+2. For each window:
+   a. Call `retrieve_context(mission, channel, values, k=5)`.
+   b. Build the RAG-augmented prompt.
+   c. Call Claude (this session model, no API cost on Max plan).
+   d. Parse the response (same parser as Phase 6).
+3. Compute P / R / F1 / CEF0.5.
+4. Persist results to `results/frontier_rag.json`.
+
+**Parameters to tune (can sweep later):**
+- `k` (number of retrieved examples): start with 5, try 3 and 10.
+- Include labels vs. not.
+- Embedding model (MiniLM is fast; try `bge-small-en-v1.5` if MiniLM underperforms).
+
+---
+
+### Step 15.5 — Run and compare
+
+**Commands:**
+```bash
+# Build the index (one-time, ~5-10 min)
+python src/inference/build_rag_index.py --train data/splits/train.jsonl --out data/rag/
+
+# Run the RAG-augmented frontier eval (150 windows, ~10-20 min)
+python src/inference/eval_frontier_rag.py --sample results/frontier_sample.json --k 5 \
+    --out results/frontier_rag.json
+
+# Regenerate comparison report
+make eval-all
+```
+
+**Expected output in `comparison_report.md`:**
+```
+| Frontier (Claude) — zero-shot | 0.308 | 0.216 | 0.254 | 0.284 | ~chance |
+| Frontier (Claude) — few-shot  | 0.200 | 0.297 | 0.239 | 0.214 | ~chance |
+| **Frontier (Claude) + RAG**   | ???   | ???   | ???   | ???   | ??? |
+```
+
+---
+
+### Step 15.6 — Interpret and document
+
+**Possible outcomes:**
+
+1. **RAG ≈ fine-tune (F1 ~0.45, precision ~0.36):** The gap was purely about context, not learned
+   priors. Recommendation shifts to "RAG a frontier model" (simpler, no training). But note: this
+   re-introduces vendor dependency, latency, and cost-per-call that the owned model avoids.
+
+2. **RAG > Phase-6 but < fine-tune (F1 ~0.35, e.g.):** Context helps but doesn't close the gap.
+   Fine-tuning still wins — it learns *compressed* priors, not just examples. The owned-model
+   recommendation stands.
+
+3. **RAG ≈ Phase-6 (~chance):** Surprising — means the retrieved examples aren't informative, or the
+   frontier can't use them. Debug retrieval quality (are the neighbors actually similar?).
+
+**Document in:**
+- `results/comparison_report.md` — add the row.
+- `thoughts/shared/research/2026-06-14-results-analysis.md` — new subsection under §5 or §6.
+- README TL;DR table — add the row if the result is significant.
+
+---
+
+### Success Criteria
+
+- [ ] FAISS (or chosen store) installed and index built for all training channels.
+- [ ] `retrieve_context()` returns k relevant neighbors with labels.
+- [ ] RAG-augmented frontier eval runs on the same 150-window sample as Phase 6.
+- [ ] Results persisted to `results/frontier_rag.json`.
+- [ ] `comparison_report.md` includes the new row.
+- [ ] Interpretation documented — does RAG close the gap or not?
+
+---
+
+### Shared merge rule (same as Phases 11–14)
+
+When merging this phase's work into `main`, if the base has moved:
+1. Merge `main` → feature branch first, resolve conflicts (prioritize newer numbers in docs).
+2. Re-run `make eval-all` to regenerate `comparison_report.md` with all rows.
+3. Then merge feature → `main`.
+
+---
+
+# ═══════════════════════════════════════════════════════════════════════════
+
+## Phase 10 — Teardown (run LAST — after any Phases 11–15 you choose to do; precondition Phases 1–9)
 
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -2884,6 +3092,9 @@ for any re-download. Both are torn down together as the final step.
   base control), and 14's vision-score run need the raw data / PNGs that this teardown deletes.
   Phase 13 is independent; Phase 14 depends on Phase 13. **ALL OF 11–14 ARE COMPLETE (2026-06-15)** →
   raw data / PNGs are no longer needed; teardown is unblocked (still LAST + user-confirmed).
+- [ ] **Phase 15 (RAG + Frontier) if you intend to run it** — needs the training JSONL to build the
+  RAG index. Does NOT need raw data or PNGs. Can run after teardown if `data/splits/train.jsonl` is
+  preserved (it is tracked in git, so this is fine).
 - [ ] Final models exported (GGUF) and stored on `DUAL DRIVE` and/or pushed to their cloud home.
 - [ ] No open question that could require re-running the ETL from raw.
 
