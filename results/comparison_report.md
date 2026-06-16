@@ -15,6 +15,8 @@ End-to-end comparison of anomaly-detection approaches on the ESA-AD test split. 
 | Base Qwen3-8B (few-shot, no fine-tune) | 0.282 | 0.824 | 0.420 | 0.325 | N/A | 500 windows |
 | Frontier zero-shot (Claude, n=150 sample) | 0.308 | 0.216 | 0.254 | 0.284 | N/A | 150 windows |
 | Frontier few-shot (Claude, n=150 sample) | 0.200 | 0.297 | 0.239 | 0.214 | N/A | 150 windows |
+| Frontier + RAG (Claude, n=150 sample) | 1.000 | 0.703 | 0.825 | 0.922 | N/A | 150 windows |
+| Base Qwen3-8B + RAG | 0.447 | 0.654 | 0.531 | 0.478 | N/A | 100 windows |
 | Always-anomaly (trivial baseline) | 0.250 | 1.000 | 0.399 | 0.294 | N/A | 4500 windows |
 | Ensemble (text+vision, stacked) | 0.810 | 0.511 | 0.627 | 0.725 | N/A | 2000 shared windows |
 | Ensemble (text+vision+LSTM, stacked) | 0.922 | 0.486 | 0.636 | 0.781 | N/A | 1378 shared windows |
@@ -22,8 +24,8 @@ End-to-end comparison of anomaly-detection approaches on the ESA-AD test split. 
 
 ## Key Findings
 
-- Highest detection F1: **Ensemble (text+vision+LSTM, stacked)** (F1=0.636, precision=0.922, recall=0.486).
-- Best precision-weighted score (CEF0.5, the operationally relevant metric for costly false alarms): **Ensemble (text+vision+LSTM, stacked)** (CEF0.5=0.781).
+- Highest detection F1: **Frontier + RAG (Claude, n=150 sample)** (F1=0.825, precision=1.000, recall=0.703).
+- Best precision-weighted score (CEF0.5, the operationally relevant metric for costly false alarms): **Frontier + RAG (Claude, n=150 sample)** (CEF0.5=0.922).
 - The LSTM baseline detects with higher precision (0.837 vs 0.360); the LLM trades precision for recall (0.609 vs 0.432) while adding a capability the baselines lack: free-text diagnostic advice.
 - LLM advice coherence: 100% of the 1898 anomaly predictions emitted structured DIAGNOSIS+ADVICE text (responses persisted truncated at 300 chars) -- the hybrid's added value over the bare LSTM.
 - LLM inference cost: 2.77s/window on M3 Max Metal over 4500 windows (vs near-instant scoring for the baselines).
