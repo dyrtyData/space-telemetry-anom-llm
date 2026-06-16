@@ -331,6 +331,20 @@ Each has a concrete next step in the
 
 ---
 
+## Presentation materials
+
+Generated via [NotebookLM](https://notebooklm.google.com/notebook/8bdf78b7-edfd-45c7-b39c-7418957184b5)
+from the project documentation. **Ask questions interactively** via the chat, or explore:
+
+| Material | Link | Local copy |
+|----------|------|------------|
+| **Video walkthrough** | [NotebookLM](https://notebooklm.google.com/notebook/8bdf78b7-edfd-45c7-b39c-7418957184b5/artifact/339a7f38-74f5-44a8-a1ae-4aff9d32c876) | — (65 MB, not in repo) |
+| **Slide deck** | [NotebookLM](https://notebooklm.google.com/notebook/8bdf78b7-edfd-45c7-b39c-7418957184b5/artifact/a4632c10-05a7-4cf7-9536-c4350e5beb45) | [`thoughts/shared/notebookLM/STAR-Pipeline_Hybrid_Anomaly_Detection.pdf`](thoughts/shared/notebookLM/STAR-Pipeline_Hybrid_Anomaly_Detection.pdf) |
+| **Infographic** | [NotebookLM](https://notebooklm.google.com/notebook/8bdf78b7-edfd-45c7-b39c-7418957184b5/artifact/3dc5fd18-2e32-4cb2-8992-997801528bfe) | [`thoughts/shared/notebookLM/Satellite_Anomaly_Detection_Using_LLMs.png`](thoughts/shared/notebookLM/Satellite_Anomaly_Detection_Using_LLMs.png) |
+| **Mind map** | [NotebookLM](https://notebooklm.google.com/notebook/8bdf78b7-edfd-45c7-b39c-7418957184b5/artifact/32077d52-0340-40fe-bee5-5282a8624da9) | [`thoughts/shared/notebookLM/Mind Map.png`](thoughts/shared/notebookLM/Mind%20Map.png) |
+
+---
+
 ## License & data
 
 Code in this repository is released under the **MIT License** (see [`LICENSE`](LICENSE)). The
