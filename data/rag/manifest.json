@@ -1,0 +1,651 @@
+{
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "embedding_dim": 384,
+  "channels": {
+    "ESA-Mission3__channel_25": {
+      "n_windows": 136,
+      "n_anomalous": 16,
+      "index_file": "ESA-Mission3__channel_25.faiss"
+    },
+    "ESA-Mission1__channel_41": {
+      "n_windows": 234,
+      "n_anomalous": 48,
+      "index_file": "ESA-Mission1__channel_41.faiss"
+    },
+    "ESA-Mission2__channel_13": {
+      "n_windows": 153,
+      "n_anomalous": 125,
+      "index_file": "ESA-Mission2__channel_13.faiss"
+    },
+    "ESA-Mission1__channel_23": {
+      "n_windows": 294,
+      "n_anomalous": 94,
+      "index_file": "ESA-Mission1__channel_23.faiss"
+    },
+    "ESA-Mission2__channel_15": {
+      "n_windows": 134,
+      "n_anomalous": 102,
+      "index_file": "ESA-Mission2__channel_15.faiss"
+    },
+    "ESA-Mission1__channel_28": {
+      "n_windows": 214,
+      "n_anomalous": 36,
+      "index_file": "ESA-Mission1__channel_28.faiss"
+    },
+    "ESA-Mission1__channel_51": {
+      "n_windows": 243,
+      "n_anomalous": 79,
+      "index_file": "ESA-Mission1__channel_51.faiss"
+    },
+    "ESA-Mission1__channel_36": {
+      "n_windows": 223,
+      "n_anomalous": 33,
+      "index_file": "ESA-Mission1__channel_36.faiss"
+    },
+    "ESA-Mission1__channel_31": {
+      "n_windows": 306,
+      "n_anomalous": 155,
+      "index_file": "ESA-Mission1__channel_31.faiss"
+    },
+    "ESA-Mission1__channel_26": {
+      "n_windows": 212,
+      "n_anomalous": 38,
+      "index_file": "ESA-Mission1__channel_26.faiss"
+    },
+    "ESA-Mission1__channel_34": {
+      "n_windows": 224,
+      "n_anomalous": 37,
+      "index_file": "ESA-Mission1__channel_34.faiss"
+    },
+    "ESA-Mission1__channel_29": {
+      "n_windows": 277,
+      "n_anomalous": 84,
+      "index_file": "ESA-Mission1__channel_29.faiss"
+    },
+    "ESA-Mission3__channel_39": {
+      "n_windows": 133,
+      "n_anomalous": 15,
+      "index_file": "ESA-Mission3__channel_39.faiss"
+    },
+    "ESA-Mission2__channel_22": {
+      "n_windows": 105,
+      "n_anomalous": 58,
+      "index_file": "ESA-Mission2__channel_22.faiss"
+    },
+    "ESA-Mission1__channel_32": {
+      "n_windows": 272,
+      "n_anomalous": 77,
+      "index_file": "ESA-Mission1__channel_32.faiss"
+    },
+    "ESA-Mission1__channel_25": {
+      "n_windows": 202,
+      "n_anomalous": 26,
+      "index_file": "ESA-Mission1__channel_25.faiss"
+    },
+    "ESA-Mission1__channel_52": {
+      "n_windows": 261,
+      "n_anomalous": 69,
+      "index_file": "ESA-Mission1__channel_52.faiss"
+    },
+    "ESA-Mission1__channel_76": {
+      "n_windows": 234,
+      "n_anomalous": 25,
+      "index_file": "ESA-Mission1__channel_76.faiss"
+    },
+    "ESA-Mission3__channel_20": {
+      "n_windows": 133,
+      "n_anomalous": 15,
+      "index_file": "ESA-Mission3__channel_20.faiss"
+    },
+    "ESA-Mission1__channel_30": {
+      "n_windows": 256,
+      "n_anomalous": 74,
+      "index_file": "ESA-Mission1__channel_30.faiss"
+    },
+    "ESA-Mission2__channel_10": {
+      "n_windows": 76,
+      "n_anomalous": 18,
+      "index_file": "ESA-Mission2__channel_10.faiss"
+    },
+    "ESA-Mission1__channel_14": {
+      "n_windows": 256,
+      "n_anomalous": 96,
+      "index_file": "ESA-Mission1__channel_14.faiss"
+    },
+    "ESA-Mission1__channel_13": {
+      "n_windows": 214,
+      "n_anomalous": 24,
+      "index_file": "ESA-Mission1__channel_13.faiss"
+    },
+    "ESA-Mission2__channel_12": {
+      "n_windows": 166,
+      "n_anomalous": 122,
+      "index_file": "ESA-Mission2__channel_12.faiss"
+    },
+    "ESA-Mission1__channel_22": {
+      "n_windows": 310,
+      "n_anomalous": 137,
+      "index_file": "ESA-Mission1__channel_22.faiss"
+    },
+    "ESA-Mission1__channel_39": {
+      "n_windows": 326,
+      "n_anomalous": 125,
+      "index_file": "ESA-Mission1__channel_39.faiss"
+    },
+    "ESA-Mission3__channel_37": {
+      "n_windows": 116,
+      "n_anomalous": 16,
+      "index_file": "ESA-Mission3__channel_37.faiss"
+    },
+    "ESA-Mission1__channel_50": {
+      "n_windows": 297,
+      "n_anomalous": 88,
+      "index_file": "ESA-Mission1__channel_50.faiss"
+    },
+    "ESA-Mission2__channel_80": {
+      "n_windows": 54,
+      "n_anomalous": 8,
+      "index_file": "ESA-Mission2__channel_80.faiss"
+    },
+    "ESA-Mission1__channel_24": {
+      "n_windows": 264,
+      "n_anomalous": 75,
+      "index_file": "ESA-Mission1__channel_24.faiss"
+    },
+    "ESA-Mission2__channel_16": {
+      "n_windows": 102,
+      "n_anomalous": 64,
+      "index_file": "ESA-Mission2__channel_16.faiss"
+    },
+    "ESA-Mission1__channel_46": {
+      "n_windows": 237,
+      "n_anomalous": 39,
+      "index_file": "ESA-Mission1__channel_46.faiss"
+    },
+    "ESA-Mission1__channel_62": {
+      "n_windows": 184,
+      "n_anomalous": 12,
+      "index_file": "ESA-Mission1__channel_62.faiss"
+    },
+    "ESA-Mission1__channel_19": {
+      "n_windows": 232,
+      "n_anomalous": 32,
+      "index_file": "ESA-Mission1__channel_19.faiss"
+    },
+    "ESA-Mission1__channel_71": {
+      "n_windows": 209,
+      "n_anomalous": 23,
+      "index_file": "ESA-Mission1__channel_71.faiss"
+    },
+    "ESA-Mission1__channel_18": {
+      "n_windows": 221,
+      "n_anomalous": 39,
+      "index_file": "ESA-Mission1__channel_18.faiss"
+    },
+    "ESA-Mission3__channel_7": {
+      "n_windows": 131,
+      "n_anomalous": 24,
+      "index_file": "ESA-Mission3__channel_7.faiss"
+    },
+    "ESA-Mission1__channel_47": {
+      "n_windows": 251,
+      "n_anomalous": 77,
+      "index_file": "ESA-Mission1__channel_47.faiss"
+    },
+    "ESA-Mission1__channel_42": {
+      "n_windows": 245,
+      "n_anomalous": 40,
+      "index_file": "ESA-Mission1__channel_42.faiss"
+    },
+    "ESA-Mission2__channel_78": {
+      "n_windows": 52,
+      "n_anomalous": 10,
+      "index_file": "ESA-Mission2__channel_78.faiss"
+    },
+    "ESA-Mission3__channel_27": {
+      "n_windows": 128,
+      "n_anomalous": 20,
+      "index_file": "ESA-Mission3__channel_27.faiss"
+    },
+    "ESA-Mission1__channel_74": {
+      "n_windows": 232,
+      "n_anomalous": 27,
+      "index_file": "ESA-Mission1__channel_74.faiss"
+    },
+    "ESA-Mission1__channel_64": {
+      "n_windows": 226,
+      "n_anomalous": 2,
+      "index_file": "ESA-Mission1__channel_64.faiss"
+    },
+    "ESA-Mission1__channel_37": {
+      "n_windows": 227,
+      "n_anomalous": 43,
+      "index_file": "ESA-Mission1__channel_37.faiss"
+    },
+    "ESA-Mission1__channel_44": {
+      "n_windows": 234,
+      "n_anomalous": 46,
+      "index_file": "ESA-Mission1__channel_44.faiss"
+    },
+    "ESA-Mission1__channel_17": {
+      "n_windows": 244,
+      "n_anomalous": 40,
+      "index_file": "ESA-Mission1__channel_17.faiss"
+    },
+    "ESA-Mission1__channel_15": {
+      "n_windows": 284,
+      "n_anomalous": 98,
+      "index_file": "ESA-Mission1__channel_15.faiss"
+    },
+    "ESA-Mission2__channel_9": {
+      "n_windows": 149,
+      "n_anomalous": 103,
+      "index_file": "ESA-Mission2__channel_9.faiss"
+    },
+    "ESA-Mission1__channel_43": {
+      "n_windows": 241,
+      "n_anomalous": 49,
+      "index_file": "ESA-Mission1__channel_43.faiss"
+    },
+    "ESA-Mission1__channel_33": {
+      "n_windows": 283,
+      "n_anomalous": 83,
+      "index_file": "ESA-Mission1__channel_33.faiss"
+    },
+    "ESA-Mission1__channel_48": {
+      "n_windows": 278,
+      "n_anomalous": 85,
+      "index_file": "ESA-Mission1__channel_48.faiss"
+    },
+    "ESA-Mission1__channel_45": {
+      "n_windows": 246,
+      "n_anomalous": 50,
+      "index_file": "ESA-Mission1__channel_45.faiss"
+    },
+    "ESA-Mission1__channel_60": {
+      "n_windows": 239,
+      "n_anomalous": 43,
+      "index_file": "ESA-Mission1__channel_60.faiss"
+    },
+    "ESA-Mission1__channel_12": {
+      "n_windows": 241,
+      "n_anomalous": 24,
+      "index_file": "ESA-Mission1__channel_12.faiss"
+    },
+    "ESA-Mission2__channel_18": {
+      "n_windows": 155,
+      "n_anomalous": 118,
+      "index_file": "ESA-Mission2__channel_18.faiss"
+    },
+    "ESA-Mission3__channel_44": {
+      "n_windows": 123,
+      "n_anomalous": 20,
+      "index_file": "ESA-Mission3__channel_44.faiss"
+    },
+    "ESA-Mission3__channel_33": {
+      "n_windows": 134,
+      "n_anomalous": 14,
+      "index_file": "ESA-Mission3__channel_33.faiss"
+    },
+    "ESA-Mission3__channel_8": {
+      "n_windows": 128,
+      "n_anomalous": 25,
+      "index_file": "ESA-Mission3__channel_8.faiss"
+    },
+    "ESA-Mission2__channel_59": {
+      "n_windows": 69,
+      "n_anomalous": 17,
+      "index_file": "ESA-Mission2__channel_59.faiss"
+    },
+    "ESA-Mission2__channel_79": {
+      "n_windows": 55,
+      "n_anomalous": 5,
+      "index_file": "ESA-Mission2__channel_79.faiss"
+    },
+    "ESA-Mission1__channel_49": {
+      "n_windows": 263,
+      "n_anomalous": 74,
+      "index_file": "ESA-Mission1__channel_49.faiss"
+    },
+    "ESA-Mission1__channel_40": {
+      "n_windows": 258,
+      "n_anomalous": 76,
+      "index_file": "ESA-Mission1__channel_40.faiss"
+    },
+    "ESA-Mission1__channel_72": {
+      "n_windows": 229,
+      "n_anomalous": 21,
+      "index_file": "ESA-Mission1__channel_72.faiss"
+    },
+    "ESA-Mission1__channel_66": {
+      "n_windows": 199,
+      "n_anomalous": 21,
+      "index_file": "ESA-Mission1__channel_66.faiss"
+    },
+    "ESA-Mission3__channel_43": {
+      "n_windows": 138,
+      "n_anomalous": 13,
+      "index_file": "ESA-Mission3__channel_43.faiss"
+    },
+    "ESA-Mission1__channel_27": {
+      "n_windows": 228,
+      "n_anomalous": 38,
+      "index_file": "ESA-Mission1__channel_27.faiss"
+    },
+    "ESA-Mission2__channel_20": {
+      "n_windows": 182,
+      "n_anomalous": 139,
+      "index_file": "ESA-Mission2__channel_20.faiss"
+    },
+    "ESA-Mission3__channel_2": {
+      "n_windows": 152,
+      "n_anomalous": 18,
+      "index_file": "ESA-Mission3__channel_2.faiss"
+    },
+    "ESA-Mission2__channel_72": {
+      "n_windows": 58,
+      "n_anomalous": 8,
+      "index_file": "ESA-Mission2__channel_72.faiss"
+    },
+    "ESA-Mission1__channel_16": {
+      "n_windows": 264,
+      "n_anomalous": 84,
+      "index_file": "ESA-Mission1__channel_16.faiss"
+    },
+    "ESA-Mission2__channel_23": {
+      "n_windows": 100,
+      "n_anomalous": 55,
+      "index_file": "ESA-Mission2__channel_23.faiss"
+    },
+    "ESA-Mission2__channel_26": {
+      "n_windows": 75,
+      "n_anomalous": 31,
+      "index_file": "ESA-Mission2__channel_26.faiss"
+    },
+    "ESA-Mission2__channel_28": {
+      "n_windows": 72,
+      "n_anomalous": 24,
+      "index_file": "ESA-Mission2__channel_28.faiss"
+    },
+    "ESA-Mission2__channel_70": {
+      "n_windows": 51,
+      "n_anomalous": 8,
+      "index_file": "ESA-Mission2__channel_70.faiss"
+    },
+    "ESA-Mission3__channel_15": {
+      "n_windows": 108,
+      "n_anomalous": 10,
+      "index_file": "ESA-Mission3__channel_15.faiss"
+    },
+    "ESA-Mission3__channel_38": {
+      "n_windows": 109,
+      "n_anomalous": 22,
+      "index_file": "ESA-Mission3__channel_38.faiss"
+    },
+    "ESA-Mission1__channel_20": {
+      "n_windows": 225,
+      "n_anomalous": 44,
+      "index_file": "ESA-Mission1__channel_20.faiss"
+    },
+    "ESA-Mission1__channel_70": {
+      "n_windows": 232,
+      "n_anomalous": 18,
+      "index_file": "ESA-Mission1__channel_70.faiss"
+    },
+    "ESA-Mission1__channel_63": {
+      "n_windows": 226,
+      "n_anomalous": 20,
+      "index_file": "ESA-Mission1__channel_63.faiss"
+    },
+    "ESA-Mission2__channel_87": {
+      "n_windows": 57,
+      "n_anomalous": 18,
+      "index_file": "ESA-Mission2__channel_87.faiss"
+    },
+    "ESA-Mission2__channel_11": {
+      "n_windows": 149,
+      "n_anomalous": 111,
+      "index_file": "ESA-Mission2__channel_11.faiss"
+    },
+    "ESA-Mission1__channel_38": {
+      "n_windows": 261,
+      "n_anomalous": 91,
+      "index_file": "ESA-Mission1__channel_38.faiss"
+    },
+    "ESA-Mission1__channel_75": {
+      "n_windows": 193,
+      "n_anomalous": 25,
+      "index_file": "ESA-Mission1__channel_75.faiss"
+    },
+    "ESA-Mission1__channel_61": {
+      "n_windows": 199,
+      "n_anomalous": 13,
+      "index_file": "ESA-Mission1__channel_61.faiss"
+    },
+    "ESA-Mission1__channel_58": {
+      "n_windows": 253,
+      "n_anomalous": 55,
+      "index_file": "ESA-Mission1__channel_58.faiss"
+    },
+    "ESA-Mission3__channel_9": {
+      "n_windows": 136,
+      "n_anomalous": 24,
+      "index_file": "ESA-Mission3__channel_9.faiss"
+    },
+    "ESA-Mission2__channel_75": {
+      "n_windows": 54,
+      "n_anomalous": 8,
+      "index_file": "ESA-Mission2__channel_75.faiss"
+    },
+    "ESA-Mission1__channel_21": {
+      "n_windows": 273,
+      "n_anomalous": 82,
+      "index_file": "ESA-Mission1__channel_21.faiss"
+    },
+    "ESA-Mission3__channel_14": {
+      "n_windows": 126,
+      "n_anomalous": 5,
+      "index_file": "ESA-Mission3__channel_14.faiss"
+    },
+    "ESA-Mission3__channel_3": {
+      "n_windows": 137,
+      "n_anomalous": 21,
+      "index_file": "ESA-Mission3__channel_3.faiss"
+    },
+    "ESA-Mission1__channel_57": {
+      "n_windows": 252,
+      "n_anomalous": 43,
+      "index_file": "ESA-Mission1__channel_57.faiss"
+    },
+    "ESA-Mission3__channel_45": {
+      "n_windows": 122,
+      "n_anomalous": 24,
+      "index_file": "ESA-Mission3__channel_45.faiss"
+    },
+    "ESA-Mission2__channel_77": {
+      "n_windows": 67,
+      "n_anomalous": 10,
+      "index_file": "ESA-Mission2__channel_77.faiss"
+    },
+    "ESA-Mission3__channel_21": {
+      "n_windows": 110,
+      "n_anomalous": 12,
+      "index_file": "ESA-Mission3__channel_21.faiss"
+    },
+    "ESA-Mission1__channel_59": {
+      "n_windows": 217,
+      "n_anomalous": 40,
+      "index_file": "ESA-Mission1__channel_59.faiss"
+    },
+    "ESA-Mission2__channel_86": {
+      "n_windows": 57,
+      "n_anomalous": 21,
+      "index_file": "ESA-Mission2__channel_86.faiss"
+    },
+    "ESA-Mission2__channel_89": {
+      "n_windows": 69,
+      "n_anomalous": 23,
+      "index_file": "ESA-Mission2__channel_89.faiss"
+    },
+    "ESA-Mission1__channel_35": {
+      "n_windows": 228,
+      "n_anomalous": 39,
+      "index_file": "ESA-Mission1__channel_35.faiss"
+    },
+    "ESA-Mission1__channel_65": {
+      "n_windows": 203,
+      "n_anomalous": 5,
+      "index_file": "ESA-Mission1__channel_65.faiss"
+    },
+    "ESA-Mission3__channel_1": {
+      "n_windows": 125,
+      "n_anomalous": 24,
+      "index_file": "ESA-Mission3__channel_1.faiss"
+    },
+    "ESA-Mission2__channel_96": {
+      "n_windows": 46,
+      "n_anomalous": 0,
+      "index_file": "ESA-Mission2__channel_96.faiss"
+    },
+    "ESA-Mission2__channel_76": {
+      "n_windows": 45,
+      "n_anomalous": 10,
+      "index_file": "ESA-Mission2__channel_76.faiss"
+    },
+    "ESA-Mission1__channel_73": {
+      "n_windows": 218,
+      "n_anomalous": 23,
+      "index_file": "ESA-Mission1__channel_73.faiss"
+    },
+    "ESA-Mission3__channel_13": {
+      "n_windows": 123,
+      "n_anomalous": 10,
+      "index_file": "ESA-Mission3__channel_13.faiss"
+    },
+    "ESA-Mission3__channel_19": {
+      "n_windows": 118,
+      "n_anomalous": 10,
+      "index_file": "ESA-Mission3__channel_19.faiss"
+    },
+    "ESA-Mission3__channel_32": {
+      "n_windows": 123,
+      "n_anomalous": 10,
+      "index_file": "ESA-Mission3__channel_32.faiss"
+    },
+    "ESA-Mission2__channel_19": {
+      "n_windows": 111,
+      "n_anomalous": 76,
+      "index_file": "ESA-Mission2__channel_19.faiss"
+    },
+    "ESA-Mission2__channel_83": {
+      "n_windows": 40,
+      "n_anomalous": 5,
+      "index_file": "ESA-Mission2__channel_83.faiss"
+    },
+    "ESA-Mission2__channel_24": {
+      "n_windows": 87,
+      "n_anomalous": 50,
+      "index_file": "ESA-Mission2__channel_24.faiss"
+    },
+    "ESA-Mission2__channel_88": {
+      "n_windows": 77,
+      "n_anomalous": 12,
+      "index_file": "ESA-Mission2__channel_88.faiss"
+    },
+    "ESA-Mission2__channel_17": {
+      "n_windows": 106,
+      "n_anomalous": 60,
+      "index_file": "ESA-Mission2__channel_17.faiss"
+    },
+    "ESA-Mission2__channel_58": {
+      "n_windows": 70,
+      "n_anomalous": 15,
+      "index_file": "ESA-Mission2__channel_58.faiss"
+    },
+    "ESA-Mission2__channel_91": {
+      "n_windows": 53,
+      "n_anomalous": 12,
+      "index_file": "ESA-Mission2__channel_91.faiss"
+    },
+    "ESA-Mission2__channel_73": {
+      "n_windows": 62,
+      "n_anomalous": 12,
+      "index_file": "ESA-Mission2__channel_73.faiss"
+    },
+    "ESA-Mission3__channel_26": {
+      "n_windows": 147,
+      "n_anomalous": 20,
+      "index_file": "ESA-Mission3__channel_26.faiss"
+    },
+    "ESA-Mission2__channel_27": {
+      "n_windows": 75,
+      "n_anomalous": 23,
+      "index_file": "ESA-Mission2__channel_27.faiss"
+    },
+    "ESA-Mission2__channel_98": {
+      "n_windows": 46,
+      "n_anomalous": 0,
+      "index_file": "ESA-Mission2__channel_98.faiss"
+    },
+    "ESA-Mission2__channel_74": {
+      "n_windows": 59,
+      "n_anomalous": 20,
+      "index_file": "ESA-Mission2__channel_74.faiss"
+    },
+    "ESA-Mission3__channel_31": {
+      "n_windows": 142,
+      "n_anomalous": 15,
+      "index_file": "ESA-Mission3__channel_31.faiss"
+    },
+    "ESA-Mission2__channel_84": {
+      "n_windows": 79,
+      "n_anomalous": 8,
+      "index_file": "ESA-Mission2__channel_84.faiss"
+    },
+    "ESA-Mission2__channel_82": {
+      "n_windows": 51,
+      "n_anomalous": 14,
+      "index_file": "ESA-Mission2__channel_82.faiss"
+    },
+    "ESA-Mission2__channel_90": {
+      "n_windows": 62,
+      "n_anomalous": 21,
+      "index_file": "ESA-Mission2__channel_90.faiss"
+    },
+    "ESA-Mission2__channel_81": {
+      "n_windows": 60,
+      "n_anomalous": 8,
+      "index_file": "ESA-Mission2__channel_81.faiss"
+    },
+    "ESA-Mission2__channel_25": {
+      "n_windows": 75,
+      "n_anomalous": 24,
+      "index_file": "ESA-Mission2__channel_25.faiss"
+    },
+    "ESA-Mission2__channel_71": {
+      "n_windows": 43,
+      "n_anomalous": 7,
+      "index_file": "ESA-Mission2__channel_71.faiss"
+    },
+    "ESA-Mission2__channel_85": {
+      "n_windows": 58,
+      "n_anomalous": 7,
+      "index_file": "ESA-Mission2__channel_85.faiss"
+    },
+    "ESA-Mission2__channel_14": {
+      "n_windows": 127,
+      "n_anomalous": 97,
+      "index_file": "ESA-Mission2__channel_14.faiss"
+    },
+    "ESA-Mission2__channel_21": {
+      "n_windows": 86,
+      "n_anomalous": 46,
+      "index_file": "ESA-Mission2__channel_21.faiss"
+    },
+    "ESA-Mission2__channel_97": {
+      "n_windows": 49,
+      "n_anomalous": 1,
+      "index_file": "ESA-Mission2__channel_97.faiss"
+    }
+  }
+}

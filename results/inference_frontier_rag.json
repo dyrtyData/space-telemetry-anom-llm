@@ -1,0 +1,1522 @@
+{
+  "summary": {
+    "approach": "Frontier (Claude) + RAG (k=5)",
+    "model": "Claude (session model) + RAG (k=5)",
+    "n_samples": 150,
+    "accuracy": 0.9267,
+    "precision": 1.0,
+    "recall": 0.7027,
+    "f1": 0.8254,
+    "tp": 26,
+    "fp": 0,
+    "fn": 11,
+    "tn": 113,
+    "unknown_responses": 0,
+    "seed": 42,
+    "k": 5,
+    "partial": false,
+    "note": "RAG-augmented frontier: same 150-window sample as Phase-6 zero-shot, but with k=5 retrieved training neighbors per window as context. Tests whether channel-specific history closes the gap vs the fine-tune."
+  },
+  "results": [
+    {
+      "index": 8,
+      "mission": "ESA-Mission1",
+      "channel": "channel_66",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values show gradual decrease within normal range matching historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 33,
+      "mission": "ESA-Mission2",
+      "channel": "channel_9",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Steady downward trend matches anomaly examples showing continuous decline pattern.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 46,
+      "mission": "ESA-Mission3",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0175 values match all historical nominal examples exactly.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 73,
+      "mission": "ESA-Mission1",
+      "channel": "channel_57",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth transition pattern matches nominal examples without abrupt jumps.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 109,
+      "mission": "ESA-Mission1",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "Values within 0.29-0.31 range match nominal historical patterns despite is_anomaly label.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 122,
+      "mission": "ESA-Mission1",
+      "channel": "channel_48",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Minor fluctuations around -0.0301 match anomaly example patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 135,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "Values around -0.38 to -0.39 match nominal historical range, not extreme like anomaly example.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 138,
+      "mission": "ESA-Mission1",
+      "channel": "channel_24",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around -0.024 to -0.033 match nominal historical pattern.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 152,
+      "mission": "ESA-Mission1",
+      "channel": "channel_47",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values -0.0300 to -0.0302 match nominal examples closely.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 175,
+      "mission": "ESA-Mission1",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "Values around 0.09-0.10 match nominal historical examples, not showing declining trend of anomaly.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 193,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0114 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 231,
+      "mission": "ESA-Mission1",
+      "channel": "channel_30",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around 5.35-5.38 show stable pattern matching nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 268,
+      "mission": "ESA-Mission3",
+      "channel": "channel_37",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant zero values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 299,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Upward trend from 0.91 to 1.16 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 345,
+      "mission": "ESA-Mission2",
+      "channel": "channel_9",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Sharp spike from 0.31 to -0.16 matches anomaly examples with abrupt transitions.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 346,
+      "mission": "ESA-Mission2",
+      "channel": "channel_15",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "High variability with values dropping to -0.3 matches anomaly pattern.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 359,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around 0.03-0.07 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 360,
+      "mission": "ESA-Mission2",
+      "channel": "channel_24",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Steady decline from 0.27 to 0.25 matches nominal pattern, no abrupt changes.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 407,
+      "mission": "ESA-Mission3",
+      "channel": "channel_2",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0072 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 489,
+      "mission": "ESA-Mission3",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0264 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 497,
+      "mission": "ESA-Mission3",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0175 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 507,
+      "mission": "ESA-Mission1",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Rising trend from 0.21 to 0.41 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 525,
+      "mission": "ESA-Mission1",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values in -0.81 to -0.62 range showing gradual rise matches nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 583,
+      "mission": "ESA-Mission1",
+      "channel": "channel_74",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "Values 0.067-0.09 match nominal historical patterns despite is_anomaly label.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 589,
+      "mission": "ESA-Mission1",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around 0.33 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 595,
+      "mission": "ESA-Mission1",
+      "channel": "channel_28",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Recovery pattern from -1.2 to -0.76 matches nominal historical curves.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 610,
+      "mission": "ESA-Mission1",
+      "channel": "channel_23",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Declining trend from 0.25 to 0.21 matches anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 650,
+      "mission": "ESA-Mission1",
+      "channel": "channel_46",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Oscillating pattern around -0.05 to -0.13 matches nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 654,
+      "mission": "ESA-Mission1",
+      "channel": "channel_34",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values 0.11-0.25 show smooth rise matching nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 680,
+      "mission": "ESA-Mission1",
+      "channel": "channel_74",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values 0.03-0.07 with some variation match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 728,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values 0.03-0.07 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 730,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Gradual decline from -0.84 to -1.22 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 743,
+      "mission": "ESA-Mission1",
+      "channel": "channel_59",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth variation around -0.62 to -0.68 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 764,
+      "mission": "ESA-Mission2",
+      "channel": "channel_15",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Small fluctuations around -0.01 match anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 813,
+      "mission": "ESA-Mission1",
+      "channel": "channel_14",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around 0.48-0.50 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 832,
+      "mission": "ESA-Mission2",
+      "channel": "channel_83",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "High variability pattern matches nominal historical examples for this channel.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 865,
+      "mission": "ESA-Mission2",
+      "channel": "channel_74",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around 0.36-0.44 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 915,
+      "mission": "ESA-Mission3",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.2733 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 974,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Rising pattern from 0.33 to 0.37 with fluctuation matches anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1007,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values 0.04-0.07 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1020,
+      "mission": "ESA-Mission1",
+      "channel": "channel_17",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth rise from 0.88 to 1.05 matches nominal historical patterns without spikes.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1047,
+      "mission": "ESA-Mission3",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.3122 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1076,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Rising trend from 0.38 to 0.62 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1095,
+      "mission": "ESA-Mission1",
+      "channel": "channel_45",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values 0.05-0.14 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1099,
+      "mission": "ESA-Mission1",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around -0.39 match nominal historical range.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1135,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Cyclic pattern from 0.14 to 0.37 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1136,
+      "mission": "ESA-Mission2",
+      "channel": "channel_80",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "High variability is typical for this channel based on nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1138,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "Constant -0.0114 values match all historical nominal examples despite is_anomaly label.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1239,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values 0.03-0.08 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1300,
+      "mission": "ESA-Mission1",
+      "channel": "channel_29",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around 0.69-0.70 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1323,
+      "mission": "ESA-Mission1",
+      "channel": "channel_65",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant 0.0309 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1351,
+      "mission": "ESA-Mission2",
+      "channel": "channel_11",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Erratic pattern with values from -0.71 to -1.76 matches anomaly historical examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1383,
+      "mission": "ESA-Mission1",
+      "channel": "channel_22",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around 0.52-0.54 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1420,
+      "mission": "ESA-Mission1",
+      "channel": "channel_15",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around 0.93-0.97 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1429,
+      "mission": "ESA-Mission1",
+      "channel": "channel_15",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth progression around 0.80-0.86 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1440,
+      "mission": "ESA-Mission1",
+      "channel": "channel_36",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Descending then rising pattern matches nominal historical curves.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1466,
+      "mission": "ESA-Mission3",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0169 values match majority nominal historical examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1479,
+      "mission": "ESA-Mission1",
+      "channel": "channel_45",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Extreme negative values around -12 match anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1495,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Values around 2.0-2.3 match anomaly historical examples in elevated range.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1517,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "Constant -0.0114 values match all historical nominal examples despite is_anomaly label.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1533,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth curve from -0.24 to -0.45 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1583,
+      "mission": "ESA-Mission1",
+      "channel": "channel_43",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values 0.09-0.15 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1592,
+      "mission": "ESA-Mission1",
+      "channel": "channel_75",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values 0.02-0.09 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1609,
+      "mission": "ESA-Mission2",
+      "channel": "channel_20",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Spike from 0.61 to 0.41 then 0.95 shows unusual jump matching anomaly pattern.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1654,
+      "mission": "ESA-Mission1",
+      "channel": "channel_30",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around -0.39 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1701,
+      "mission": "ESA-Mission1",
+      "channel": "channel_43",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values -0.05 to -0.09 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1733,
+      "mission": "ESA-Mission3",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0369 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1895,
+      "mission": "ESA-Mission1",
+      "channel": "channel_65",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around 0.03 with minor variation match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1910,
+      "mission": "ESA-Mission1",
+      "channel": "channel_57",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around -0.17 to -0.20 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1911,
+      "mission": "ESA-Mission1",
+      "channel": "channel_37",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth rise from 0.97 to 1.32 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 1987,
+      "mission": "ESA-Mission1",
+      "channel": "channel_57",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around 0.43-0.48 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2054,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Low variability around 0.04-0.06 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2061,
+      "mission": "ESA-Mission2",
+      "channel": "channel_19",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Small fluctuations around -0.003 match anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2094,
+      "mission": "ESA-Mission2",
+      "channel": "channel_22",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Steady decline from 0.064 to 0.052 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2096,
+      "mission": "ESA-Mission1",
+      "channel": "channel_16",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "Values around -0.062 to -0.068 match nominal historical patterns despite is_anomaly label.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2182,
+      "mission": "ESA-Mission1",
+      "channel": "channel_28",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Recovery curve from 0.63 to 0.15 to 0.22 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2217,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth curve from -0.31 to -0.57 to -0.41 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2224,
+      "mission": "ESA-Mission3",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0369 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2314,
+      "mission": "ESA-Mission2",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant zero values match majority nominal historical examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2347,
+      "mission": "ESA-Mission1",
+      "channel": "channel_41",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "Values 0.09-0.15 match nominal historical patterns despite is_anomaly label.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2424,
+      "mission": "ESA-Mission3",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.2733 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2436,
+      "mission": "ESA-Mission3",
+      "channel": "channel_7",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.2959 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2470,
+      "mission": "ESA-Mission3",
+      "channel": "channel_14",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0114 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2502,
+      "mission": "ESA-Mission3",
+      "channel": "channel_32",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0037 values match majority nominal historical examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2517,
+      "mission": "ESA-Mission2",
+      "channel": "channel_12",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Variable pattern 0.35-0.47 matches anomaly historical examples with similar range.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2518,
+      "mission": "ESA-Mission1",
+      "channel": "channel_23",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around 0.97-1.00 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2552,
+      "mission": "ESA-Mission2",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant zero values with 1 nominal example in history suggest nominal despite ambiguity.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2580,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values 0.035-0.072 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2591,
+      "mission": "ESA-Mission1",
+      "channel": "channel_51",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Rising pattern from 0.02 to 0.08 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2602,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Values around -0.65 to -0.69 match anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2614,
+      "mission": "ESA-Mission1",
+      "channel": "channel_76",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values 0.023-0.064 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2847,
+      "mission": "ESA-Mission1",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth rise from 1.06 to 1.27 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2948,
+      "mission": "ESA-Mission1",
+      "channel": "channel_63",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Step pattern around 0.85-0.87 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 2955,
+      "mission": "ESA-Mission1",
+      "channel": "channel_48",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around -0.0312 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3015,
+      "mission": "ESA-Mission3",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0169 values match majority nominal historical examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3060,
+      "mission": "ESA-Mission1",
+      "channel": "channel_66",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Gradual decline from 0.022 to 0.014 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3088,
+      "mission": "ESA-Mission3",
+      "channel": "channel_33",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.2733 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3168,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Rising trend from 1.02 to 1.22 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3184,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around 0.30 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3239,
+      "mission": "ESA-Mission1",
+      "channel": "channel_18",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Oscillating pattern from -0.71 to -0.26 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3242,
+      "mission": "ESA-Mission1",
+      "channel": "channel_63",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant 0.5891 values match nominal historical step patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3355,
+      "mission": "ESA-Mission1",
+      "channel": "channel_15",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Gradual decline trend from -1.24 to -1.27 matches anomaly historical pattern.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3373,
+      "mission": "ESA-Mission1",
+      "channel": "channel_22",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Values around -1.58 to -1.60 match anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3404,
+      "mission": "ESA-Mission1",
+      "channel": "channel_40",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around -1.25 to -1.28 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3444,
+      "mission": "ESA-Mission1",
+      "channel": "channel_47",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around -0.0291 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3504,
+      "mission": "ESA-Mission2",
+      "channel": "channel_75",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "High variability is normal for this channel based on nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3532,
+      "mission": "ESA-Mission1",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around -0.375 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3577,
+      "mission": "ESA-Mission1",
+      "channel": "channel_48",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around -0.030 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3596,
+      "mission": "ESA-Mission1",
+      "channel": "channel_47",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around -0.0295 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3615,
+      "mission": "ESA-Mission2",
+      "channel": "channel_89",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around -1.32 to -1.37 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3620,
+      "mission": "ESA-Mission1",
+      "channel": "channel_49",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "Stable values around -0.0301 to -0.0302 match nominal historical patterns despite is_anomaly label.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3630,
+      "mission": "ESA-Mission1",
+      "channel": "channel_41",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "Values 0.04-0.12 match nominal historical patterns despite is_anomaly label.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3648,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Extreme values around 14.0 match anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3676,
+      "mission": "ESA-Mission1",
+      "channel": "channel_16",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around 0.84-0.86 match nominal historical patterns despite some ambiguity.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3680,
+      "mission": "ESA-Mission3",
+      "channel": "channel_20",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0264 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3713,
+      "mission": "ESA-Mission1",
+      "channel": "channel_13",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Extreme values around 13.4 match anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3716,
+      "mission": "ESA-Mission1",
+      "channel": "channel_26",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Extreme values around 11.4 match anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3739,
+      "mission": "ESA-Mission2",
+      "channel": "channel_18",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Values around -0.0758 with all historical examples labeled anomaly.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3792,
+      "mission": "ESA-Mission1",
+      "channel": "channel_31",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around 0.33 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3854,
+      "mission": "ESA-Mission3",
+      "channel": "channel_21",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.3122 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3867,
+      "mission": "ESA-Mission1",
+      "channel": "channel_17",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth curve from 0.45 to 0.23 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3883,
+      "mission": "ESA-Mission1",
+      "channel": "channel_32",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Stable values around 0.47-0.48 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3886,
+      "mission": "ESA-Mission1",
+      "channel": "channel_58",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Rising trend from -0.53 to -0.46 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3902,
+      "mission": "ESA-Mission1",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Rising pattern from 0.71 to 0.87 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3962,
+      "mission": "ESA-Mission1",
+      "channel": "channel_52",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Small variation around 0.01 to -0.02 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3973,
+      "mission": "ESA-Mission3",
+      "channel": "channel_44",
+      "is_anomaly": true,
+      "predicted": "NOMINAL",
+      "correct": false,
+      "actual_response": "Constant -0.0570 with 4/5 historical examples labeled nominal.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3982,
+      "mission": "ESA-Mission1",
+      "channel": "channel_25",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth rise from 0.22 to 0.58 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3988,
+      "mission": "ESA-Mission3",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Transition pattern from -0.48 to 1.87 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 3994,
+      "mission": "ESA-Mission3",
+      "channel": "channel_19",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.3109 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4009,
+      "mission": "ESA-Mission2",
+      "channel": "channel_79",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Extreme values 3.8 to 4.97 exceed historical nominal range significantly.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4025,
+      "mission": "ESA-Mission1",
+      "channel": "channel_45",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Oscillating values -0.07 to -0.12 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4050,
+      "mission": "ESA-Mission3",
+      "channel": "channel_13",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0369 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4067,
+      "mission": "ESA-Mission2",
+      "channel": "channel_80",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "High variability is normal for this channel based on nominal examples.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4080,
+      "mission": "ESA-Mission1",
+      "channel": "channel_39",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Values around 3.74 match anomaly historical patterns in elevated range.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4093,
+      "mission": "ESA-Mission3",
+      "channel": "channel_39",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Transition from -0.48 to 0.97 matches nominal historical transition patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4109,
+      "mission": "ESA-Mission2",
+      "channel": "channel_27",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant zero values with 1/3 nominal examples suggest nominal despite ambiguity.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4115,
+      "mission": "ESA-Mission1",
+      "channel": "channel_19",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth curve from -1.33 to -0.99 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4136,
+      "mission": "ESA-Mission1",
+      "channel": "channel_61",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.4939 values match nominal historical step patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4171,
+      "mission": "ESA-Mission1",
+      "channel": "channel_20",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Extreme values around 13.0 match anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4226,
+      "mission": "ESA-Mission1",
+      "channel": "channel_12",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth variation from -0.56 to -0.42 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4230,
+      "mission": "ESA-Mission1",
+      "channel": "channel_63",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -1.3095 values match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4243,
+      "mission": "ESA-Mission2",
+      "channel": "channel_91",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around -1.16 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4244,
+      "mission": "ESA-Mission2",
+      "channel": "channel_17",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Spike from 0.009 to 0.29 then decline matches anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4289,
+      "mission": "ESA-Mission3",
+      "channel": "channel_43",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Constant 4.09 with 3/5 historical examples labeled anomaly suggests anomaly.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4315,
+      "mission": "ESA-Mission1",
+      "channel": "channel_19",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Smooth rise from -0.19 to 0.51 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4343,
+      "mission": "ESA-Mission2",
+      "channel": "channel_17",
+      "is_anomaly": true,
+      "predicted": "ANOMALY",
+      "correct": true,
+      "actual_response": "Values around -0.005 to -0.03 match anomaly historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4384,
+      "mission": "ESA-Mission2",
+      "channel": "channel_90",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around -0.55 to -0.63 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4389,
+      "mission": "ESA-Mission1",
+      "channel": "channel_40",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Gradual decline from 0.98 to 0.96 matches nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4397,
+      "mission": "ESA-Mission2",
+      "channel": "channel_58",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Values around 2.11-2.18 match nominal historical patterns.",
+      "elapsed_s": 0.0
+    },
+    {
+      "index": 4410,
+      "mission": "ESA-Mission3",
+      "channel": "channel_26",
+      "is_anomaly": false,
+      "predicted": "NOMINAL",
+      "correct": true,
+      "actual_response": "Constant -0.0175 values match all historical nominal examples.",
+      "elapsed_s": 0.0
+    }
+  ]
+}
