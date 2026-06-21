@@ -20,12 +20,27 @@ Phase 2 assertions (only when results/foxes_repro/data_smoke.json exists):
   * normalized log-space labels are finite;
   * STREAMING-BOUNDED pull: is_streaming is True AND exactly subsample_n records were
     materialized (so no full ~1.46 TB download can have occurred).
+
+Phase 3 assertions (only when a TRAINED metrics summary is present -- i.e. `summary.mae_dex`
+exists; absent for the synthetic + data-smoke states, so those stay green/skipped):
+  * `summary.mae_dex` finite;
+  * PRIMARY self-calibrating gate: mae_dex < mae_dex_mean_baseline by a margin (the model must
+    beat predicting the constant train-mean on the SAME held-out set -- real learning, no
+    hard-coded magic number, mirroring validate-baseline's "loss decreased" style);
+  * SECONDARY loose sanity band: 0.01 < mae_dex < 0.4 (lower bound catches label leakage /
+    impossibly-perfect bugs, upper bound catches a non-learning / blowup run and keeps us under
+    the paper's 0.307 naive baseline);
+  * Pearson r finite and in [-1, 1];
+  * the cost estimate elapsed_hr * usd_per_hr < 25 (budget-ceiling sanity check);
+  * the faithfulness invariant and the checkpoint-reload-reproduces-metrics check already run on
+    the (trained, when present) checkpoint via the shared model below.
 """
 
 from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 
 import torch
@@ -36,8 +51,31 @@ from .model import InvertedAttentionBlock, ViTLocal
 
 OUT_DIR = Path("results/foxes_repro")
 METRICS_FILE = OUT_DIR / "metrics.json"
-CKPT_FILE = OUT_DIR / "checkpoint.pt"
 DATA_SMOKE_FILE = OUT_DIR / "data_smoke.json"
+
+# Primary-gate margin: the trained model must beat the constant-mean baseline by at least this
+# fraction of the baseline MAE (a small but non-trivial relative improvement -> proves learning).
+PRIMARY_GATE_MARGIN = 0.05  # 5% relative improvement over the mean-baseline MAE
+SANITY_MAE_LO = 0.01
+SANITY_MAE_HI = 0.4
+COST_CEILING_USD = 25.0
+
+
+def _checkpoint_path() -> Path:
+    """Resolve the checkpoint location with the SAME logic as run.py.
+
+    Prefers `$STAR_OUTPUT_DIR/foxes_repro/checkpoint.pt` (external-drive convention) when set and
+    its parent is reachable AND the file exists there; otherwise the in-repo results checkpoint.
+    """
+    star = os.environ.get("STAR_OUTPUT_DIR", "")
+    if star:
+        cand = Path(star) / "foxes_repro" / "checkpoint.pt"
+        if cand.exists():
+            return cand
+    return OUT_DIR / "checkpoint.pt"
+
+
+CKPT_FILE = _checkpoint_path()
 
 
 def check_metrics() -> dict:
@@ -50,6 +88,54 @@ def check_metrics() -> dict:
     assert all(math.isfinite(v) for v in finite_vals), f"non-finite loss: {finite_vals}"
     print(f"  metrics OK: {summary}")
     return d
+
+
+def check_trained_results(metrics: dict) -> None:
+    """Phase-3 gate: activate the trained-result assertions only when a trained summary exists.
+
+    A trained run records `summary.mae_dex` (a held-out eval in dex). When that key is absent
+    (synthetic + data-smoke states), this skips silently so the earlier phases stay green. When
+    present, it enforces the self-calibrating primary gate + loose sanity band + Pearson finite +
+    cost ceiling described in the structure outline.
+    """
+    summary = metrics.get("summary", {})
+    if "mae_dex" not in summary:
+        print("  trained results: (skipped -- no trained metrics summary yet)")
+        return
+
+    mae = summary["mae_dex"]
+    assert isinstance(mae, (int, float)) and math.isfinite(mae), f"mae_dex not finite: {mae}"
+
+    # PRIMARY self-calibrating gate: beat the constant-mean baseline by a margin.
+    base = summary.get("mae_dex_mean_baseline")
+    assert base is not None and math.isfinite(base), f"missing/non-finite mean baseline: {base}"
+    assert mae < base * (1.0 - PRIMARY_GATE_MARGIN), (
+        f"model MAE {mae:.4f} dex did not beat the mean-baseline {base:.4f} dex by "
+        f"{PRIMARY_GATE_MARGIN:.0%} (no real learning)"
+    )
+
+    # SECONDARY loose sanity band.
+    assert SANITY_MAE_LO < mae < SANITY_MAE_HI, (
+        f"mae_dex {mae:.4f} outside sanity band ({SANITY_MAE_LO}, {SANITY_MAE_HI}) "
+        "(leakage/impossibly-perfect below; non-learning/blowup above)"
+    )
+
+    # Pearson r finite and in [-1, 1].
+    r = summary.get("pearson_r")
+    assert r is not None and math.isfinite(r), f"pearson_r not finite: {r}"
+    assert -1.0 <= r <= 1.0, f"pearson_r {r} outside [-1, 1]"
+
+    # Cost-ceiling sanity check.
+    eh = summary.get("elapsed_hr")
+    uph = summary.get("usd_per_hr")
+    assert eh is not None and uph is not None, "missing elapsed_hr / usd_per_hr for cost check"
+    cost = eh * uph
+    assert cost < COST_CEILING_USD, f"estimated cost ${cost:.2f} exceeds ${COST_CEILING_USD:.0f}"
+
+    print(
+        f"  trained results OK: mae_dex={mae:.4f} < baseline={base:.4f} (margin "
+        f"{PRIMARY_GATE_MARGIN:.0%}); pearson_r={r:.4f}; est_cost=${cost:.2f}"
+    )
 
 
 def check_data_smoke() -> None:
@@ -193,7 +279,7 @@ def check_checkpoint_reload(x: torch.Tensor, ref_global: torch.Tensor) -> None:
 
 def main() -> None:
     print("validate-foxes:")
-    check_metrics()
+    metrics = check_metrics()
     check_data_smoke()
 
     # Build a fresh model with the SAME architecture the checkpoint used, so the structural,
@@ -220,9 +306,12 @@ def main() -> None:
 
     check_structural(model)
     check_mask(model)
+    # Faithfulness invariant runs on the (trained, when present) checkpoint weights.
     x, ref_global = check_forward_and_faithfulness(model)
     check_attention(model, x)
     check_checkpoint_reload(x, ref_global)
+    # Phase-3 trained-result gates (skipped silently for synthetic + data-smoke states).
+    check_trained_results(metrics)
     print("validate-foxes OK")
 
 

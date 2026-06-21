@@ -55,8 +55,14 @@ if [[ "${1:-}" != "--create" ]]; then
     exit 0
 fi
 
-# --- onstart: install unsloth stack on top of the base PyTorch image ---------
-ONSTART='pip install -q --no-cache-dir unsloth "transformers>=4.46" trl peft datasets accelerate bitsandbytes pyyaml && echo UNSLOTH_READY'
+# --- onstart: install the training stack on top of the base PyTorch image -----
+# Default is the Unsloth VLM stack (Phase 3/8 text+vision LoRA). Override ONSTART for the
+# mini-FOXES ViT run, which needs only datasets/timm (no unsloth/bitsandbytes), e.g.:
+#   GPU_NAME=RTX_A6000 MIN_GPU_RAM=47 \
+#   ONSTART='pip install -q --no-cache-dir "datasets>=2.18.0" "timm>=1.0.0" "huggingface_hub>=0.23.0" pillow && echo FOXES_READY' \
+#   ./scripts/cloud/launch_vast.sh --create
+# See scripts/cloud/README.md for the full FOXES A6000/4090 walkthrough.
+ONSTART="${ONSTART:-pip install -q --no-cache-dir unsloth \"transformers>=4.46\" trl peft datasets accelerate bitsandbytes pyyaml && echo UNSLOTH_READY}"
 
 echo "Creating instance from offer $OFFER_ID ..."
 "$VASTAI" create instance "$OFFER_ID" \

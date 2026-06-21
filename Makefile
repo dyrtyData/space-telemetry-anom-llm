@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble foxes-smoke foxes-data validate-foxes
+.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble foxes-smoke foxes-data foxes-train validate-foxes
 
 PYTHON := python3
 VENV := .venv
@@ -239,6 +239,23 @@ foxes-smoke:
 FOXES_SUBSAMPLE_N ?= 8
 foxes-data:
 	$(PY) -m src.foxes.run --data foxes --subsample-n $(FOXES_SUBSAMPLE_N) --epochs 1
+
+# Phase 3: the REAL training run -- runs ON the Vast.ai instance (A6000/4090; CUDA avoids the
+# M3-MPS masked-attention NaN bug), mirroring the train-cloud pattern (launch-vast ->
+# upload_data.sh -> run -> download_models.sh). See scripts/cloud/README.md for the full
+# A6000/4090 invocation. The trained checkpoint lands under STAR_OUTPUT_DIR; the small
+# metrics.json comes back to results/foxes_repro/. Knobs (override on the CLI):
+#   FOXES_TRAIN_N (subsample, 1-2k)  FOXES_EPOCHS (20-50)  FOXES_DEVICE  FOXES_USD_PER_HR
+FOXES_TRAIN_N ?= 1500
+FOXES_EPOCHS ?= 40
+FOXES_BATCH ?= 12
+FOXES_DEVICE ?= cuda
+FOXES_USD_PER_HR ?= 0.40
+foxes-train:
+	$(PY) -m src.foxes.run --data foxes \
+		--subsample-n $(FOXES_TRAIN_N) --epochs $(FOXES_EPOCHS) --batch $(FOXES_BATCH) \
+		--device $(FOXES_DEVICE) --usd-per-hr $(FOXES_USD_PER_HR) \
+		--checkpoint-every 5 --resume
 
 validate-foxes:
 	$(PY) -m src.foxes.validate
