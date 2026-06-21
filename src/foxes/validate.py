@@ -46,6 +46,21 @@ has been run; absent for earlier states, so those stay green/skipped):
     EUV brightness (Pearson r above a small positive threshold) -- a quantitative stand-in for
     "attribution lands on active regions." The brightness proxy is skipped for synthetic renders
     (random input has no structure), recorded via `data_source` in the sidecar.
+
+Phase 5 assertions (packaging + aux-mask + headless Gradio):
+  * PACKAGING completeness: results/foxes_repro/report.md contains the required sections
+    (Regression Metrics / Methodology / Limitations / Next steps) + the honest "miniature"
+    framing, and huggingface/foxes-repro_MODELCARD.md declares a regression `model-index`
+    (image-regression task + mae / rmse / pearsonr keys) -- mirroring validate-eval's section
+    check. Skipped only until either artifact exists.
+  * AUX-MASK forward: a CPU forward pass with a PLACEHOLDER aux_mask (aux_mask_chans=1) runs and
+    still satisfies the faithfulness invariant; aux_mask=None feeds an internal zeros placeholder
+    that matches the explicit-zeros result, and attention stays extractable -- proving the Surya
+    AR-mask drop-in path is wired, not dead code (DQ5).
+  * HEADLESS GRADIO smoke: import huggingface/space-demo/foxes_app.py and call predict() directly
+    (no UI launch), asserting it returns a valid non-empty PNG path for the attribution overlay
+    plus a caption -- the automated stand-in for "launch the Space and look". Skipped until the
+    figures are rendered (predict needs a PNG to return).
 """
 
 from __future__ import annotations
@@ -67,6 +82,25 @@ DATA_SMOKE_FILE = OUT_DIR / "data_smoke.json"
 VIZ_META_FILE = OUT_DIR / "viz_meta.json"
 ATTRIBUTION_PNG = OUT_DIR / "attribution_overlay.png"
 ATTENTION_PNG = OUT_DIR / "attention_sanity.png"
+REPORT_FILE = OUT_DIR / "report.md"
+MODELCARD_FILE = Path("huggingface/foxes-repro_MODELCARD.md")
+
+# Phase-5 packaging-completeness checks. Required headings the standalone report must contain
+# (mirroring validate-eval's "report has these sections" check) and the regression model-index
+# keys the HF model card must declare.
+REPORT_REQUIRED_SECTIONS = (
+    "Regression Metrics",
+    "Methodology",
+    "Limitations",
+    "Next steps",
+)
+MODELCARD_REQUIRED_KEYS = (
+    "model-index",
+    "image-regression",
+    "mae",
+    "rmse",
+    "pearsonr",
+)
 
 # Primary-gate margin: the trained model must beat the constant-mean baseline by at least this
 # fraction of the baseline MAE (a small but non-trivial relative improvement -> proves learning).
@@ -364,6 +398,100 @@ def check_figures() -> None:
         )
 
 
+def check_packaging() -> None:
+    """Phase-5 gate: the standalone report + HF model card are present and complete.
+
+    Mirrors validate-eval's "report contains the required sections" check. Skips silently only if
+    NEITHER artifact exists yet (pre-Phase-5 states); once either is present, both are required and
+    asserted complete -- the report's required section headings + the card's regression
+    model-index keys.
+    """
+    if not REPORT_FILE.exists() and not MODELCARD_FILE.exists():
+        print("  packaging: (skipped -- no report.md / model card yet)")
+        return
+
+    assert REPORT_FILE.exists(), f"missing {REPORT_FILE} (Phase-5 report)"
+    report = REPORT_FILE.read_text()
+    missing = [s for s in REPORT_REQUIRED_SECTIONS if s not in report]
+    assert not missing, f"report.md missing required section(s): {missing}"
+    # The honest "miniature, not a full reproduction" framing must be present.
+    assert "miniature" in report.lower(), "report.md must label the result a miniature (honesty)"
+
+    assert MODELCARD_FILE.exists(), f"missing {MODELCARD_FILE} (Phase-5 model card)"
+    card = MODELCARD_FILE.read_text()
+    missing_keys = [k for k in MODELCARD_REQUIRED_KEYS if k not in card]
+    assert not missing_keys, f"model card missing required model-index key(s): {missing_keys}"
+    print(
+        f"  packaging OK: report.md has {len(REPORT_REQUIRED_SECTIONS)} required sections + "
+        f"miniature framing; model card has regression model-index ({MODELCARD_REQUIRED_KEYS})"
+    )
+
+
+def check_aux_mask_forward() -> None:
+    """Phase-5 gate: a CPU forward pass with a PLACEHOLDER aux_mask runs (path is not dead code).
+
+    Builds a small ViTLocal with aux_mask_chans=1 and runs a forward both with an explicit
+    placeholder mask and with aux_mask=None (which feeds an internal all-zeros placeholder),
+    asserting the faithfulness invariant still holds on the aux-conditioned path. This is the
+    Surya AR-mask drop-in exercised on a stub (DQ5), per the structure outline.
+    """
+    model = ViTLocal(
+        in_chans=7, img=128, patch=8, embed=64, depth=2, heads=4, mlp=128, aux_mask_chans=1
+    )
+    model.eval()
+    b = 2
+    torch.manual_seed(0)
+    x = torch.randn(b, 7, model.img, model.img)
+    aux = torch.zeros(b, 1, model.img, model.img)  # placeholder AR mask (no AR available)
+    with torch.no_grad():
+        g_explicit, pp_explicit = model(x, aux_mask=aux)
+        g_none, _ = model(x, aux_mask=None)  # internal zeros placeholder -- must match explicit
+    assert tuple(g_explicit.shape) == (b,), f"aux forward global shape {tuple(g_explicit.shape)}"
+    assert tuple(pp_explicit.shape) == (b, model.num_patches), "aux forward per-patch shape wrong"
+    ferr = (pp_explicit.sum(1) - g_explicit).abs().max().item()
+    assert ferr < 1e-4, f"aux-mask path violates faithfulness invariant: {ferr}"
+    same = (g_explicit - g_none).abs().max().item()
+    assert same < 1e-5, f"explicit-zeros vs None-placeholder mismatch: {same}"
+    # Attention is still extractable on the aux-conditioned path.
+    attn = extract_attention(model, x, aux_mask=aux)
+    assert attn and all(w is not None for w in attn.values()), "no attention on aux path"
+    print(
+        f"  aux_mask OK: placeholder AR-mask forward runs, faithful (err {ferr:.2e}), "
+        f"None==zeros (diff {same:.2e}), attention extractable"
+    )
+
+
+def check_gradio_smoke() -> None:
+    """Phase-5 gate: headless Gradio smoke -- call the app's predict() directly (no UI launch).
+
+    Skips silently if the figures have not been rendered yet (predict needs a PNG to return) or
+    if the foxes_app module is not importable. When runnable, asserts predict() returns a valid,
+    non-empty PNG path for the attribution overlay -- the automated stand-in for "launch and look".
+    """
+    app_path = Path("huggingface/space-demo/foxes_app.py")
+    if not app_path.exists():
+        print("  gradio smoke: (skipped -- foxes_app.py not present yet)")
+        return
+    if not ATTRIBUTION_PNG.exists():
+        print("  gradio smoke: (skipped -- no attribution_overlay.png; run make foxes-figures)")
+        return
+
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("foxes_app", app_path)
+    assert spec and spec.loader, f"could not load spec for {app_path}"
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    # Call predict() directly with the safe, no-download default choice.
+    img_path, caption = mod.predict(mod.DEFAULT_CHOICE)
+    p = Path(img_path)
+    assert p.exists() and p.stat().st_size > 0, f"predict() returned bad image path: {img_path}"
+    assert p.suffix.lower() == ".png", f"predict() did not return a PNG: {img_path}"
+    assert isinstance(caption, str) and caption.strip(), "predict() returned an empty caption"
+    print(f"  gradio smoke OK: predict() -> {p.name} ({p.stat().st_size} bytes) + caption")
+
+
 def main() -> None:
     print("validate-foxes:")
     metrics = check_metrics()
@@ -401,6 +529,10 @@ def main() -> None:
     check_trained_results(metrics)
     # Phase-4 figure gates (skipped silently until make foxes-figures has been run).
     check_figures()
+    # Phase-5 packaging + aux-mask + headless-Gradio gates.
+    check_packaging()
+    check_aux_mask_forward()
+    check_gradio_smoke()
     print("validate-foxes OK")
 
 

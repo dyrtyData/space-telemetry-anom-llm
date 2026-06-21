@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble foxes-smoke foxes-data foxes-train foxes-figures validate-foxes
+.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble foxes-smoke foxes-data foxes-train foxes-figures foxes-report foxes-aux-smoke foxes-gradio-smoke validate-foxes
 
 PYTHON := python3
 VENV := .venv
@@ -265,6 +265,21 @@ foxes-train:
 FOXES_VIZ_N ?= 16
 foxes-figures:
 	$(PY) -m src.foxes.visualize --data foxes --subsample-n $(FOXES_VIZ_N)
+
+# Phase 5: packaging. foxes-report is a convenience target that (re)renders the figures and runs
+# the validate gate -- the report.md + foxes-repro_MODELCARD.md + foxes_app.py are authored
+# artifacts, so this just confirms the figures + completeness gates are green. foxes-aux-smoke
+# exercises the Surya AR-mask drop-in on a placeholder mask (CPU, no data); foxes-gradio-smoke is
+# the headless Gradio check (calls foxes_app.predict() directly, no UI launch). All three are also
+# folded into validate-foxes, so `make validate-foxes` alone covers the Phase-5 automated checks.
+foxes-report: foxes-figures validate-foxes
+	@echo "foxes-report: report.md + model card + figures + Gradio overlay validated."
+
+foxes-aux-smoke:
+	$(PY) -c "from src.foxes.validate import check_aux_mask_forward; check_aux_mask_forward()"
+
+foxes-gradio-smoke:
+	$(PY) -c "from src.foxes.validate import check_gradio_smoke; check_gradio_smoke()"
 
 validate-foxes:
 	$(PY) -m src.foxes.validate

@@ -22,9 +22,38 @@ weights can be captured by `src/foxes/attention.py` for the XAI sanity figure. t
 `set_fused_attn(False)` is called at import time as belt-and-suspenders in case timm
 primitives are ever introduced.
 
-`aux_mask` hook: an optional auxiliary active-region mask path is stubbed here for the real
-SuryaBench AR-segmentation masks (Phase 5 documents the drop-in); in Phase 1 it is an
-extra-channel placeholder so the signature is pinned and the path is not dead code.
+`aux_mask` hook (the Surya AR-mask drop-in, exercised in Phase 5)
+-----------------------------------------------------------------
+An optional auxiliary active-region (AR) mask path is wired through the module so the named
+HeliolabOps integration point -- conditioning the EUV->SXR regressor on Surya-derived AR
+segmentation -- is a live signature, not dead code. Construct the model with
+``aux_mask_chans>=1`` and the patch-embed `Conv2d` widens to ``in_chans + aux_mask_chans``; the
+extra channel(s) are the AR mask, concatenated to the EUV stack before patchification. Passing
+``aux_mask=None`` at ``aux_mask_chans>=1`` feeds an all-zeros placeholder (the "no AR mask
+available" / Phase-5 smoke case), so the forward never crashes and the path is exercised by
+``foxes-aux-smoke`` / ``validate-foxes``.
+
+How the REAL SuryaBench AR masks attach (the documented v1 next-step, not done here):
+
+  * Source: ``nasa-ibm-ai4science/surya-bench-ar-segmentation`` -- 128,352 binary masks in
+    HDF5 (~1.31 GB), each ``.h5`` with an ``intersection`` (polarity-inversion lines) and a
+    ``union_with_intersect`` (active-region) array, 4096^2, derived from HMI magnetograms,
+    hourly over 2010-2024 (Surya / SuryaBench, arXiv 2508.14112; IBM Research + NASA-IMPACT).
+  * Alignment: each FOXES-Data record carries an ISO-timestamp ``filename``; pick the AR mask
+    whose hourly timestamp is nearest that EUV snapshot, load ``union_with_intersect``, and
+    ``F.interpolate`` it from 4096^2 down to the model's 128^2 (nearest-neighbour for a binary
+    mask) -- the same one-line resize ``data.resize_stack`` already does for the EUV stack.
+  * Attach: pass it as the ``aux_mask`` argument (shape ``(B, aux_mask_chans, img, img)``); it
+    is concatenated as an extra input channel here. (An additive-attention-prior variant -- bias
+    the ``InvertedAttentionBlock`` scores toward AR patches -- is the natural alternative; the
+    extra-channel form is the simplest faithful drop-in and is what this hook implements.)
+  * Heavier path: instead of a binary mask, feed Surya's 366M-param embeddings as the auxiliary
+    channels (Surya is a 13-channel spatiotemporal transformer, not a plain ViT) -- a foundation-
+    model-conditioned regressor. Out of scope for this miniature; flagged in the report next-steps.
+
+The mask data lift (1.31 GB HDF5 + cadence alignment) is deliberately NOT done in v1 (DQ5): the
+hook + this documentation demonstrate understanding of the integration point without blowing the
+deadline. ``aux_mask_chans=0`` (the default) keeps the trained Phase-3 checkpoint EUV-only.
 """
 
 from __future__ import annotations
@@ -183,8 +212,14 @@ class ViTLocal(nn.Module):
         Returns (global_pred (B,), per_patch (B, N)) with per_patch.sum(1) == global_pred.
         """
         if self.aux_mask_chans:
+            # Surya AR-mask drop-in: concatenate the AR mask as extra input channel(s) before
+            # patchification. aux_mask=None feeds an all-zeros placeholder ("no AR mask available"
+            # / the Phase-5 smoke case) so the path is always exercisable, never dead code.
             if aux_mask is None:
                 aux_mask = x.new_zeros(x.shape[0], self.aux_mask_chans, x.shape[2], x.shape[3])
+            assert aux_mask.shape[1] == self.aux_mask_chans, (
+                f"aux_mask has {aux_mask.shape[1]} channels, expected {self.aux_mask_chans}"
+            )
             x = torch.cat([x, aux_mask], dim=1)
 
         p = self.patch_embed(x)  # (B, embed, grid_h, grid_w)
