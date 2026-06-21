@@ -27,6 +27,14 @@ dev = [
 lstm = [
     "keras>=3.0.0",
 ]
+# Phase 16 (mini-FOXES ViT + XAI showcase, dedicated branch). torch, numpy, matplotlib,
+# pillow, h5py are already in the core deps above; this group adds only the FOXES-specific
+# plumbing (timm primitives + HF dataset streaming for the real EUV->SXR subsample).
+foxes = [
+    "timm>=1.0.0",
+    "datasets>=2.18.0",
+    "huggingface_hub>=0.23.0",
+]
 
 [build-system]
 requires = ["hatchling"]

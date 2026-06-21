@@ -1,0 +1,46 @@
+{
+  "config": {
+    "data": "foxes",
+    "epochs": 40,
+    "batch": 12,
+    "subsample_n": 1500,
+    "val_frac": 0.25,
+    "lr": 0.0001,
+    "lr_min": 1e-05,
+    "seed": 42,
+    "device": "cuda",
+    "checkpoint_every": 5,
+    "resume": true,
+    "synthetic_steps": 1,
+    "usd_per_hr": 0.538,
+    "in_chans": 7,
+    "img": 128,
+    "patch": 8,
+    "embed": 256,
+    "depth": 8,
+    "heads": 8,
+    "mlp": 1024,
+    "local_window": 9,
+    "aux_mask_chans": 0
+  },
+  "data_smoke": {
+    "dataset_repo": "griffingoodwin04/FOXES-Data",
+    "subsample_n": 1500,
+    "n_materialized": 1500,
+    "is_streaming": true,
+    "n_train": 1125,
+    "n_val": 375,
+    "tensor_shape": [
+      1125,
+      7,
+      128,
+      128
+    ],
+    "dtype": "torch.float32",
+    "value_min": -1.0,
+    "value_max": 1.0,
+    "label_min": -0.41642627120018005,
+    "label_max": 0.8261469006538391,
+    "labels_finite": true
+  }
+}

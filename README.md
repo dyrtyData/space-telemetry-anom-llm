@@ -11,9 +11,10 @@ baselines (LSTM, Isolation Forest), un-fine-tuned bases, a frontier model, a tri
 all three detectors beats every one of them** — so the architecture the data recommends is an
 ensemble detector feeding an LLM advisor.
 
-📄 **Full analysis:** [`thoughts/shared/research/2026-06-14-results-analysis.md`](thoughts/shared/research/2026-06-14-results-analysis.md)
-🎓 **Learn it from scratch (plain-language):** [`thoughts/shared/research/2026-06-14-plain-language-walkthrough.md`](thoughts/shared/research/2026-06-14-plain-language-walkthrough.md)
+📄 **Full analysis:** [`thoughts/shared/reports/2026-06-14-results-analysis.md`](thoughts/shared/reports/2026-06-14-results-analysis.md)
+🎓 **Learn it from scratch (plain-language):** [`thoughts/shared/reports/2026-06-14-plain-language-walkthrough.md`](thoughts/shared/reports/2026-06-14-plain-language-walkthrough.md)
 📊 **Generated metrics report:** [`results/comparison_report.md`](results/comparison_report.md)
+🛰️ **Bonus (separate task):** a from-scratch **ViT + Explainable-AI** solar-flare showcase — see [Mini-FOXES](#bonus--mini-foxes-a-from-scratch-vit--explainable-ai-showcase-separate-task) · [`results/foxes_repro/report.md`](results/foxes_repro/report.md)
 
 ---
 
@@ -176,7 +177,7 @@ Pareto-beats every one of them**.
 | **13 — Text-LLM calibration** | Continuous verdict score + PR curve (AUC-PR 0.678); the over-flagging is a calibration artifact (precision 0.360 → 0.838) |
 | **14 — Ensemble** | Leakage-free stacked fusion of text+vision+LSTM scores: **P 0.922 / CEF0.5 0.781** — the strongest detector |
 
-See the [analysis doc](thoughts/shared/research/2026-06-14-results-analysis.md) for how each result
+See the [analysis doc](thoughts/shared/reports/2026-06-14-results-analysis.md) for how each result
 was produced.
 
 ---
@@ -283,10 +284,14 @@ src/
   training/    format_for_unsloth.py · train_advice.py · train_detection.py · export_gguf.py  (cloud)
   inference/   test_local_gguf.py (Metal) · eval_vision.py · evaluate.py (unified report)
                select_frontier_sample.py · grade_advice_sample.py
+  foxes/       (Phase 16, separate task) from-scratch ViTLocal + XAI: model.py · attention.py
+               · data.py · run.py · visualize.py · validate.py
 scripts/cloud/ Vast.ai launch / data upload / model download helpers
 results/       comparison_report.md · comparison_metrics.json · per-approach JSON
-thoughts/      research, plan, full implementation log, results analysis, plain-language walkthrough
-Makefile       every phase + a validate-* target encoding its success criteria
+               · foxes_repro/ (Phase 16 report + metrics + XAI figures)
+thoughts/      reports/ (results analysis + plain-language walkthrough) · plans · implement log
+               · research · handoff · phase16/ (mini-FOXES planning artifacts)
+Makefile       every phase + a validate-* target encoding its success criteria (incl. validate-foxes)
 ```
 
 ---
@@ -301,8 +306,8 @@ dynamic thresholding turning out to be unsuitable here).
 
 - **Plan:** [`thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md`](thoughts/shared/plans/2026-06-12-star-pipeline-create-plan.md)
 - **Implementation log (D1–D49):** [`thoughts/shared/implement/2026-06-12-star-pipeline-log.md`](thoughts/shared/implement/2026-06-12-star-pipeline-log.md)
-- **Results analysis:** [`thoughts/shared/research/2026-06-14-results-analysis.md`](thoughts/shared/research/2026-06-14-results-analysis.md)
-- **Plain-language walkthrough:** [`thoughts/shared/research/2026-06-14-plain-language-walkthrough.md`](thoughts/shared/research/2026-06-14-plain-language-walkthrough.md)
+- **Results analysis:** [`thoughts/shared/reports/2026-06-14-results-analysis.md`](thoughts/shared/reports/2026-06-14-results-analysis.md)
+- **Plain-language walkthrough:** [`thoughts/shared/reports/2026-06-14-plain-language-walkthrough.md`](thoughts/shared/reports/2026-06-14-plain-language-walkthrough.md)
 
 ---
 
@@ -327,7 +332,7 @@ This is a showcase, not a deployed system. Residual gaps, stated up front:
    transients.
 
 Each has a concrete next step in the
-[analysis doc](thoughts/shared/research/2026-06-14-results-analysis.md#10-open-next-steps).
+[analysis doc](thoughts/shared/reports/2026-06-14-results-analysis.md#10-open-next-steps).
 
 ---
 
@@ -342,6 +347,44 @@ from the project documentation. **Ask questions interactively** via the chat, or
 | **Slide deck** | [NotebookLM](https://notebooklm.google.com/notebook/8bdf78b7-edfd-45c7-b39c-7418957184b5/artifact/a4632c10-05a7-4cf7-9536-c4350e5beb45) | [`thoughts/shared/notebookLM/STAR-Pipeline_Hybrid_Anomaly_Detection.pdf`](thoughts/shared/notebookLM/STAR-Pipeline_Hybrid_Anomaly_Detection.pdf) |
 | **Infographic** | [NotebookLM](https://notebooklm.google.com/notebook/8bdf78b7-edfd-45c7-b39c-7418957184b5/artifact/3dc5fd18-2e32-4cb2-8992-997801528bfe) | [`thoughts/shared/notebookLM/Satellite_Anomaly_Detection_Using_LLMs.png`](thoughts/shared/notebookLM/Satellite_Anomaly_Detection_Using_LLMs.png) |
 | **Mind map** | [NotebookLM](https://notebooklm.google.com/notebook/8bdf78b7-edfd-45c7-b39c-7418957184b5/artifact/32077d52-0340-40fe-bee5-5282a8624da9) | [`thoughts/shared/notebookLM/Mind Map.png`](thoughts/shared/notebookLM/Mind%20Map.png) |
+
+---
+
+## Bonus — Mini-FOXES: a from-scratch ViT + Explainable-AI showcase (separate task)
+
+A standalone proof-of-mechanism miniature of **FOXES** (Goodwin et al. 2026) — multi-channel SDO/AIA
+EUV imagery → GOES soft-X-ray flux **regression** — built on the `phase16-mini-foxes` branch to
+demonstrate two competencies the anomaly-detection bake-off above doesn't exercise: **raw
+Vision-Transformer construction** and **spatial Explainable-AI / attention attribution**.
+
+It is a **different task with a different metric** (error in *dex*, not anomaly precision), so it is
+**deliberately kept off the scoreboard** above — putting flux regression on the CEF0.5 / Affinity-F1
+table would be apples-to-oranges. What connects it to the rest of the repo is **engineering DNA, not
+the leaderboard**: it reuses the same provenance (config snapshots, atomic writes,
+`--resume`/`--checkpoint-every`), the same `validate-*` gate discipline, the same matplotlib
+vocabulary, the same Vast.ai cloud-training path, and the same report + HF-model-card packaging —
+*same engineer, same rigor, new domain*, which is exactly the leap from telemetry-MLOps to
+heliophysics-ViT. It also fills two genuine gaps: the repo's first **from-scratch neural-network
+code** (`src/foxes/` — a real `nn.Module` ViT; the anomaly side only fine-tunes frozen pretrained
+weights) and its first **image / heatmap / overlay rendering**.
+
+| mini-FOXES (held-out subset, in dex) | Result |
+|---|---|
+| MAE | **0.368** — beats the constant-mean baseline (0.689) by ~47% |
+| Pearson r | **0.943** |
+| Faithfulness invariant | per-patch attribution **sums exactly to** the global flux prediction |
+| Compute / cost | RTX 4090, ~17 min, **$0.15** |
+
+A from-scratch `ViTLocal` (7-channel 8×8 patch embed, 9×9 **inverted** masked attention, **no CLS**
+token, per-patch linear head whose 256 scalars sum to the global flux prediction), trained on a
+subsample of the FOXES authors' own published EUV→SXR dataset. Honestly labeled a **proof-of-mechanism
+miniature**, not a full reproduction (the paper's full model reaches 0.051 dex; ours is a 128² /
+~17-min / single-4090 miniature with a documented residual calibration bias).
+
+- **Report:** [`results/foxes_repro/report.md`](results/foxes_repro/report.md)
+- **HF model card:** [`huggingface/foxes-repro_MODELCARD.md`](huggingface/foxes-repro_MODELCARD.md)
+- **XAI figures:** [`attribution_overlay.png`](results/foxes_repro/attribution_overlay.png) (per-patch flux attribution) · [`attention_sanity.png`](results/foxes_repro/attention_sanity.png) (raw inverted-mask attention)
+- **Planning artifacts:** [`thoughts/shared/phase16/`](thoughts/shared/phase16/) (research questions, research, design discussion, structure outline)
 
 ---
 

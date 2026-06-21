@@ -1509,3 +1509,30 @@ single model's *own* best operating point (computed on the same windows) on both
   `results/ensemble_metrics.json`; code: `src/inference/ensemble.py`, edits to `eval_vision.py`,
   `pr_curve.py`, `train_lstm.py`, `evaluate.py`, `Makefile`, `.gitignore`. The LSTM dense dump
   (`results/lstm/window_scores.json`, `baseline_results_scoredump.json`) is gitignored.
+
+---
+
+## Phase 16 — Vision Transformer + Explainable-AI extension (separate branch, 2026-06-21)
+
+Implemented on the dedicated `phase16-mini-foxes` worktree/branch (kept off `main`'s anomaly narrative
+and off the comparison scoreboard — different task, error in *dex*). Built a **from-scratch `ViTLocal`**
+(`src/foxes/`) and trained a real miniature of **FOXES** (EUV → GOES soft-X-ray flux regression) on
+Vast.ai, with the repo's first from-scratch `nn.Module` and first image/heatmap rendering. Result: MAE
+**0.368 dex**, Pearson r **0.943** (beats constant-mean baseline ~47%), RTX 4090 ~17 min **$0.15**;
+`make validate-foxes` green (13 checks incl. faithfulness Σ per-patch ≈ global).
+
+Notable deviations during the cloud run (full detail in the structure outline's Phase-3 run notes):
+- **D50 — temporal-holdout bias.** The initial deterministic *tail-slice* train/val split on the
+  timestamp-ordered FOXES-Data injected a distribution-shift bias (Pearson 0.53, MAE 0.71). Fix: a
+  seeded **shuffled split** (`data.py`) → Pearson 0.94.
+- **D51 — AdamW weight-decay suppressed the head bias.** Because the global prediction is a *sum of
+  256 per-patch scalars*, AdamW's default `weight_decay=0.01` decayed the only constant-offset term
+  (the per-patch head bias) toward 0, biasing predictions high in dex (mean_bias ≈ MAE ≈ 0.62 at
+  Pearson 0.94). Fix: `weight_decay=0.0` (`run.py`) → MAE 0.629 → 0.368 (inside the 0.4 band).
+- **D52 — flaky regional HF CDN.** The cheapest 4090 was a CN-region host whose HF data-CDN edge
+  intermittently 401'd / aborted bulk parquet streaming; a detached self-retrying loop (clean
+  re-stream per attempt) succeeded on attempt 2.
+
+Artifacts: planning docs in `thoughts/shared/phase16/`; report + figures in `results/foxes_repro/`;
+HF card `huggingface/foxes-repro_MODELCARD.md`. See the README "Bonus — Mini-FOXES" section and the
+structure outline for the full phased account.

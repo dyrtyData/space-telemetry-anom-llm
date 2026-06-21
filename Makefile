@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble
+.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble foxes-smoke foxes-data foxes-train foxes-figures foxes-report foxes-aux-smoke foxes-gradio-smoke validate-foxes
 
 PYTHON := python3
 VENV := .venv
@@ -22,7 +22,7 @@ RESULTS_FILE ?= baseline_results.json
 # Setup
 setup:
 	$(PYTHON) -m venv $(VENV)
-	$(PIP) install -e ".[dev,lstm]"
+	$(PIP) install -e ".[dev,lstm,foxes]"
 
 # ETL Pipeline -- primary download is the Kaggle mirror (fast CDN, byte-identical
 # to the official Zenodo manifest). Zenodo kept as a fallback (download-zenodo).
@@ -226,6 +226,63 @@ llm = next(r for r in results if r['approach'] == 'LLM Detection'); \
 assert llm.get('advice_avg_chars', 0) > 50, f'LLM anomaly responses too short: {llm.get(\"advice_avg_chars\")}'; \
 print('validate-eval OK:', {r['approach']: r['f1'] for r in results}) \
 "
+
+# Phase 16 (mini-FOXES ViT + XAI, dedicated branch) -- NOT part of the anomaly comparison.
+# Phase 1: thinnest end-to-end slice on CPU + synthetic random tensors (no data, no GPU).
+# foxes-smoke trains 1 epoch and writes results/foxes_repro/metrics.json + a checkpoint;
+# validate-foxes is the inline correctness/faithfulness gate (factored into src/foxes/validate.py).
+foxes-smoke:
+	$(PY) -m src.foxes.run --data synthetic --epochs 1
+
+# Phase 2: pull a TINY (8-sample) streaming subsample of the real FOXES-Data and run one
+# forward+loss pass on CPU. streaming=True + .take(n) bounds the pull (never the full ~1.46 TB).
+FOXES_SUBSAMPLE_N ?= 8
+foxes-data:
+	$(PY) -m src.foxes.run --data foxes --subsample-n $(FOXES_SUBSAMPLE_N) --epochs 1
+
+# Phase 3: the REAL training run -- runs ON the Vast.ai instance (A6000/4090; CUDA avoids the
+# M3-MPS masked-attention NaN bug), mirroring the train-cloud pattern (launch-vast ->
+# upload_data.sh -> run -> download_models.sh). See scripts/cloud/README.md for the full
+# A6000/4090 invocation. The trained checkpoint lands under STAR_OUTPUT_DIR; the small
+# metrics.json comes back to results/foxes_repro/. Knobs (override on the CLI):
+#   FOXES_TRAIN_N (subsample, 1-2k)  FOXES_EPOCHS (20-50)  FOXES_DEVICE  FOXES_USD_PER_HR
+FOXES_TRAIN_N ?= 1500
+FOXES_EPOCHS ?= 40
+FOXES_BATCH ?= 12
+FOXES_DEVICE ?= cuda
+FOXES_USD_PER_HR ?= 0.40
+foxes-train:
+	$(PY) -m src.foxes.run --data foxes \
+		--subsample-n $(FOXES_TRAIN_N) --epochs $(FOXES_EPOCHS) --batch $(FOXES_BATCH) \
+		--device $(FOXES_DEVICE) --usd-per-hr $(FOXES_USD_PER_HR) \
+		--checkpoint-every 5 --resume
+
+# Phase 4: the repo's FIRST image / heatmap / overlay rendering. Loads the trained checkpoint,
+# runs a forward pass on a held-out FOXES sample (tiny streaming pull -- never the full ~1.46 TB),
+# and writes the per-patch flux-attribution overlay + the raw-attention sanity figure + a
+# viz_meta.json sidecar the validate gate asserts (faithfulness + non-uniformity + brightness
+# correlation). Runs LOCALLY on CPU -- no cloud, no GPU. FOXES_VIZ_N is the held-out pull size.
+FOXES_VIZ_N ?= 16
+foxes-figures:
+	$(PY) -m src.foxes.visualize --data foxes --subsample-n $(FOXES_VIZ_N)
+
+# Phase 5: packaging. foxes-report is a convenience target that (re)renders the figures and runs
+# the validate gate -- the report.md + foxes-repro_MODELCARD.md + foxes_app.py are authored
+# artifacts, so this just confirms the figures + completeness gates are green. foxes-aux-smoke
+# exercises the Surya AR-mask drop-in on a placeholder mask (CPU, no data); foxes-gradio-smoke is
+# the headless Gradio check (calls foxes_app.predict() directly, no UI launch). All three are also
+# folded into validate-foxes, so `make validate-foxes` alone covers the Phase-5 automated checks.
+foxes-report: foxes-figures validate-foxes
+	@echo "foxes-report: report.md + model card + figures + Gradio overlay validated."
+
+foxes-aux-smoke:
+	$(PY) -c "from src.foxes.validate import check_aux_mask_forward; check_aux_mask_forward()"
+
+foxes-gradio-smoke:
+	$(PY) -c "from src.foxes.validate import check_gradio_smoke; check_gradio_smoke()"
+
+validate-foxes:
+	$(PY) -m src.foxes.validate
 
 # Utilities
 lint:

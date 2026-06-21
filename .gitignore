@@ -25,6 +25,11 @@ models/merged/
 models/gguf/
 models/lstm/
 
+# Phase 16 (mini-FOXES): torch checkpoints are binaries, regenerable from run.py; keep them
+# out of git like the other model weights. metrics.json IS tracked (it's the small product).
+results/foxes_repro/*.pt
+results/foxes_repro/*.pt.tmp
+
 # Results ARE tracked: eval JSONs + the comparison report are the product (≈3.5 MB total,
 # and several cost hours of model inference to regenerate). Only transient run logs are
 # ignored. (Previously results/**/*.json + results/*.md were ignored as "regenerable" —

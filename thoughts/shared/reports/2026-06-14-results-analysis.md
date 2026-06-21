@@ -13,10 +13,22 @@ limitations, and the open next steps.
 - Original brief (a product brief: a PM needs anomaly detection + end-user advice and wants to own
   the model rather than depend on an external API):
   [`space_telemetry_anom_llm_ISSUE.md`](../issues/space_telemetry_anom_llm_ISSUE.md)
-- Validated architecture research: [`2026-06-12-star-pipeline-codebase-research.md`](2026-06-12-star-pipeline-codebase-research.md)
+- Validated architecture research: [`2026-06-12-star-pipeline-codebase-research.md`](../research/2026-06-12-star-pipeline-codebase-research.md)
 - Implementation plan: [`2026-06-12-star-pipeline-create-plan.md`](../plans/2026-06-12-star-pipeline-create-plan.md)
 - Implementation log (the full engineering trail, 49 numbered deviations):
   [`2026-06-12-star-pipeline-log.md`](../implement/2026-06-12-star-pipeline-log.md)
+
+> **Related — separate task, not on this scoreboard.** A from-scratch **Vision Transformer +
+> Explainable-AI** showcase (Phase 16, `phase16-mini-foxes` branch) reproduces a miniature of
+> **FOXES** — multi-channel SDO/AIA EUV imagery → GOES soft-X-ray flux *regression* (MAE 0.368 dex,
+> Pearson r 0.943). It is **deliberately excluded from the comparison table in this document**
+> (different task, different metric — error in *dex*, not anomaly precision; forcing it onto the
+> CEF0.5/Affinity-F1 board would be apples-to-oranges). It connects to this work by **shared
+> engineering discipline** — the same provenance (config snapshots, atomic writes, `--resume`),
+> `validate-*` gates, matplotlib vocabulary, Vast.ai training path, and report/model-card packaging
+> (*same engineer, same rigor, new domain*) — and it adds the repo's first from-scratch `nn.Module`
+> and first image/heatmap rendering. See [`results/foxes_repro/report.md`](../../../results/foxes_repro/report.md)
+> and [`thoughts/shared/phase16/`](../phase16/).
 
 ---
 

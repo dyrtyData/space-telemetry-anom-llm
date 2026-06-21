@@ -9,6 +9,16 @@ analysis doc and you're not 100% sure what it means, it's defined here.
 Read it top to bottom once; after that, §10 (the FAQ) and §11 (glossary) are the
 quick-reference parts.
 
+> **One more thing, kept separate on purpose.** There's a bonus showcase on its own branch
+> (`phase16-mini-foxes`) that builds a small **Vision Transformer from scratch** and explains *where
+> in a solar image* it thinks the X-ray flux comes from (Explainable AI). That's a **different
+> problem** from the anomaly detection in this doc — it predicts solar-flare X-ray *brightness* from
+> Sun images, measured in "dex," not anomaly precision — so it is intentionally **not** mixed into
+> the comparisons here. What ties it to everything below is the *same way of working*: the same
+> careful provenance, the same automatic correctness checks, the same plots-and-model-card packaging,
+> just pointed at a new scientific domain. Plain-English summary lives in
+> [`results/foxes_repro/report.md`](../../../results/foxes_repro/report.md).
+
 ---
 
 ## 1. The problem, in one breath

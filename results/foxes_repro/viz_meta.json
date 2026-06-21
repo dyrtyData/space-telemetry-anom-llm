@@ -1,0 +1,38 @@
+{
+  "config": {
+    "data": "foxes",
+    "subsample_n": 16,
+    "val_frac": 0.25,
+    "sample_index": 0,
+    "channel": 0,
+    "block": -1,
+    "head": 0,
+    "seed": 42
+  },
+  "viz_meta": {
+    "data_source": "foxes",
+    "sample_label": "2012-01-14T13:03:00.npy",
+    "channel": 0,
+    "block_idx": 7,
+    "head": 0,
+    "global_pred": 0.08364802598953247,
+    "per_patch_sum": 0.08364802598953247,
+    "faithfulness_abs_err": 0.0,
+    "attribution_gini": 0.4654655789594879,
+    "top_decile_mass": 0.29404667589786115,
+    "brightness_pearson_r": 0.48723566716304045,
+    "brightness_pearson_r_mean": 0.24750272860058992,
+    "brightness_pearson_r_by_channel": [
+      0.48723566716304045,
+      0.3783706207609775,
+      0.04040360810569445,
+      0.15025566303615964,
+      0.30478813870462224,
+      -0.08869930503100487,
+      0.46016470746463994
+    ],
+    "attribution_overlay_png": "results/foxes_repro/attribution_overlay.png",
+    "attention_sanity_png": "results/foxes_repro/attention_sanity.png",
+    "checkpoint_path": "results/foxes_repro/checkpoint.pt"
+  }
+}
