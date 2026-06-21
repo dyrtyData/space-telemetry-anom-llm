@@ -20,14 +20,24 @@
     "local_window": 9,
     "aux_mask_chans": 0
   },
-  "summary": {
-    "data": "foxes",
-    "n_epochs_run": 1,
-    "final_loss": 49.656063079833984,
-    "initial_loss": 49.656063079833984,
-    "num_patches": 256,
-    "device": "cpu",
+  "data_smoke": {
+    "dataset_repo": "griffingoodwin04/FOXES-Data",
     "subsample_n": 8,
-    "n_train_samples": 6
+    "n_materialized": 8,
+    "is_streaming": true,
+    "n_train": 6,
+    "n_val": 2,
+    "tensor_shape": [
+      6,
+      7,
+      128,
+      128
+    ],
+    "dtype": "torch.float32",
+    "value_min": -1.0,
+    "value_max": 1.0,
+    "label_min": 0.19825401902198792,
+    "label_max": 0.22333240509033203,
+    "labels_finite": true
   }
 }

@@ -13,6 +13,13 @@ Phase 1 assertions:
   * the saved checkpoint reloads and reproduces the forward pass.
   * FOXES STRUCTURAL invariants: no CLS token (token count N, no cls_token/class_token attr);
     per-patch head is Linear(embed, 1); every encoder block is an InvertedAttentionBlock.
+
+Phase 2 assertions (only when results/foxes_repro/data_smoke.json exists):
+  * real input tensor shape (n, 7, 128, 128), dtype float32;
+  * value range within [-1, 1] +/- eps (the authors' ITI normalization);
+  * normalized log-space labels are finite;
+  * STREAMING-BOUNDED pull: is_streaming is True AND exactly subsample_n records were
+    materialized (so no full ~1.46 TB download can have occurred).
 """
 
 from __future__ import annotations
@@ -30,6 +37,7 @@ from .model import InvertedAttentionBlock, ViTLocal
 OUT_DIR = Path("results/foxes_repro")
 METRICS_FILE = OUT_DIR / "metrics.json"
 CKPT_FILE = OUT_DIR / "checkpoint.pt"
+DATA_SMOKE_FILE = OUT_DIR / "data_smoke.json"
 
 
 def check_metrics() -> dict:
@@ -42,6 +50,48 @@ def check_metrics() -> dict:
     assert all(math.isfinite(v) for v in finite_vals), f"non-finite loss: {finite_vals}"
     print(f"  metrics OK: {summary}")
     return d
+
+
+def check_data_smoke() -> None:
+    """Phase-2 gate: assert the real FOXES-Data smoke artifact (only when it exists).
+
+    Skips silently if data_smoke.json is absent (Phase-1-only runs), so synthetic-only
+    validation still passes. When present, asserts tensor shape/dtype/value-range, finite
+    labels, and the streaming-bounded invariant (the automated stand-in for the manual
+    "did it pull the full 1.46 TB?" check).
+    """
+    if not DATA_SMOKE_FILE.exists():
+        print("  data smoke: (skipped -- no data_smoke.json; synthetic-only run)")
+        return
+    d = json.load(open(DATA_SMOKE_FILE))
+    smoke = d.get("data_smoke", {})
+
+    shape = smoke.get("tensor_shape")
+    assert shape and len(shape) == 4, f"bad tensor_shape {shape}"
+    n, c, h, w = shape
+    assert c == 7, f"expected 7 EUV channels, got {c}"
+    assert h == 128 and w == 128, f"expected 128x128, got {h}x{w}"
+    assert "float32" in smoke.get("dtype", ""), f"dtype not float32: {smoke.get('dtype')}"
+
+    eps = 1e-3
+    vmin, vmax = smoke["value_min"], smoke["value_max"]
+    assert vmin >= -1.0 - eps and vmax <= 1.0 + eps, (
+        f"value range [{vmin}, {vmax}] outside [-1, 1]+/-eps"
+    )
+
+    lmin, lmax = smoke["label_min"], smoke["label_max"]
+    assert math.isfinite(lmin) and math.isfinite(lmax), f"non-finite labels [{lmin}, {lmax}]"
+    assert smoke.get("labels_finite") is True, "labels_finite flag is not True"
+
+    # Streaming-bounded download invariant.
+    assert smoke.get("is_streaming") is True, "loader was not constructed with streaming=True"
+    sub_n = smoke.get("subsample_n")
+    n_mat = smoke.get("n_materialized")
+    assert n_mat == sub_n, f"materialized {n_mat} != subsample_n {sub_n} (unbounded pull?)"
+    print(
+        f"  data smoke OK: shape {shape} float32, value [{vmin:.3f}, {vmax:.3f}], "
+        f"labels finite, streaming pull bounded to {n_mat} records"
+    )
 
 
 def check_structural(model: ViTLocal) -> None:
@@ -144,6 +194,7 @@ def check_checkpoint_reload(x: torch.Tensor, ref_global: torch.Tensor) -> None:
 def main() -> None:
     print("validate-foxes:")
     check_metrics()
+    check_data_smoke()
 
     # Build a fresh model with the SAME architecture the checkpoint used, so the structural,
     # mask, forward, attention, and reload checks all share one configuration.

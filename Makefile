@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble foxes-smoke validate-foxes
+.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble foxes-smoke foxes-data validate-foxes
 
 PYTHON := python3
 VENV := .venv
@@ -233,6 +233,12 @@ print('validate-eval OK:', {r['approach']: r['f1'] for r in results}) \
 # validate-foxes is the inline correctness/faithfulness gate (factored into src/foxes/validate.py).
 foxes-smoke:
 	$(PY) -m src.foxes.run --data synthetic --epochs 1
+
+# Phase 2: pull a TINY (8-sample) streaming subsample of the real FOXES-Data and run one
+# forward+loss pass on CPU. streaming=True + .take(n) bounds the pull (never the full ~1.46 TB).
+FOXES_SUBSAMPLE_N ?= 8
+foxes-data:
+	$(PY) -m src.foxes.run --data foxes --subsample-n $(FOXES_SUBSAMPLE_N) --epochs 1
 
 validate-foxes:
 	$(PY) -m src.foxes.validate
