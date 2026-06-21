@@ -10,8 +10,8 @@ answers so a fresh thread can execute without re-deriving.
 ## 0. What this task is
 
 Revise the project's TWO final, public-facing documents per the user's follow-up list:
-- **A** = `thoughts/shared/research/2026-06-14-results-analysis.md` (rigorous report)
-- **B** = `thoughts/shared/research/2026-06-14-plain-language-walkthrough.md` (learn-from-scratch companion)
+- **A** = `thoughts/shared/reports/2026-06-14-results-analysis.md` (rigorous report)
+- **B** = `thoughts/shared/reports/2026-06-14-plain-language-walkthrough.md` (learn-from-scratch companion)
 
 The user's revision requests are in `thoughts/shared/issues/FinalReport_FollowUp.md` (items 1–14;
 there is no item 12). This repo is going PUBLIC, so the framing must read as a standalone public

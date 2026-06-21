@@ -2087,7 +2087,7 @@ git commit -m "[Setup] Initialize implementation log"
 > **Read this whole block before starting — it is self-contained for a fresh thread.**
 > Phases 1–5 are DONE and committed (latest commit at authoring: `23c6cce`). The final n=4,500
 > comparison report is in `results/comparison_report.md`. These phases close the gaps surfaced in
-> the results analysis (`thoughts/shared/research/2026-06-14-results-analysis.md`).
+> the results analysis (`thoughts/shared/reports/2026-06-14-results-analysis.md`).
 >
 > **Recommended order & cost:** Phase 6 (free, ~½ day, highest value) → Phase 7 (free, ~1–1.5 h)
 > → Phase 9 (free, ~1 h) → Phase 8 (cloud ~$3–6, ~½ day, medium risk) → **optional post-report
@@ -2520,7 +2520,7 @@ Assets are ready (PNGs + `train_detection.py`); only the training run + eval rem
 # ═══════════════════════════════════════════════════════════════════════════
 
 > **Why these exist / numbering.** Phases 1–9 are complete and the final report is written
-> (`thoughts/shared/research/2026-06-14-results-analysis.md`, §10). These four are the
+> (`thoughts/shared/reports/2026-06-14-results-analysis.md`, §10). These four are the
 > highest-priority *next* steps, specced to be runnable in a **fresh thread with only this section as
 > context**. They are numbered 11–14 because they were added after the original 1–10 plan; **they
 > must run before Phase 10 (teardown)** — Phases 11, 12, and 14's vision-score run need the raw data /
@@ -3048,7 +3048,7 @@ make eval-all
 
 **Document in:**
 - `results/comparison_report.md` — add the row.
-- `thoughts/shared/research/2026-06-14-results-analysis.md` — new subsection under §5 or §6.
+- `thoughts/shared/reports/2026-06-14-results-analysis.md` — new subsection under §5 or §6.
 - README TL;DR table — add the row if the result is significant.
 
 ---
@@ -3218,3 +3218,25 @@ for any re-download. Both are torn down together as the final step.
 - Unsloth documentation: https://unsloth.ai/docs
 - Telemanom paper: https://arxiv.org/abs/1802.04431
 - AnomSeer paper: https://arxiv.org/abs/2602.08868
+
+---
+
+## Addendum — Phase 16: Vision Transformer + Explainable-AI extension (separate branch, 2026-06-21)
+
+Added after the anomaly-detection work, on the dedicated `phase16-mini-foxes` branch — **outside this
+plan's Phase 1–14 sequence and outside the comparison scoreboard**. It builds a **from-scratch
+`ViTLocal`** (7-channel 8×8 patch embed, 9×9 *inverted* masked attention, no CLS, per-patch linear
+head summing to the global prediction) and trains a faithful **miniature of FOXES** (Goodwin et al.
+2026) on a subsample of the authors' published SDO/AIA EUV → GOES soft-X-ray flux dataset, plus the
+repo's first **spatial XAI** (per-patch flux-attribution overlay + raw attention sanity figure).
+
+- **Why it's separate:** it's a *regression* task scored in **dex**, not the anomaly CEF0.5/Affinity-F1
+  metrics — putting it on the master table would be apples-to-oranges. It is connected by **shared
+  engineering discipline** (same provenance/atomic-writes/`--resume`, `validate-*` gate style,
+  matplotlib vocabulary, Vast.ai training, report + HF-model-card packaging) and fills two repo gaps:
+  the first from-scratch `nn.Module` and the first image/heatmap rendering.
+- **Result:** MAE **0.368 dex**, Pearson r **0.943**, beats the constant-mean baseline ~47%; RTX 4090,
+  ~17 min, **$0.15**; `make validate-foxes` green (incl. the faithfulness invariant Σ per-patch ≈ global).
+- **Artifacts:** planning docs in [`thoughts/shared/phase16/`](../phase16/); code in `src/foxes/`;
+  report + figures in [`results/foxes_repro/`](../../../results/foxes_repro/); HF card
+  `huggingface/foxes-repro_MODELCARD.md`. See the README "Bonus — Mini-FOXES" section.
