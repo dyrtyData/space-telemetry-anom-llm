@@ -140,6 +140,7 @@ def load_foxes_data(args: argparse.Namespace) -> dict:
         img=args.img,
         val_frac=args.val_frac,
         streaming=True,
+        seed=args.seed,
     )
     x = bundle["x_train"]
     y_all = torch.cat([bundle["y_train"], bundle["y_val"]])
@@ -245,7 +246,13 @@ def train(args: argparse.Namespace) -> dict:
     t0 = time.time()
 
     model = build_model(args).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    # weight_decay=0.0 (NOT AdamW's 0.01 default): the prediction is a SUM of 256 per-patch
+    # scalars, so the only constant-offset term is the per-patch head bias. Decaying it toward 0
+    # pulls predictions toward 0 in normalized log-space -> a systematic high bias in dex
+    # (targets are mostly negative). With decay off, the head learns the correct offset; with it
+    # on we measured mean_bias_dex ~= mae_dex ~0.62 despite Pearson r ~0.94 (shape learned,
+    # level suppressed). Standard practice anyway: don't weight-decay biases / norm / a tiny head.
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.0)
     # Cosine LR 1e-4 -> ~1e-5 over the full epoch budget (the FOXES schedule).
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=max(args.epochs, 1), eta_min=args.lr_min

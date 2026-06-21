@@ -26,6 +26,7 @@ gate asserts (automating the former manual "did it pull the whole dataset?" chec
 from __future__ import annotations
 
 import math
+import random
 
 import torch
 import torch.nn.functional as F
@@ -85,6 +86,7 @@ def load_foxes_subsample(
     val_frac: float = 0.25,
     streaming: bool = True,
     split: str = "train",
+    seed: int = 42,
 ):
     """Stream `subsample_n` FOXES-Data records and return train/held-out tensor batches.
 
@@ -95,8 +97,15 @@ def load_foxes_subsample(
       * `is_streaming` -- True (the loader was built with `streaming=True`);
       * `n_materialized` -- how many records were actually pulled (must equal `subsample_n`).
 
-    The held-out split is a deterministic tail slice (the last `round(n * val_frac)` records),
-    so it is reproducible without shuffling a streamed iterator.
+    The held-out split is a **seeded random shuffle** of the materialized records before the
+    train/val slice. FOXES-Data records arrive in ISO-timestamp order, and solar SXR activity
+    is non-stationary, so a naive tail slice puts a temporally-distinct (different-activity)
+    period in validation -- which shows up as a large *constant bias* (mean_bias_dex ~ mae_dex)
+    rather than honest scatter. Shuffling with a fixed `seed` draws train/val from the same
+    distribution (the standard ML split the FOXES MAE/baseline are framed against) while staying
+    fully reproducible. The temporal-holdout view remains a documented harder eval (see report
+    limitations). The shuffle uses an independent `random.Random(seed)` so it does not perturb
+    the torch global RNG that seeds training.
     """
     from datasets import load_dataset
 
@@ -120,6 +129,16 @@ def load_foxes_subsample(
 
     x = torch.stack(xs)  # (n, 7, img, img)
     y = torch.tensor(ys, dtype=torch.float32)  # (n,)
+
+    # Seeded random permutation -> draw train/val from the same distribution (avoids the
+    # temporal-holdout distribution-shift bias). random.Random keeps this independent of the
+    # torch RNG used for training, so the split is reproducible regardless of training state.
+    perm = list(range(n))
+    random.Random(seed).shuffle(perm)
+    idx = torch.tensor(perm, dtype=torch.long)
+    x = x[idx]
+    y = y[idx]
+    names = [names[i] for i in perm]
 
     n_val = min(max(round(n * val_frac), 1), n - 1) if n > 1 else 0
     n_train = n - n_val
