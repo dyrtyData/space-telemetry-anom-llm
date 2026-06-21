@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble
+.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble foxes-smoke validate-foxes
 
 PYTHON := python3
 VENV := .venv
@@ -22,7 +22,7 @@ RESULTS_FILE ?= baseline_results.json
 # Setup
 setup:
 	$(PYTHON) -m venv $(VENV)
-	$(PIP) install -e ".[dev,lstm]"
+	$(PIP) install -e ".[dev,lstm,foxes]"
 
 # ETL Pipeline -- primary download is the Kaggle mirror (fast CDN, byte-identical
 # to the official Zenodo manifest). Zenodo kept as a fallback (download-zenodo).
@@ -226,6 +226,16 @@ llm = next(r for r in results if r['approach'] == 'LLM Detection'); \
 assert llm.get('advice_avg_chars', 0) > 50, f'LLM anomaly responses too short: {llm.get(\"advice_avg_chars\")}'; \
 print('validate-eval OK:', {r['approach']: r['f1'] for r in results}) \
 "
+
+# Phase 16 (mini-FOXES ViT + XAI, dedicated branch) -- NOT part of the anomaly comparison.
+# Phase 1: thinnest end-to-end slice on CPU + synthetic random tensors (no data, no GPU).
+# foxes-smoke trains 1 epoch and writes results/foxes_repro/metrics.json + a checkpoint;
+# validate-foxes is the inline correctness/faithfulness gate (factored into src/foxes/validate.py).
+foxes-smoke:
+	$(PY) -m src.foxes.run --data synthetic --epochs 1
+
+validate-foxes:
+	$(PY) -m src.foxes.validate
 
 # Utilities
 lint:

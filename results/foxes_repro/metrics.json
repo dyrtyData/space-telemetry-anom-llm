@@ -1,0 +1,29 @@
+{
+  "config": {
+    "data": "synthetic",
+    "epochs": 1,
+    "batch": 4,
+    "lr": 0.0001,
+    "seed": 42,
+    "device": "cpu",
+    "checkpoint_every": 250,
+    "resume": false,
+    "in_chans": 7,
+    "img": 128,
+    "patch": 8,
+    "embed": 256,
+    "depth": 8,
+    "heads": 8,
+    "mlp": 1024,
+    "local_window": 9,
+    "aux_mask_chans": 0
+  },
+  "summary": {
+    "data": "synthetic",
+    "n_epochs_run": 1,
+    "final_loss": 3.5880630016326904,
+    "initial_loss": 3.5880630016326904,
+    "num_patches": 256,
+    "device": "cpu"
+  }
+}
