@@ -1,4 +1,4 @@
-.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble foxes-smoke foxes-data foxes-train validate-foxes
+.PHONY: setup download download-zenodo etl baseline baseline-if tune-threshold validate-baseline format-train launch-vast train-cloud export eval-all eval-lstm eval-llm validate-eval install-local validate-inference clean lint format validate-etl validate-format validate-advice advice eval-base eval-base-fewshot frontier-select frontier-assemble eval-vision eval-vision-score lstm-window-scores vision-pr-curve ensemble grade-advice-select grade-advice-assemble foxes-smoke foxes-data foxes-train foxes-figures validate-foxes
 
 PYTHON := python3
 VENV := .venv
@@ -256,6 +256,15 @@ foxes-train:
 		--subsample-n $(FOXES_TRAIN_N) --epochs $(FOXES_EPOCHS) --batch $(FOXES_BATCH) \
 		--device $(FOXES_DEVICE) --usd-per-hr $(FOXES_USD_PER_HR) \
 		--checkpoint-every 5 --resume
+
+# Phase 4: the repo's FIRST image / heatmap / overlay rendering. Loads the trained checkpoint,
+# runs a forward pass on a held-out FOXES sample (tiny streaming pull -- never the full ~1.46 TB),
+# and writes the per-patch flux-attribution overlay + the raw-attention sanity figure + a
+# viz_meta.json sidecar the validate gate asserts (faithfulness + non-uniformity + brightness
+# correlation). Runs LOCALLY on CPU -- no cloud, no GPU. FOXES_VIZ_N is the held-out pull size.
+FOXES_VIZ_N ?= 16
+foxes-figures:
+	$(PY) -m src.foxes.visualize --data foxes --subsample-n $(FOXES_VIZ_N)
 
 validate-foxes:
 	$(PY) -m src.foxes.validate

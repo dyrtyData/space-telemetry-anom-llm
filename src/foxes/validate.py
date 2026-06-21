@@ -34,6 +34,18 @@ exists; absent for the synthetic + data-smoke states, so those stay green/skippe
   * the cost estimate elapsed_hr * usd_per_hr < 25 (budget-ceiling sanity check);
   * the faithfulness invariant and the checkpoint-reload-reproduces-metrics check already run on
     the (trained, when present) checkpoint via the shared model below.
+
+Phase 4 assertions (only when results/foxes_repro/viz_meta.json exists -- i.e. make foxes-figures
+has been run; absent for earlier states, so those stay green/skipped):
+  * both PNGs (attribution_overlay.png + attention_sanity.png) exist and are non-empty;
+  * the rendered sample's per-patch attribution SUMS to the model's global prediction
+    (|per_patch_sum - global_pred| < tol) -- the visual artifact is faithful to the number;
+  * the "attribution corresponds to structure, not noise" proxies: the per-patch attribution is
+    NON-UNIFORM (Gini above a floor AND top-decile mass well above the uniform 0.1) and, for the
+    REAL-data figure, the per-patch attribution magnitude POSITIVELY CORRELATES with per-patch
+    EUV brightness (Pearson r above a small positive threshold) -- a quantitative stand-in for
+    "attribution lands on active regions." The brightness proxy is skipped for synthetic renders
+    (random input has no structure), recorded via `data_source` in the sidecar.
 """
 
 from __future__ import annotations
@@ -52,6 +64,9 @@ from .model import InvertedAttentionBlock, ViTLocal
 OUT_DIR = Path("results/foxes_repro")
 METRICS_FILE = OUT_DIR / "metrics.json"
 DATA_SMOKE_FILE = OUT_DIR / "data_smoke.json"
+VIZ_META_FILE = OUT_DIR / "viz_meta.json"
+ATTRIBUTION_PNG = OUT_DIR / "attribution_overlay.png"
+ATTENTION_PNG = OUT_DIR / "attention_sanity.png"
 
 # Primary-gate margin: the trained model must beat the constant-mean baseline by at least this
 # fraction of the baseline MAE (a small but non-trivial relative improvement -> proves learning).
@@ -59,6 +74,19 @@ PRIMARY_GATE_MARGIN = 0.05  # 5% relative improvement over the mean-baseline MAE
 SANITY_MAE_LO = 0.01
 SANITY_MAE_HI = 0.4
 COST_CEILING_USD = 25.0
+
+# Phase-4 XAI proxy floors. The attribution must be visibly structured (not flat noise) and,
+# on real data, land on bright EUV structure. These are deliberately loose -- they catch a dead
+# / uniform / anti-correlated map, not a specific scientific claim (the expert eyeball is the
+# deferred Final Manual Verification).
+VIZ_FAITHFULNESS_TOL = 1e-3  # |per_patch_sum - global_pred| in normalized log-space
+VIZ_GINI_FLOOR = 0.05  # Gini concentration floor (0 == perfectly uniform)
+VIZ_TOP_DECILE_FLOOR = 0.12  # top-10% patch mass must exceed the uniform 0.10
+# Min mean-over-channels Pearson r(|attribution|, per-patch EUV brightness) on real data. The
+# SXR flux is driven by the hot channels (94/131/335 A), so the channel-averaged correlation is
+# robustly positive (~0.22-0.30 measured); a single arbitrary channel (e.g. quiet-Sun 171 A) can
+# read near zero, so the gate asserts the channel-averaged statistic.
+VIZ_BRIGHTNESS_R_FLOOR = 0.10
 
 
 def _checkpoint_path() -> Path:
@@ -277,6 +305,65 @@ def check_checkpoint_reload(x: torch.Tensor, ref_global: torch.Tensor) -> None:
     print(f"  checkpoint OK: reloaded model reproduces forward (max diff {diff:.2e})")
 
 
+def check_figures() -> None:
+    """Phase-4 gate: assert the rendered XAI figures (only when viz_meta.json exists).
+
+    Skips silently if viz_meta.json is absent (pre-Phase-4 states), so earlier validation still
+    passes. When present, asserts both PNGs exist and are non-empty, the attribution-sums-to-
+    global faithfulness invariant on the *rendered* sample, and the two "structure, not noise"
+    proxies (non-uniformity floors always; brightness correlation only for real-data renders).
+    """
+    if not VIZ_META_FILE.exists():
+        print("  figures: (skipped -- no viz_meta.json; run make foxes-figures)")
+        return
+    d = json.load(open(VIZ_META_FILE))
+    meta = d.get("viz_meta", {})
+
+    for png in (ATTRIBUTION_PNG, ATTENTION_PNG):
+        assert png.exists(), f"missing figure {png} -- run make foxes-figures"
+        assert png.stat().st_size > 0, f"figure {png} is empty"
+
+    # Faithfulness on the rendered sample: per-patch attribution sums to the global prediction.
+    ferr = meta.get("faithfulness_abs_err")
+    assert ferr is not None and math.isfinite(ferr), f"missing/non-finite faithfulness err: {ferr}"
+    assert ferr < VIZ_FAITHFULNESS_TOL, (
+        f"rendered attribution sum diverges from global pred by {ferr:.2e} "
+        f"(>{VIZ_FAITHFULNESS_TOL:.0e}) -- the figure is not faithful to the number"
+    )
+
+    # Non-uniformity: the map must be concentrated, not flat noise.
+    gini = meta.get("attribution_gini")
+    top_mass = meta.get("top_decile_mass")
+    assert gini is not None and math.isfinite(gini), f"missing/non-finite gini: {gini}"
+    assert gini > VIZ_GINI_FLOOR, (
+        f"attribution Gini {gini:.3f} <= floor {VIZ_GINI_FLOOR} -- map is ~uniform (no structure)"
+    )
+    assert top_mass is not None and top_mass > VIZ_TOP_DECILE_FLOOR, (
+        f"top-decile mass {top_mass} <= floor {VIZ_TOP_DECILE_FLOOR} (uniform == 0.10)"
+    )
+
+    # Brightness correlation: only meaningful on real EUV structure (skip synthetic renders).
+    # Asserts the channel-averaged correlation (robust); falls back to the single-channel value
+    # for sidecars written before the mean statistic existed.
+    data_source = meta.get("data_source")
+    r = meta.get("brightness_pearson_r_mean", meta.get("brightness_pearson_r"))
+    if data_source == "foxes":
+        assert r is not None and math.isfinite(r), f"missing/non-finite brightness r: {r}"
+        assert r > VIZ_BRIGHTNESS_R_FLOOR, (
+            f"attribution<->EUV-brightness mean Pearson r {r:.3f} <= floor "
+            f"{VIZ_BRIGHTNESS_R_FLOOR} -- attribution does not land on bright structure"
+        )
+        print(
+            f"  figures OK: both PNGs present, faithful (err {ferr:.2e}), "
+            f"gini={gini:.3f}, top-decile={top_mass:.3f}, brightness r(mean)={r:.3f} (real data)"
+        )
+    else:
+        print(
+            f"  figures OK: both PNGs present, faithful (err {ferr:.2e}), gini={gini:.3f}, "
+            f"top-decile={top_mass:.3f} (synthetic render -- brightness proxy skipped)"
+        )
+
+
 def main() -> None:
     print("validate-foxes:")
     metrics = check_metrics()
@@ -312,6 +399,8 @@ def main() -> None:
     check_checkpoint_reload(x, ref_global)
     # Phase-3 trained-result gates (skipped silently for synthetic + data-smoke states).
     check_trained_results(metrics)
+    # Phase-4 figure gates (skipped silently until make foxes-figures has been run).
+    check_figures()
     print("validate-foxes OK")
 
 
