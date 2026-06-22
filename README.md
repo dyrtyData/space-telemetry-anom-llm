@@ -381,9 +381,12 @@ subsample of the FOXES authors' own published EUV→SXR dataset. Honestly labele
 miniature**, not a full reproduction (the paper's full model reaches 0.051 dex; ours is a 128² /
 ~17-min / single-4090 miniature with a documented residual calibration bias).
 
+![Mini-FOXES infographic — task, FOXES architecture blueprint, performance/efficiency, and XAI artifacts](results/foxes_repro/Mini-FOXES_Solar_Vision_Transformer.png)
+
 - **Report:** [`results/foxes_repro/report.md`](results/foxes_repro/report.md)
 - **HF model card:** [`huggingface/foxes-repro_MODELCARD.md`](huggingface/foxes-repro_MODELCARD.md)
 - **XAI figures:** [`attribution_overlay.png`](results/foxes_repro/attribution_overlay.png) (per-patch flux attribution) · [`attention_sanity.png`](results/foxes_repro/attention_sanity.png) (raw inverted-mask attention)
+- **Showcase deck & infographic:** [`Mini-FOXES_Solar_ViT_and_Spatial_XAI_Showcase.pdf`](results/foxes_repro/Mini-FOXES_Solar_ViT_and_Spatial_XAI_Showcase.pdf) (slideshow) · [`Mini-FOXES_Solar_Vision_Transformer.png`](results/foxes_repro/Mini-FOXES_Solar_Vision_Transformer.png) (infographic, embedded above)
 - **Planning artifacts:** [`thoughts/shared/phase16/`](thoughts/shared/phase16/) (research questions, research, design discussion, structure outline)
 
 ---
